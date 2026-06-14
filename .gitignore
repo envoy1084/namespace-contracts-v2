@@ -1,35 +1,35 @@
-# 💾 Dependencies
+# Dependencies
 dependencies/
 
-# 🔧 Foundry build artifacts & caches
+# Foundry build artifacts & caches
 out/
 cache/
 
-# 🧪 Forge test artifacts
+# Forge test artifacts
 test_*.json
 *.dbg.json
 
-# 🔐 Env files & secrets
+# Env files & secrets
 .env
 .env.*
 !.env.example
 /*.keystore
 
-# 📊 Coverage & gas reports
+# Coverage & gas reports
 coverage/
 gas-report.*
 
-# 📝 Logs & temporary files
+# Logs & temporary files
 *.log
 *.tmp
 *.temp
 
-# 🎯 Misc OS-specific
+# Misc OS-specific
 .DS_Store
 thumbs.db
 
-# ⚙️ Scripting outputs (e.g., Soldeer)
-zkout/
-
 # Local Deployments
 broadcast/**/31337
+
+# Local repos
+.repos

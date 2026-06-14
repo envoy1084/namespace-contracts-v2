@@ -1,50 +1,33 @@
-# -------------------------------------------------------------
-# 🛠 Default Profile – local dev & CI
-# -------------------------------------------------------------
+# Default Profile – local dev & CI
 [profile.default]
-solc_version = "0.8.26"
-evm_version = "cancun"
+solc_version = "0.8.35"
+evm_version = "prague"
 optimizer = true
-optimizer_runs = 20000
+optimizer_runs = 200
 ffi = true
 src = "src"
 out = "out"
 dynamic_test_linking = true
 gas_reports = ["*"]
-libs = ["dependencies"]
 
-# -------------------------------------------------------------
-# 🧪 Fuzz testing
-# -------------------------------------------------------------
+# Fuzz testing
 [fuzz]
 runs = 200
 timeout = 300 # seconds
 
-# -------------------------------------------------------------
-# 🔄 Invariant testing
-# -------------------------------------------------------------
+# Invariant testing
 [invariant]
 runs = 200
 min_successful = 40 # 20% of runs
 timeout = 600
 
-# -------------------------------------------------------------
-# 🧪 CI-specific profile
-# -------------------------------------------------------------
+# CI-specific profile
 [profile.ci]
 verbosity = 4
 timeout = 1200        # allow longer CI tests
 fuzz_runs = 2000
 invariant_runs = 2000
 
-# -------------------------------------------------------------
-# 🧭 Formatting & linting
-# -------------------------------------------------------------
+# Formatting & linting
 [fmt]
 auto_format = true
-
-# -------------------------------------------------------------
-# 💾 Dependencies
-# -------------------------------------------------------------
-[dependencies]
-forge-std = "1.9.7"
