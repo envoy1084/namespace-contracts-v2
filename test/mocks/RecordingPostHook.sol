@@ -11,6 +11,7 @@ contract RecordingPostHook is NamespaceModule, IPostHookModule {
     bytes32 public lastLabelHash;
     uint256 public lastTokenId;
     bytes public lastRuntimeData;
+    uint64 public lastNewExpiry;
 
     constructor(address controller_) NamespaceModule(controller_) {}
 
@@ -27,5 +28,11 @@ contract RecordingPostHook is NamespaceModule, IPostHookModule {
         lastRuntimeData = runtimeData;
     }
 
-    function afterRenew(NamespaceTypes.RenewContext calldata, bytes calldata) external view onlyController {}
+    function afterRenew(NamespaceTypes.RenewContext calldata ctx, bytes calldata runtimeData) external onlyController {
+        lastActivationId = ctx.activationId;
+        lastLabelHash = ctx.labelHash;
+        lastTokenId = ctx.tokenId;
+        lastNewExpiry = ctx.newExpiry;
+        lastRuntimeData = runtimeData;
+    }
 }

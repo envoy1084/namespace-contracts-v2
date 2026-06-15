@@ -62,6 +62,19 @@ interface INamespaceController {
         NamespaceTypes.RuntimeData calldata runtimeData
     ) external payable returns (uint256 tokenId);
 
+    /// @notice Renew a subname through a stored activation.
+    /// @param activationId Activation id.
+    /// @param label Direct label to renew.
+    /// @param duration Renewal extension in seconds.
+    /// @param runtimeData Per-module runtime data.
+    /// @return newExpiry New expiry written to the ENSv2 registry.
+    function renew(
+        bytes32 activationId,
+        string calldata label,
+        uint64 duration,
+        NamespaceTypes.RuntimeData calldata runtimeData
+    ) external payable returns (uint64 newExpiry);
+
     /// @notice Read public activation metadata.
     /// @param activationId Activation id.
     /// @return activation Public activation metadata.

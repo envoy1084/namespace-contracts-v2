@@ -28,7 +28,7 @@
   - [x] mint orchestration
   - [x] ENSv2 registry `register()` call
   - [x] events and custom errors
-  - [ ] renewal orchestration
+  - [x] renewal orchestration
   - [ ] activation ownership verification beyond root registrar admin
 
 ### Phase 2: First Modules
@@ -56,7 +56,7 @@
 
 - [ ] Gas snapshots and optimization pass.
 - [ ] Add module registry / approved modules if needed.
-- [ ] Add renewal flow.
+- [x] Add renewal flow.
 - [ ] Add reservation flow.
 - [ ] Add ERC721/ERC20 gate policies.
 - [ ] Add Merkle whitelist policy.
@@ -75,3 +75,5 @@
 - 2026-06-16: Added `LengthBasedPricing` and module tests for fixed pricing,
   length pricing, ERC20 payment collection, and ERC20 split processing.
 - 2026-06-16: Added `SetAddrToBuyerHook` and resolver hook tests.
+- 2026-06-16: Added controller renewal orchestration with policy, pricing,
+  payment, processor, registry renewal, post-hook execution, and unit tests.

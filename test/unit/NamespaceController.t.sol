@@ -96,4 +96,37 @@ contract NamespaceControllerTest is NamespaceSetUp {
         controller.mint(activationId, "pay", 365 days, runtimeData);
         vm.stopPrank();
     }
+
+    function test_renew_runsModulesCollectsPaymentAndExtendsExpiry() public {
+        bytes32 activationId = _activateDefault();
+        NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
+
+        vm.startPrank(accounts.buyer.addr);
+        token.approve(address(erc20Payment), 150 ether);
+        uint256 tokenId = controller.mint(activationId, "pay", 365 days, runtimeData);
+
+        IPermissionedRegistry.State memory beforeRenew = registry.getState(tokenId);
+        uint64 newExpiry = controller.renew(activationId, "pay", 30 days, runtimeData);
+        vm.stopPrank();
+
+        IPermissionedRegistry.State memory afterRenew = registry.getState(tokenId);
+        assertEq(newExpiry, beforeRenew.expiry + 30 days);
+        assertEq(afterRenew.expiry, newExpiry);
+        assertEq(token.balanceOf(accounts.treasury.addr), 150 ether);
+    }
+
+    function test_renew_revertsWhenLabelIsAvailable() public {
+        bytes32 activationId = _activateDefault();
+        NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
+
+        vm.startPrank(accounts.buyer.addr);
+        token.approve(address(erc20Payment), 50 ether);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                NamespaceController.LabelNotRenewable.selector, "pay", IPermissionedRegistry.Status.AVAILABLE
+            )
+        );
+        controller.renew(activationId, "pay", 30 days, runtimeData);
+        vm.stopPrank();
+    }
 }

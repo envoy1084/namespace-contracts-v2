@@ -76,6 +76,8 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
     error RuntimeDataLengthMismatch(bytes32 kind, uint256 expected, uint256 actual);
     /// @notice Label is not available in the configured ENSv2 registry.
     error LabelNotAvailable(string label, IPermissionedRegistry.Status status);
+    /// @notice Label cannot be renewed because it is not currently registered or reserved.
+    error LabelNotRenewable(string label, IPermissionedRegistry.Status status);
 
     /// @param initialOwner Owner of controller-level administration.
     constructor(address initialOwner) Ownable(initialOwner) {}
@@ -185,6 +187,58 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc INamespaceController
+    function renew(
+        bytes32 activationId,
+        string calldata label,
+        uint64 duration,
+        NamespaceTypes.RuntimeData calldata runtimeData
+    ) external payable nonReentrant returns (uint64 newExpiry) {
+        if (duration == 0) {
+            revert ZeroDuration();
+        }
+
+        ActivationData storage activation = _requireActivation(activationId);
+        if (!activation.active) {
+            revert ActivationNotActive(activationId);
+        }
+
+        _checkRuntimeDataLengths(activation, runtimeData);
+
+        uint256 labelId = uint256(keccak256(bytes(label)));
+        IPermissionedRegistry.State memory state = activation.registry.getState(labelId);
+        if (state.status == IPermissionedRegistry.Status.AVAILABLE) {
+            revert LabelNotRenewable(label, state.status);
+        }
+
+        newExpiry = state.expiry + duration;
+
+        NamespaceTypes.RenewContext memory ctx = NamespaceTypes.RenewContext({
+            activationId: activationId,
+            payer: msg.sender,
+            registry: activation.registry,
+            parentNode: activation.parentNode,
+            label: label,
+            labelHash: bytes32(labelId),
+            tokenId: state.tokenId,
+            duration: duration,
+            currentExpiry: state.expiry,
+            newExpiry: newExpiry
+        });
+
+        _checkRenewPolicies(activation, ctx, runtimeData.policyData);
+        NamespaceTypes.Price memory price = _quoteRenew(activation, ctx, runtimeData.pricingData);
+
+        IPaymentModule(activation.paymentModule).collectRenew{value: msg.value}(ctx, price, runtimeData.paymentData);
+        IProcessorModule(activation.processor).processRenew(ctx, price, runtimeData.processorData);
+
+        activation.registry.renew(state.tokenId, newExpiry);
+
+        _runPostRenewHooks(activation, ctx, runtimeData.postHookData);
+
+        emit SubnameRenewed(activationId, bytes32(labelId), label, state.tokenId, newExpiry, price.token, price.amount);
+    }
+
+    /// @inheritdoc INamespaceController
     function getActivation(bytes32 activationId) external view returns (NamespaceTypes.Activation memory activation) {
         ActivationData storage stored = _requireActivationView(activationId);
         activation = NamespaceTypes.Activation({
@@ -264,6 +318,28 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
         }
     }
 
+    function _checkRenewPolicies(
+        ActivationData storage activation,
+        NamespaceTypes.RenewContext memory ctx,
+        bytes[] calldata policyData
+    ) private {
+        uint256 length = activation.policies.length;
+        for (uint256 i; i < length; ++i) {
+            IPolicyModule(activation.policies[i]).checkRenew(ctx, policyData[i]);
+        }
+    }
+
+    function _quoteRenew(
+        ActivationData storage activation,
+        NamespaceTypes.RenewContext memory ctx,
+        bytes[] calldata pricingData
+    ) private view returns (NamespaceTypes.Price memory price) {
+        uint256 length = activation.pricingModules.length;
+        for (uint256 i; i < length; ++i) {
+            price = IPricingModule(activation.pricingModules[i]).quoteRenew(ctx, price, pricingData[i]);
+        }
+    }
+
     function _runPostMintHooks(
         ActivationData storage activation,
         NamespaceTypes.MintContext memory ctx,
@@ -273,6 +349,17 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
         uint256 length = activation.postHooks.length;
         for (uint256 i; i < length; ++i) {
             IPostHookModule(activation.postHooks[i]).afterMint(ctx, tokenId, postHookData[i]);
+        }
+    }
+
+    function _runPostRenewHooks(
+        ActivationData storage activation,
+        NamespaceTypes.RenewContext memory ctx,
+        bytes[] calldata postHookData
+    ) private {
+        uint256 length = activation.postHooks.length;
+        for (uint256 i; i < length; ++i) {
+            IPostHookModule(activation.postHooks[i]).afterRenew(ctx, postHookData[i]);
         }
     }
 
