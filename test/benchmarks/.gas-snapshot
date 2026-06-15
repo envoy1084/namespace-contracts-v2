@@ -1,0 +1,8 @@
+NamespaceIssuanceGasBenchmarks:testBenchmark_erc20FixedPrice_noPolicy() (gas: 250030)
+NamespaceIssuanceGasBenchmarks:testBenchmark_erc20Split_threePolicies() (gas: 329125)
+NamespaceIssuanceGasBenchmarks:testBenchmark_freeMint_fivePolicies() (gas: 281105)
+NamespaceIssuanceGasBenchmarks:testBenchmark_freeMint_noPolicyNoPricing() (gas: 199423)
+NamespaceIssuanceGasBenchmarks:testBenchmark_freeMint_onePolicy() (gas: 211729)
+NamespaceIssuanceGasBenchmarks:testBenchmark_freeMint_threePolicies() (gas: 244039)
+NamespaceIssuanceGasBenchmarks:testBenchmark_fullStack_fivePoliciesTwoPricingSplitHook() (gas: 505912)
+NamespaceIssuanceGasBenchmarks:testBenchmark_lengthPricing_twoPolicies() (gas: 293150)
