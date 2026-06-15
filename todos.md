@@ -54,7 +54,7 @@
 - [x] Unit tests for mint orchestration.
 - [x] Unit tests for each initial module.
 - [x] Fuzz tests for labels, durations, pricing tables, and splits.
-- [ ] Integration tests for policy + pricing + payment + register flow.
+- [x] Integration tests for policy + pricing + payment + register flow.
 - [ ] End-to-end tests using ENSv2 `PermissionedRegistry` where practical.
 
 ### Phase 4: Hardening
@@ -92,3 +92,5 @@
   renewal prices converted through Chainlink-style token/USD oracles.
 - 2026-06-16: Replaced scaffold Counter fuzz coverage with Namespace fuzz
   tests for label/duration minting, length pricing buckets, and ERC20 splits.
+- 2026-06-16: Added an integration test for stacked policies, multiple pricing
+  modules, ERC20 payment, split processing, ENSv2 registry minting, and hooks.
