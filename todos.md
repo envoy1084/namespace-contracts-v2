@@ -43,6 +43,8 @@
 - [x] `SetAddrToBuyerHook`
 - [x] `ReservationPolicy`
 - [x] `MerkleWhitelistPolicy`
+- [x] `ERC20BalanceGatePolicy`
+- [x] `ERC721BalanceGatePolicy`
 
 ### Phase 3: Tests
 
@@ -60,7 +62,7 @@
 - [ ] Add module registry / approved modules if needed.
 - [x] Add renewal flow.
 - [x] Add reservation policy module.
-- [ ] Add ERC721/ERC20 gate policies.
+- [x] Add ERC721/ERC20 gate policies.
 - [x] Add Merkle whitelist policy.
 - [ ] Add USD oracle pricing.
 
@@ -83,3 +85,5 @@
   with standalone policy tests and controller integration coverage.
 - 2026-06-16: Added `MerkleWhitelistPolicy` with account and account-label
   leaf modes, separate mint/renew roots, disabled-root bypasses, and unit tests.
+- 2026-06-16: Added ERC20 and ERC721 balance gate policies for mint and
+  renewal checks, plus mock-backed unit tests.
