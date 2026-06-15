@@ -36,7 +36,7 @@
 - [x] `SaleWindowPolicy`
 - [x] `LabelLengthPolicy`
 - [x] `FixedPricePricing`
-- [ ] `LengthBasedPricing`
+- [x] `LengthBasedPricing`
 - [x] `ERC20PaymentModule`
 - [x] `SplitProcessor`
 - [x] `NoopProcessor`
@@ -47,7 +47,7 @@
 - [x] Test fixtures for ENSv2 registry mock/fixture setup.
 - [x] Unit tests for controller activation.
 - [x] Unit tests for mint orchestration.
-- [ ] Unit tests for each initial module.
+- [x] Unit tests for each initial module.
 - [ ] Fuzz tests for labels, durations, pricing tables, and splits.
 - [ ] Integration tests for policy + pricing + payment + register flow.
 - [ ] End-to-end tests using ENSv2 `PermissionedRegistry` where practical.
@@ -72,3 +72,5 @@
   ERC20 split processor.
 - 2026-06-16: Added initial Foundry fixtures and tests covering activation,
   mint orchestration, sale window policy, and label length policy.
+- 2026-06-16: Added `LengthBasedPricing` and module tests for fixed pricing,
+  length pricing, ERC20 payment collection, and ERC20 split processing.
