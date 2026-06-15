@@ -35,12 +35,16 @@ contract ERC20SplitProcessor is NamespaceModule, IProcessorModule {
         delete _splits[activationId];
 
         uint256 totalBps;
-        for (uint256 i; i < decoded.length; ++i) {
+        uint256 length = decoded.length;
+        for (uint256 i; i < length;) {
             if (decoded[i].recipient == address(0)) {
                 revert InvalidSplitRecipient();
             }
             totalBps += decoded[i].bps;
             _splits[activationId].push(decoded[i]);
+            unchecked {
+                ++i;
+            }
         }
         if (totalBps != BPS_DENOMINATOR) {
             revert InvalidSplitBps(totalBps);
@@ -83,10 +87,13 @@ contract ERC20SplitProcessor is NamespaceModule, IProcessorModule {
         uint256 remaining = price.amount;
         uint256 last = stored.length - 1;
 
-        for (uint256 i; i < last; ++i) {
+        for (uint256 i; i < last;) {
             uint256 amount = (price.amount * stored[i].bps) / BPS_DENOMINATOR;
             remaining -= amount;
             token.safeTransfer(stored[i].recipient, amount);
+            unchecked {
+                ++i;
+            }
         }
         token.safeTransfer(stored[last].recipient, remaining);
     }

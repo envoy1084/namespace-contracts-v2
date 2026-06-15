@@ -60,7 +60,7 @@
 ### Phase 4: Hardening
 
 - [x] Gas snapshot baseline.
-- [ ] Gas optimization pass.
+- [x] Gas optimization pass.
 - [x] Add optional module approval registry.
 - [x] Add renewal flow.
 - [x] Add reservation policy module.
@@ -107,3 +107,5 @@
   Namespace suite.
 - 2026-06-16: Added an end-to-end test that mints and renews through ENSv2's
   real `PermissionedRegistry` implementation.
+- 2026-06-16: Applied low-risk unchecked loop increment optimizations in
+  production module loops and refreshed `.gas-snapshot`.

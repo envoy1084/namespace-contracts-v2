@@ -46,12 +46,15 @@ contract ReservationPolicy is NamespaceModule, IPolicyModule {
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         Params memory decoded = abi.decode(configData, (Params));
         uint256 length = decoded.reservations.length;
-        for (uint256 i; i < length; ++i) {
+        for (uint256 i; i < length;) {
             ReservationInput memory input = decoded.reservations[i];
             if (input.labelHash == bytes32(0)) {
                 revert EmptyReservationLabel(activationId);
             }
             reservations[activationId][input.labelHash] = Reservation({account: input.account, expiry: input.expiry});
+            unchecked {
+                ++i;
+            }
         }
     }
 

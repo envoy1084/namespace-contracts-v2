@@ -313,12 +313,15 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
         address[] storage modules
     ) private {
         uint256 length = configs.length;
-        for (uint256 i; i < length; ++i) {
+        for (uint256 i; i < length;) {
             NamespaceTypes.ModuleConfig calldata config = configs[i];
             _checkModule(config.module, kind);
             modules.push(config.module);
             IConfigurableModule(config.module).configure(activationId, config.configData);
             emit ModuleConfigured(activationId, config.module, kind);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -345,8 +348,11 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
         bytes[] calldata policyData
     ) private {
         uint256 length = activation.policies.length;
-        for (uint256 i; i < length; ++i) {
+        for (uint256 i; i < length;) {
             IPolicyModule(activation.policies[i]).checkMint(ctx, policyData[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -356,8 +362,11 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
         bytes[] calldata pricingData
     ) private view returns (NamespaceTypes.Price memory price) {
         uint256 length = activation.pricingModules.length;
-        for (uint256 i; i < length; ++i) {
+        for (uint256 i; i < length;) {
             price = IPricingModule(activation.pricingModules[i]).quoteMint(ctx, price, pricingData[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -367,8 +376,11 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
         bytes[] calldata policyData
     ) private {
         uint256 length = activation.policies.length;
-        for (uint256 i; i < length; ++i) {
+        for (uint256 i; i < length;) {
             IPolicyModule(activation.policies[i]).checkRenew(ctx, policyData[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -378,8 +390,11 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
         bytes[] calldata pricingData
     ) private view returns (NamespaceTypes.Price memory price) {
         uint256 length = activation.pricingModules.length;
-        for (uint256 i; i < length; ++i) {
+        for (uint256 i; i < length;) {
             price = IPricingModule(activation.pricingModules[i]).quoteRenew(ctx, price, pricingData[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -390,8 +405,11 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
         bytes[] calldata postHookData
     ) private {
         uint256 length = activation.postHooks.length;
-        for (uint256 i; i < length; ++i) {
+        for (uint256 i; i < length;) {
             IPostHookModule(activation.postHooks[i]).afterMint(ctx, tokenId, postHookData[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -401,8 +419,11 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
         bytes[] calldata postHookData
     ) private {
         uint256 length = activation.postHooks.length;
-        for (uint256 i; i < length; ++i) {
+        for (uint256 i; i < length;) {
             IPostHookModule(activation.postHooks[i]).afterRenew(ctx, postHookData[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 
