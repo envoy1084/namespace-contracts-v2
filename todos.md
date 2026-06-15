@@ -53,7 +53,7 @@
 - [x] Unit tests for controller activation.
 - [x] Unit tests for mint orchestration.
 - [x] Unit tests for each initial module.
-- [ ] Fuzz tests for labels, durations, pricing tables, and splits.
+- [x] Fuzz tests for labels, durations, pricing tables, and splits.
 - [ ] Integration tests for policy + pricing + payment + register flow.
 - [ ] End-to-end tests using ENSv2 `PermissionedRegistry` where practical.
 
@@ -90,3 +90,5 @@
   renewal checks, plus mock-backed unit tests.
 - 2026-06-16: Added `USDOraclePricing` for fixed USD-denominated mint and
   renewal prices converted through Chainlink-style token/USD oracles.
+- 2026-06-16: Replaced scaffold Counter fuzz coverage with Namespace fuzz
+  tests for label/duration minting, length pricing buckets, and ERC20 splits.
