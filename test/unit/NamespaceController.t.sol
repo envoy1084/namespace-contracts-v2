@@ -6,9 +6,7 @@ import {Vm} from "forge-std/Vm.sol";
 
 import {NamespaceController} from "src/NamespaceController.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
-import {ERC20PaymentModule} from "src/modules/payment/ERC20PaymentModule.sol";
 import {ReservationPolicy} from "src/modules/policies/ReservationPolicy.sol";
-import {FixedPricePricing} from "src/modules/pricing/FixedPricePricing.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
 
 contract NamespaceControllerTest is NamespaceSetUp {

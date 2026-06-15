@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 
 /// @title NamespaceTypes

@@ -91,7 +91,11 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
     constructor(address initialOwner) Ownable(initialOwner) {}
 
     /// @inheritdoc INamespaceController
-    function activate(NamespaceTypes.ActivationConfig calldata config) external returns (bytes32 activationId) {
+    function activate(NamespaceTypes.ActivationConfig calldata config)
+        external
+        nonReentrant
+        returns (bytes32 activationId)
+    {
         if (address(config.registry) == address(0)) {
             revert ZeroRegistry();
         }

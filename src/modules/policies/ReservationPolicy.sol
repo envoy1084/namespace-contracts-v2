@@ -64,6 +64,8 @@ contract ReservationPolicy is NamespaceModule, IPolicyModule {
         if (reservation.account == address(0) && reservation.expiry == 0) {
             return;
         }
+        // Reservation expiry is intentionally timestamp-based sale policy state.
+        // forge-lint: disable-next-line(block-timestamp)
         if (reservation.expiry != 0 && block.timestamp >= reservation.expiry) {
             return;
         }

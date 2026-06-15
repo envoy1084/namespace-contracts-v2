@@ -16,7 +16,9 @@ contract SetAddrToBuyerHook is NamespaceModule, IPostHookModule {
     constructor(address controller_) NamespaceModule(controller_) {}
 
     /// @notice Accept activation configuration without storing hook state.
-    function configure(bytes32, bytes calldata) external view onlyController {}
+    function configure(bytes32, bytes calldata) external view onlyController {
+        // Intentionally no-op.
+    }
 
     /// @inheritdoc IPostHookModule
     function afterMint(NamespaceTypes.MintContext calldata ctx, uint256, bytes calldata runtimeData)
@@ -39,9 +41,13 @@ contract SetAddrToBuyerHook is NamespaceModule, IPostHookModule {
     }
 
     /// @inheritdoc IPostHookModule
-    function afterRenew(NamespaceTypes.RenewContext calldata, bytes calldata) external view onlyController {}
+    function afterRenew(NamespaceTypes.RenewContext calldata, bytes calldata) external view onlyController {
+        // Intentionally no-op.
+    }
 
     function _childNode(bytes32 parentNode, bytes32 labelHash) private pure returns (bytes32) {
+        // Keep the straightforward ENS namehash-style composition for readability.
+        // forge-lint: disable-next-line(asm-keccak256)
         return keccak256(abi.encodePacked(parentNode, labelHash));
     }
 }

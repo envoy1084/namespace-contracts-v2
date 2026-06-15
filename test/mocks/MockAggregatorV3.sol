@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 contract MockAggregatorV3 {
-    uint8 public immutable decimals;
+    uint8 public immutable DECIMALS;
     uint80 public roundId = 1;
     int256 public answer;
     uint256 public startedAt;
@@ -10,10 +10,14 @@ contract MockAggregatorV3 {
     uint80 public answeredInRound = 1;
 
     constructor(uint8 decimals_, int256 answer_) {
-        decimals = decimals_;
+        DECIMALS = decimals_;
         answer = answer_;
         startedAt = block.timestamp;
         updatedAt = block.timestamp;
+    }
+
+    function decimals() external view returns (uint8) {
+        return DECIMALS;
     }
 
     function setRoundData(int256 answer_, uint256 updatedAt_) external {

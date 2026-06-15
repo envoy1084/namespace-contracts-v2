@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 import {RegistryRolesLib} from "@ensv2/registry/libraries/RegistryRolesLib.sol";
 import {PermissionedRegistry} from "@ensv2/registry/PermissionedRegistry.sol";
@@ -19,24 +18,13 @@ import {FixedPricePricing} from "src/modules/pricing/FixedPricePricing.sol";
 import {LengthBasedPricing} from "src/modules/pricing/LengthBasedPricing.sol";
 import {ERC20SplitProcessor} from "src/modules/processors/ERC20SplitProcessor.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
-
-contract MockBenchmarkHCAFactoryBasic is IHCAFactoryBasic {
-    mapping(address hca => address owner) internal _ownerOf;
-
-    function setAccountOwner(address hca, address owner) external {
-        _ownerOf[hca] = owner;
-    }
-
-    function getAccountOwner(address hca) external view returns (address) {
-        return _ownerOf[hca];
-    }
-}
+import {MockENSV2HCAFactoryBasic} from "test/mocks/MockENSV2HCAFactoryBasic.sol";
 
 /// @notice Gas benchmarks for Namespace subname issuance scenarios.
 /// @dev Run only these benchmarks with:
 ///      forge snapshot --match-path 'test/benchmarks/*.t.sol' --snap test/benchmarks/.gas-snapshot
 contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
-    MockBenchmarkHCAFactoryBasic internal hcaFactory;
+    MockENSV2HCAFactoryBasic internal hcaFactory;
     SimpleRegistryMetadata internal metadata;
     PermissionedRegistry internal permissionedRegistry;
 
@@ -73,7 +61,7 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         lengthPricing = new LengthBasedPricing(address(controller));
         splitProcessor = new ERC20SplitProcessor(address(controller));
 
-        hcaFactory = new MockBenchmarkHCAFactoryBasic();
+        hcaFactory = new MockENSV2HCAFactoryBasic();
         metadata = new SimpleRegistryMetadata(hcaFactory);
         permissionedRegistry = new PermissionedRegistry(
             hcaFactory,

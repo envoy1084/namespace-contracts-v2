@@ -34,7 +34,7 @@ contract ERC20SplitProcessor is NamespaceModule, IProcessorModule {
         Split[] memory decoded = abi.decode(configData, (Split[]));
         delete _splits[activationId];
 
-        uint256 totalBps;
+        uint256 totalBps = 0;
         uint256 length = decoded.length;
         for (uint256 i; i < length;) {
             if (decoded[i].recipient == address(0)) {

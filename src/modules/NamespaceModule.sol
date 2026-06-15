@@ -19,9 +19,13 @@ abstract contract NamespaceModule is IConfigurableModule {
 
     /// @notice Restricts functions to the Namespace controller.
     modifier onlyController() {
+        _onlyController();
+        _;
+    }
+
+    function _onlyController() internal view {
         if (msg.sender != CONTROLLER) {
             revert NotController(msg.sender);
         }
-        _;
     }
 }

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 import {RegistryRolesLib} from "@ensv2/registry/libraries/RegistryRolesLib.sol";
 import {PermissionedRegistry} from "@ensv2/registry/PermissionedRegistry.sol";
@@ -12,20 +11,8 @@ import {ERC20PaymentModule} from "src/modules/payment/ERC20PaymentModule.sol";
 import {LabelLengthPolicy} from "src/modules/policies/LabelLengthPolicy.sol";
 import {SaleWindowPolicy} from "src/modules/policies/SaleWindowPolicy.sol";
 import {FixedPricePricing} from "src/modules/pricing/FixedPricePricing.sol";
-import {NoopProcessor} from "src/modules/processors/NoopProcessor.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
-
-contract MockENSV2HCAFactoryBasic is IHCAFactoryBasic {
-    mapping(address hca => address owner) internal _ownerOf;
-
-    function setAccountOwner(address hca, address owner) external {
-        _ownerOf[hca] = owner;
-    }
-
-    function getAccountOwner(address hca) external view returns (address) {
-        return _ownerOf[hca];
-    }
-}
+import {MockENSV2HCAFactoryBasic} from "test/mocks/MockENSV2HCAFactoryBasic.sol";
 
 contract NamespacePermissionedRegistryE2ETest is NamespaceSetUp {
     MockENSV2HCAFactoryBasic internal hcaFactory;

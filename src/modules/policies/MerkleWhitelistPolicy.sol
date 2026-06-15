@@ -72,8 +72,12 @@ contract MerkleWhitelistPolicy is NamespaceModule, IPolicyModule {
 
     function _leaf(address account, bytes32 labelHash, LeafMode leafMode) private pure returns (bytes32) {
         if (leafMode == LeafMode.ACCOUNT) {
+            // OpenZeppelin-compatible double-hashed Merkle leaf.
+            // forge-lint: disable-next-line(asm-keccak256)
             return keccak256(bytes.concat(keccak256(abi.encode(account))));
         }
+        // OpenZeppelin-compatible double-hashed Merkle leaf.
+        // forge-lint: disable-next-line(asm-keccak256)
         return keccak256(bytes.concat(keccak256(abi.encode(account, labelHash))));
     }
 }

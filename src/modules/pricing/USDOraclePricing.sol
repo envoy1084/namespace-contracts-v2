@@ -85,10 +85,14 @@ contract USDOraclePricing is NamespaceModule, IPricingModule {
     }
 
     function _quoteTokenAmount(Params memory stored, uint256 usdAmount) private view returns (uint256) {
+        // Only `answer` and `updatedAt` are needed for quote conversion and staleness checks.
+        // slither-disable-next-line unused-return
         (, int256 answer,, uint256 updatedAt,) = stored.oracle.latestRoundData();
         if (answer <= 0) {
             revert InvalidOraclePrice(answer);
         }
+        // Oracle staleness is intentionally timestamp-based.
+        // forge-lint: disable-next-line(block-timestamp)
         if (stored.maxStaleness != 0 && block.timestamp > updatedAt + stored.maxStaleness) {
             revert StaleOraclePrice(updatedAt, stored.maxStaleness, block.timestamp);
         }
@@ -96,6 +100,8 @@ contract USDOraclePricing is NamespaceModule, IPricingModule {
         uint256 tokenUnit = 10 ** stored.tokenDecimals;
         uint256 oracleUnit = 10 ** stored.oracle.decimals();
         uint256 numerator = usdAmount * tokenUnit * oracleUnit;
+        // casting to uint256 is safe because non-positive oracle answers are rejected above.
+        // forge-lint: disable-next-line(unsafe-typecast)
         uint256 denominator = uint256(answer) * _USD_DECIMALS;
         return _ceilDiv(numerator, denominator);
     }
