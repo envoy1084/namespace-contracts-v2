@@ -59,7 +59,8 @@
 
 ### Phase 4: Hardening
 
-- [ ] Gas snapshots and optimization pass.
+- [x] Gas snapshot baseline.
+- [ ] Gas optimization pass.
 - [x] Add optional module approval registry.
 - [x] Add renewal flow.
 - [x] Add reservation policy module.
@@ -102,3 +103,5 @@
   production deployments that want audited module allowlists.
 - 2026-06-16: Cleaned unsupported Foundry config keys so build/test output no
   longer reports local configuration warnings.
+- 2026-06-16: Generated `.gas-snapshot` baseline for the current 50-test
+  Namespace suite.
