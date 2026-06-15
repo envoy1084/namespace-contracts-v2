@@ -29,6 +29,10 @@ contract MockPermissionedRegistry {
         rootRoles[account] |= roleBitmap;
     }
 
+    function revokeRootRoles(uint256 roleBitmap, address account) external {
+        rootRoles[account] &= ~roleBitmap;
+    }
+
     function hasRootRoles(uint256 roleBitmap, address account) external view returns (bool) {
         return rootRoles[account] & roleBitmap == roleBitmap;
     }

@@ -29,7 +29,7 @@
   - [x] ENSv2 registry `register()` call
   - [x] events and custom errors
   - [x] renewal orchestration
-  - [ ] activation ownership verification beyond root registrar admin
+  - [x] activation ownership transfer and live registry admin verification for management actions
 
 ### Phase 2: First Modules
 
@@ -96,3 +96,5 @@
   modules, ERC20 payment, split processing, ENSv2 registry minting, and hooks.
 - 2026-06-16: Removed Foundry starter Counter contract/tests and updated the
   deploy script to deploy `NamespaceController`.
+- 2026-06-16: Hardened activation management with live registry admin checks
+  for status changes and activation ownership transfers.

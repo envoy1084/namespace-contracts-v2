@@ -14,6 +14,11 @@ interface INamespaceController {
     /// @notice Emitted when an activation is enabled or disabled.
     event ActivationStatusChanged(bytes32 indexed activationId, bool active);
 
+    /// @notice Emitted when activation ownership is transferred.
+    event ActivationOwnershipTransferred(
+        bytes32 indexed activationId, address indexed previousOwner, address indexed newOwner
+    );
+
     /// @notice Emitted after a module is configured for an activation.
     event ModuleConfigured(bytes32 indexed activationId, address indexed module, bytes32 indexed kind);
 
@@ -48,6 +53,11 @@ interface INamespaceController {
     /// @param activationId Activation id.
     /// @param active New active status.
     function setActivationStatus(bytes32 activationId, bool active) external;
+
+    /// @notice Transfer activation ownership to another registry admin.
+    /// @param activationId Activation id.
+    /// @param newOwner New activation owner.
+    function transferActivationOwnership(bytes32 activationId, address newOwner) external;
 
     /// @notice Mint a subname through a stored activation.
     /// @param activationId Activation id.

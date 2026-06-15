@@ -12,6 +12,10 @@ import {FixedPricePricing} from "src/modules/pricing/FixedPricePricing.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
 
 contract NamespaceControllerTest is NamespaceSetUp {
+    event ActivationOwnershipTransferred(
+        bytes32 indexed activationId, address indexed previousOwner, address indexed newOwner
+    );
+
     function test_activate_storesActivationAndConfiguresModules() public {
         bytes32 activationId = _activateDefault();
 
@@ -54,6 +58,51 @@ contract NamespaceControllerTest is NamespaceSetUp {
         );
         vm.prank(accounts.buyer.addr);
         controller.activate(config);
+    }
+
+    function test_setActivationStatus_revertsWhenOwnerLostRegistryAdmin() public {
+        bytes32 activationId = _activateDefault();
+        registry.revokeRootRoles(ROLE_REGISTRAR_ADMIN, accounts.alice.addr);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                NamespaceController.UnauthorizedActivationOwner.selector, accounts.alice.addr, address(registry)
+            )
+        );
+        vm.prank(accounts.alice.addr);
+        controller.setActivationStatus(activationId, false);
+    }
+
+    function test_transferActivationOwnership_requiresNewOwnerRegistryAdmin() public {
+        bytes32 activationId = _activateDefault();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                NamespaceController.UnauthorizedActivationOwner.selector, accounts.buyer.addr, address(registry)
+            )
+        );
+        vm.prank(accounts.alice.addr);
+        controller.transferActivationOwnership(activationId, accounts.buyer.addr);
+    }
+
+    function test_transferActivationOwnership_updatesOwner() public {
+        bytes32 activationId = _activateDefault();
+        registry.grantRootRoles(ROLE_REGISTRAR_ADMIN, accounts.owner.addr);
+
+        vm.expectEmit(true, true, true, true, address(controller));
+        emit ActivationOwnershipTransferred(activationId, accounts.alice.addr, accounts.owner.addr);
+
+        vm.prank(accounts.alice.addr);
+        controller.transferActivationOwnership(activationId, accounts.owner.addr);
+
+        NamespaceTypes.Activation memory activation = controller.getActivation(activationId);
+        assertEq(activation.owner, accounts.owner.addr);
+
+        vm.prank(accounts.owner.addr);
+        controller.setActivationStatus(activationId, false);
+
+        activation = controller.getActivation(activationId);
+        assertFalse(activation.active);
     }
 
     function test_mint_runsModulesCollectsPaymentAndRegistersLabel() public {

@@ -66,6 +66,8 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
     error ZeroRegistry();
     /// @notice Payment processor address is zero.
     error ZeroProcessor();
+    /// @notice Activation owner address is zero.
+    error ZeroActivationOwner();
     /// @notice Activator does not have registry-level authority to create an activation.
     error UnauthorizedActivationOwner(address caller, address registry);
     /// @notice Controller does not have registry minting permissions required by the activation.
@@ -93,9 +95,7 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
         if (config.processor.module == address(0)) {
             revert ZeroProcessor();
         }
-        if (!config.registry.hasRootRoles(_ROLE_REGISTRAR_ADMIN, msg.sender)) {
-            revert UnauthorizedActivationOwner(msg.sender, address(config.registry));
-        }
+        _checkRegistryAdminAuthority(msg.sender, config.registry);
         if (!config.registry.hasRootRoles(_ROLE_REGISTRAR | _ROLE_RENEW, address(this))) {
             revert ControllerMissingRegistryRoles(address(config.registry), _ROLE_REGISTRAR | _ROLE_RENEW);
         }
@@ -128,8 +128,25 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
     function setActivationStatus(bytes32 activationId, bool active) external {
         ActivationData storage activation = _requireActivation(activationId);
         _checkActivationOwner(activationId, activation);
+        _checkRegistryAdminAuthority(activation.owner, activation.registry);
         activation.active = active;
         emit ActivationStatusChanged(activationId, active);
+    }
+
+    /// @inheritdoc INamespaceController
+    function transferActivationOwnership(bytes32 activationId, address newOwner) external {
+        if (newOwner == address(0)) {
+            revert ZeroActivationOwner();
+        }
+
+        ActivationData storage activation = _requireActivation(activationId);
+        _checkActivationOwner(activationId, activation);
+        _checkRegistryAdminAuthority(activation.owner, activation.registry);
+        _checkRegistryAdminAuthority(newOwner, activation.registry);
+
+        address previousOwner = activation.owner;
+        activation.owner = newOwner;
+        emit ActivationOwnershipTransferred(activationId, previousOwner, newOwner);
     }
 
     /// @inheritdoc INamespaceController
@@ -401,6 +418,12 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
     function _checkActivationOwner(bytes32 activationId, ActivationData storage activation) private view {
         if (msg.sender != activation.owner) {
             revert NotActivationOwner(activationId, msg.sender);
+        }
+    }
+
+    function _checkRegistryAdminAuthority(address account, IPermissionedRegistry registry) private view {
+        if (!registry.hasRootRoles(_ROLE_REGISTRAR_ADMIN, account)) {
+            revert UnauthorizedActivationOwner(account, address(registry));
         }
     }
 }
