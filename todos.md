@@ -44,9 +44,9 @@
 
 ### Phase 3: Tests
 
-- [ ] Test fixtures for ENSv2 registry mock/fixture setup.
-- [ ] Unit tests for controller activation.
-- [ ] Unit tests for mint orchestration.
+- [x] Test fixtures for ENSv2 registry mock/fixture setup.
+- [x] Unit tests for controller activation.
+- [x] Unit tests for mint orchestration.
 - [ ] Unit tests for each initial module.
 - [ ] Fuzz tests for labels, durations, pricing tables, and splits.
 - [ ] Integration tests for policy + pricing + payment + register flow.
@@ -70,3 +70,5 @@
 - 2026-06-16: Added first activation modules: sale window policy, label length
   policy, fixed price pricing, ERC20 payment collection, no-op processor, and
   ERC20 split processor.
+- 2026-06-16: Added initial Foundry fixtures and tests covering activation,
+  mint orchestration, sale window policy, and label length policy.
