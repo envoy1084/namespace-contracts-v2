@@ -18,12 +18,6 @@ runs = 200
 [invariant]
 runs = 200
 
-# CI-specific profile
-[profile.ci]
-verbosity = 4
-
-[profile.ci.fuzz]
-runs = 2000
-
-[profile.ci.invariant]
-runs = 2000
+# Linting
+[lint]
+severity = ["high", "med", "low", "info", "gas", "code-size"]
