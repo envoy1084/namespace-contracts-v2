@@ -33,12 +33,13 @@
 
 ### Phase 2: First Modules
 
-- [ ] `SaleWindowPolicy`
-- [ ] `LabelLengthPolicy`
-- [ ] `FixedPricePricing`
+- [x] `SaleWindowPolicy`
+- [x] `LabelLengthPolicy`
+- [x] `FixedPricePricing`
 - [ ] `LengthBasedPricing`
-- [ ] `ERC20PaymentModule`
-- [ ] `SplitProcessor`
+- [x] `ERC20PaymentModule`
+- [x] `SplitProcessor`
+- [x] `NoopProcessor`
 - [ ] `SetAddrToBuyerHook`
 
 ### Phase 3: Tests
@@ -66,3 +67,6 @@
 - 2026-06-16: Started Phase 1. Created core architecture scaffolding from docs:
   remappings, shared types, module interfaces, module base, and initial
   activation/mint controller.
+- 2026-06-16: Added first activation modules: sale window policy, label length
+  policy, fixed price pricing, ERC20 payment collection, no-op processor, and
+  ERC20 split processor.
