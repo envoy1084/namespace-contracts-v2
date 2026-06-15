@@ -45,6 +45,7 @@
 - [x] `MerkleWhitelistPolicy`
 - [x] `ERC20BalanceGatePolicy`
 - [x] `ERC721BalanceGatePolicy`
+- [x] `USDOraclePricing`
 
 ### Phase 3: Tests
 
@@ -64,7 +65,7 @@
 - [x] Add reservation policy module.
 - [x] Add ERC721/ERC20 gate policies.
 - [x] Add Merkle whitelist policy.
-- [ ] Add USD oracle pricing.
+- [x] Add USD oracle pricing.
 
 ## Progress Log
 
@@ -87,3 +88,5 @@
   leaf modes, separate mint/renew roots, disabled-root bypasses, and unit tests.
 - 2026-06-16: Added ERC20 and ERC721 balance gate policies for mint and
   renewal checks, plus mock-backed unit tests.
+- 2026-06-16: Added `USDOraclePricing` for fixed USD-denominated mint and
+  renewal prices converted through Chainlink-style token/USD oracles.
