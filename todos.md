@@ -60,7 +60,7 @@
 ### Phase 4: Hardening
 
 - [ ] Gas snapshots and optimization pass.
-- [ ] Add module registry / approved modules if needed.
+- [x] Add optional module approval registry.
 - [x] Add renewal flow.
 - [x] Add reservation policy module.
 - [x] Add ERC721/ERC20 gate policies.
@@ -98,3 +98,5 @@
   deploy script to deploy `NamespaceController`.
 - 2026-06-16: Hardened activation management with live registry admin checks
   for status changes and activation ownership transfers.
+- 2026-06-16: Added optional controller-level module approval enforcement for
+  production deployments that want audited module allowlists.

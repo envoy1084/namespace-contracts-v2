@@ -15,6 +15,8 @@ contract NamespaceControllerTest is NamespaceSetUp {
     event ActivationOwnershipTransferred(
         bytes32 indexed activationId, address indexed previousOwner, address indexed newOwner
     );
+    event ModuleApprovalRequiredSet(bool required);
+    event ModuleApprovalSet(address indexed module, bool approved);
 
     function test_activate_storesActivationAndConfiguresModules() public {
         bytes32 activationId = _activateDefault();
@@ -103,6 +105,39 @@ contract NamespaceControllerTest is NamespaceSetUp {
 
         activation = controller.getActivation(activationId);
         assertFalse(activation.active);
+    }
+
+    function test_activate_revertsWhenModuleApprovalRequiredAndModuleIsUnapproved() public {
+        vm.prank(accounts.owner.addr);
+        controller.setModuleApprovalRequired(true);
+
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                NamespaceController.UnapprovedModule.selector,
+                address(saleWindowPolicy),
+                controller.MODULE_KIND_POLICY()
+            )
+        );
+        vm.prank(accounts.alice.addr);
+        controller.activate(config);
+    }
+
+    function test_activate_succeedsWhenAllModulesAreApproved() public {
+        _approveDefaultModules();
+
+        vm.expectEmit(false, false, false, true, address(controller));
+        emit ModuleApprovalRequiredSet(true);
+        vm.prank(accounts.owner.addr);
+        controller.setModuleApprovalRequired(true);
+
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        vm.prank(accounts.alice.addr);
+        bytes32 activationId = controller.activate(config);
+
+        NamespaceTypes.Activation memory activation = controller.getActivation(activationId);
+        assertEq(activation.owner, accounts.alice.addr);
     }
 
     function test_mint_runsModulesCollectsPaymentAndRegistersLabel() public {
@@ -228,5 +263,21 @@ contract NamespaceControllerTest is NamespaceSetUp {
         vm.stopPrank();
 
         assertEq(registry.ownerOf(tokenId), reservedBuyer.addr);
+    }
+
+    function _approveDefaultModules() private {
+        _approveModule(address(saleWindowPolicy));
+        _approveModule(address(labelLengthPolicy));
+        _approveModule(address(fixedPricePricing));
+        _approveModule(address(erc20Payment));
+        _approveModule(address(noopProcessor));
+        _approveModule(address(postHook));
+    }
+
+    function _approveModule(address module) private {
+        vm.expectEmit(true, false, false, true, address(controller));
+        emit ModuleApprovalSet(module, true);
+        vm.prank(accounts.owner.addr);
+        controller.setModuleApproval(module, true);
     }
 }

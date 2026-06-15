@@ -52,7 +52,11 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
     /// @notice Total number of activations created by this controller.
     uint256 public activationNonce;
 
+    /// @notice Whether activation modules must be approved by the controller owner.
+    bool public moduleApprovalRequired;
+
     mapping(bytes32 activationId => ActivationData activation) private _activations;
+    mapping(address module => bool approved) public approvedModules;
 
     /// @notice Activation does not exist.
     error ActivationNotFound(bytes32 activationId);
@@ -62,6 +66,8 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
     error NotActivationOwner(bytes32 activationId, address caller);
     /// @notice Module address is zero.
     error ZeroModule(bytes32 kind);
+    /// @notice Module is not approved while approval enforcement is enabled.
+    error UnapprovedModule(address module, bytes32 kind);
     /// @notice Registry address is zero.
     error ZeroRegistry();
     /// @notice Payment processor address is zero.
@@ -147,6 +153,21 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
         address previousOwner = activation.owner;
         activation.owner = newOwner;
         emit ActivationOwnershipTransferred(activationId, previousOwner, newOwner);
+    }
+
+    /// @inheritdoc INamespaceController
+    function setModuleApprovalRequired(bool required) external onlyOwner {
+        moduleApprovalRequired = required;
+        emit ModuleApprovalRequiredSet(required);
+    }
+
+    /// @inheritdoc INamespaceController
+    function setModuleApproval(address module, bool approved) external onlyOwner {
+        if (module == address(0)) {
+            revert ZeroModule(bytes32(0));
+        }
+        approvedModules[module] = approved;
+        emit ModuleApprovalSet(module, approved);
     }
 
     /// @inheritdoc INamespaceController
@@ -294,9 +315,7 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
         uint256 length = configs.length;
         for (uint256 i; i < length; ++i) {
             NamespaceTypes.ModuleConfig calldata config = configs[i];
-            if (config.module == address(0)) {
-                revert ZeroModule(kind);
-            }
+            _checkModule(config.module, kind);
             modules.push(config.module);
             IConfigurableModule(config.module).configure(activationId, config.configData);
             emit ModuleConfigured(activationId, config.module, kind);
@@ -306,11 +325,18 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
     function _configureSingleModule(bytes32 activationId, bytes32 kind, NamespaceTypes.ModuleConfig calldata config)
         private
     {
-        if (config.module == address(0)) {
-            revert ZeroModule(kind);
-        }
+        _checkModule(config.module, kind);
         IConfigurableModule(config.module).configure(activationId, config.configData);
         emit ModuleConfigured(activationId, config.module, kind);
+    }
+
+    function _checkModule(address module, bytes32 kind) private view {
+        if (module == address(0)) {
+            revert ZeroModule(kind);
+        }
+        if (moduleApprovalRequired && !approvedModules[module]) {
+            revert UnapprovedModule(module, kind);
+        }
     }
 
     function _checkMintPolicies(

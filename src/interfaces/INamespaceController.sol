@@ -22,6 +22,12 @@ interface INamespaceController {
     /// @notice Emitted after a module is configured for an activation.
     event ModuleConfigured(bytes32 indexed activationId, address indexed module, bytes32 indexed kind);
 
+    /// @notice Emitted when module approval enforcement is enabled or disabled.
+    event ModuleApprovalRequiredSet(bool required);
+
+    /// @notice Emitted when a module approval status changes.
+    event ModuleApprovalSet(address indexed module, bool approved);
+
     /// @notice Emitted after a subname is minted.
     event SubnameMinted(
         bytes32 indexed activationId,
@@ -58,6 +64,15 @@ interface INamespaceController {
     /// @param activationId Activation id.
     /// @param newOwner New activation owner.
     function transferActivationOwnership(bytes32 activationId, address newOwner) external;
+
+    /// @notice Enable or disable controller-level module approval enforcement.
+    /// @param required Whether activations must use approved module contracts.
+    function setModuleApprovalRequired(bool required) external;
+
+    /// @notice Approve or revoke a module contract.
+    /// @param module Module contract address.
+    /// @param approved Whether the module is approved.
+    function setModuleApproval(address module, bool approved) external;
 
     /// @notice Mint a subname through a stored activation.
     /// @param activationId Activation id.
