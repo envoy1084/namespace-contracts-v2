@@ -55,7 +55,7 @@
 - [x] Unit tests for each initial module.
 - [x] Fuzz tests for labels, durations, pricing tables, and splits.
 - [x] Integration tests for policy + pricing + payment + register flow.
-- [ ] End-to-end tests using ENSv2 `PermissionedRegistry` where practical.
+- [x] End-to-end tests using ENSv2 `PermissionedRegistry` where practical.
 
 ### Phase 4: Hardening
 
@@ -105,3 +105,5 @@
   longer reports local configuration warnings.
 - 2026-06-16: Generated `.gas-snapshot` baseline for the current 50-test
   Namespace suite.
+- 2026-06-16: Added an end-to-end test that mints and renews through ENSv2's
+  real `PermissionedRegistry` implementation.
