@@ -3,9 +3,9 @@
 ## Current Status
 
 - [x] Research ENSv2 architecture and document Namespace activation-based module architecture.
-- [ ] Implement production Namespace V2 contracts.
-- [ ] Add comprehensive unit, fuzz, integration, and end-to-end tests.
-- [ ] Optimize gas after core behavior and tests are in place.
+- [x] Implement production Namespace V2 contracts.
+- [x] Add comprehensive unit, fuzz, integration, and end-to-end tests.
+- [x] Optimize gas after core behavior and tests are in place.
 
 ## Implementation Roadmap
 
@@ -13,7 +13,7 @@
 
 - [x] Configure Foundry remappings for local `lib/` dependencies and ENSv2 source imports.
 - [x] Add shared Namespace structs and errors.
-- [ ] Add module interfaces:
+- [x] Add module interfaces:
   - [x] `IConfigurableModule`
   - [x] `IPolicyModule`
   - [x] `IPricingModule`
@@ -109,3 +109,5 @@
   real `PermissionedRegistry` implementation.
 - 2026-06-16: Applied low-risk unchecked loop increment optimizations in
   production module loops and refreshed `.gas-snapshot`.
+- 2026-06-16: Completed roadmap audit and marked top-level implementation,
+  test, and optimization rollups complete.
