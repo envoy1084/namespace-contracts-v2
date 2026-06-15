@@ -2,12 +2,14 @@
 pragma solidity ^0.8.26;
 
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 import {NamespaceController} from "src/NamespaceController.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
+import {ERC20PaymentModule} from "src/modules/payment/ERC20PaymentModule.sol";
+import {ReservationPolicy} from "src/modules/policies/ReservationPolicy.sol";
 import {FixedPricePricing} from "src/modules/pricing/FixedPricePricing.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
-import {ERC20PaymentModule} from "src/modules/payment/ERC20PaymentModule.sol";
 
 contract NamespaceControllerTest is NamespaceSetUp {
     function test_activate_storesActivationAndConfiguresModules() public {
@@ -128,5 +130,54 @@ contract NamespaceControllerTest is NamespaceSetUp {
         );
         controller.renew(activationId, "pay", 30 days, runtimeData);
         vm.stopPrank();
+    }
+
+    function test_mint_respectsReservationPolicy() public {
+        ReservationPolicy reservationPolicy = new ReservationPolicy(address(controller));
+        Vm.Wallet memory reservedBuyer = vm.createWallet("reservedBuyer");
+        token.mint(reservedBuyer.addr, 1_000 ether);
+
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        NamespaceTypes.ModuleConfig[] memory policies = new NamespaceTypes.ModuleConfig[](3);
+        policies[0] = config.policies[0];
+        policies[1] = config.policies[1];
+
+        ReservationPolicy.ReservationInput[] memory reservations = new ReservationPolicy.ReservationInput[](1);
+        reservations[0] = ReservationPolicy.ReservationInput({
+            labelHash: keccak256(bytes("vip")), account: reservedBuyer.addr, expiry: uint64(block.timestamp + 1 days)
+        });
+        policies[2] = NamespaceTypes.ModuleConfig({
+            module: address(reservationPolicy),
+            configData: abi.encode(ReservationPolicy.Params({reservations: reservations}))
+        });
+        config.policies = policies;
+
+        vm.prank(accounts.alice.addr);
+        bytes32 activationId = controller.activate(config);
+
+        NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
+        runtimeData.policyData = new bytes[](3);
+
+        vm.startPrank(accounts.buyer.addr);
+        token.approve(address(erc20Payment), 100 ether);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ReservationPolicy.ReservedLabel.selector,
+                activationId,
+                "vip",
+                reservedBuyer.addr,
+                uint64(block.timestamp + 1 days),
+                accounts.buyer.addr
+            )
+        );
+        controller.mint(activationId, "vip", 365 days, runtimeData);
+        vm.stopPrank();
+
+        vm.startPrank(reservedBuyer.addr);
+        token.approve(address(erc20Payment), 100 ether);
+        uint256 tokenId = controller.mint(activationId, "vip", 365 days, runtimeData);
+        vm.stopPrank();
+
+        assertEq(registry.ownerOf(tokenId), reservedBuyer.addr);
     }
 }

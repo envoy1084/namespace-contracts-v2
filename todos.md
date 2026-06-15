@@ -41,6 +41,7 @@
 - [x] `SplitProcessor`
 - [x] `NoopProcessor`
 - [x] `SetAddrToBuyerHook`
+- [x] `ReservationPolicy`
 
 ### Phase 3: Tests
 
@@ -57,7 +58,7 @@
 - [ ] Gas snapshots and optimization pass.
 - [ ] Add module registry / approved modules if needed.
 - [x] Add renewal flow.
-- [ ] Add reservation flow.
+- [x] Add reservation policy module.
 - [ ] Add ERC721/ERC20 gate policies.
 - [ ] Add Merkle whitelist policy.
 - [ ] Add USD oracle pricing.
@@ -77,3 +78,5 @@
 - 2026-06-16: Added `SetAddrToBuyerHook` and resolver hook tests.
 - 2026-06-16: Added controller renewal orchestration with policy, pricing,
   payment, processor, registry renewal, post-hook execution, and unit tests.
+- 2026-06-16: Added `ReservationPolicy` for activation-scoped reserved labels,
+  with standalone policy tests and controller integration coverage.
