@@ -94,3 +94,5 @@
   tests for label/duration minting, length pricing buckets, and ERC20 splits.
 - 2026-06-16: Added an integration test for stacked policies, multiple pricing
   modules, ERC20 payment, split processing, ENSv2 registry minting, and hooks.
+- 2026-06-16: Removed Foundry starter Counter contract/tests and updated the
+  deploy script to deploy `NamespaceController`.
