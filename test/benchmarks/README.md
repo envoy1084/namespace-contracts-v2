@@ -2,6 +2,8 @@
 
 These benchmarks isolate Namespace subname issuance paths. Activations and approvals are created in `setUp()`, then each benchmark test performs one `controller.mint(...)`.
 
+Each benchmark is end to end for the Namespace mint path: buyer calls `NamespaceController.mint`, configured policies are checked, pricing modules are evaluated, ERC20 payment is collected, the processor and post-hooks run when configured, and the mint is executed against the official ENSv2 `PermissionedRegistry` implementation from `lib/contracts-v2`.
+
 Reference: [Foundry gas tracking](https://www.getfoundry.sh/forge/gas-tracking).
 
 Run only benchmark tests:
@@ -18,14 +20,14 @@ Assumptions:
 
 | Benchmark | Gas used | Gas consumed @ 1 gwei (gwei) | USD @ 0.1 gwei | USD @ 0.5 gwei | USD @ 1 gwei | USD @ 3 gwei | USD @ 5 gwei |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `testBenchmark_freeMint_noPolicyNoPricing()` | 199423 | 199423 | $0.059827 | $0.299135 | $0.598269 | $1.794807 | $2.991345 |
-| `testBenchmark_freeMint_onePolicy()` | 211729 | 211729 | $0.063519 | $0.317594 | $0.635187 | $1.905561 | $3.175935 |
-| `testBenchmark_freeMint_threePolicies()` | 244039 | 244039 | $0.073212 | $0.366059 | $0.732117 | $2.196351 | $3.660585 |
-| `testBenchmark_freeMint_fivePolicies()` | 281105 | 281105 | $0.084332 | $0.421658 | $0.843315 | $2.529945 | $4.216575 |
-| `testBenchmark_erc20FixedPrice_noPolicy()` | 250030 | 250030 | $0.075009 | $0.375045 | $0.750090 | $2.250270 | $3.750450 |
-| `testBenchmark_lengthPricing_twoPolicies()` | 293150 | 293150 | $0.087945 | $0.439725 | $0.879450 | $2.638350 | $4.397250 |
-| `testBenchmark_erc20Split_threePolicies()` | 329125 | 329125 | $0.098738 | $0.493688 | $0.987375 | $2.962125 | $4.936875 |
-| `testBenchmark_fullStack_fivePoliciesTwoPricingSplitHook()` | 505912 | 505912 | $0.151774 | $0.758868 | $1.517736 | $4.553208 | $7.588680 |
+| `testBenchmark_freeMint_noPolicyNoPricing()` | 202829 | 202829 | $0.060849 | $0.304244 | $0.608487 | $1.825461 | $3.042435 |
+| `testBenchmark_freeMint_onePolicy()` | 215135 | 215135 | $0.064541 | $0.322703 | $0.645405 | $1.936215 | $3.227025 |
+| `testBenchmark_freeMint_threePolicies()` | 247445 | 247445 | $0.074233 | $0.371167 | $0.742335 | $2.227005 | $3.711675 |
+| `testBenchmark_freeMint_fivePolicies()` | 284511 | 284511 | $0.085353 | $0.426767 | $0.853533 | $2.560599 | $4.267665 |
+| `testBenchmark_erc20FixedPrice_noPolicy()` | 253436 | 253436 | $0.076031 | $0.380154 | $0.760308 | $2.280924 | $3.801540 |
+| `testBenchmark_lengthPricing_twoPolicies()` | 296556 | 296556 | $0.088967 | $0.444834 | $0.889668 | $2.669004 | $4.448340 |
+| `testBenchmark_erc20Split_threePolicies()` | 332531 | 332531 | $0.099759 | $0.498797 | $0.997593 | $2.992779 | $4.987965 |
+| `testBenchmark_fullStack_fivePoliciesTwoPricingSplitHook()` | 509318 | 509318 | $0.152795 | $0.763977 | $1.527954 | $4.583862 | $7.639770 |
 
 ## Scenario Notes
 

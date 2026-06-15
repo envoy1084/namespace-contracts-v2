@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
+import {RegistryRolesLib} from "@ensv2/registry/libraries/RegistryRolesLib.sol";
+import {PermissionedRegistry} from "@ensv2/registry/PermissionedRegistry.sol";
+import {SimpleRegistryMetadata} from "@ensv2/registry/SimpleRegistryMetadata.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
@@ -16,10 +20,26 @@ import {LengthBasedPricing} from "src/modules/pricing/LengthBasedPricing.sol";
 import {ERC20SplitProcessor} from "src/modules/processors/ERC20SplitProcessor.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
 
+contract MockBenchmarkHCAFactoryBasic is IHCAFactoryBasic {
+    mapping(address hca => address owner) internal _ownerOf;
+
+    function setAccountOwner(address hca, address owner) external {
+        _ownerOf[hca] = owner;
+    }
+
+    function getAccountOwner(address hca) external view returns (address) {
+        return _ownerOf[hca];
+    }
+}
+
 /// @notice Gas benchmarks for Namespace subname issuance scenarios.
 /// @dev Run only these benchmarks with:
 ///      forge snapshot --match-path 'test/benchmarks/*.t.sol' --snap test/benchmarks/.gas-snapshot
 contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
+    MockBenchmarkHCAFactoryBasic internal hcaFactory;
+    SimpleRegistryMetadata internal metadata;
+    PermissionedRegistry internal permissionedRegistry;
+
     ERC20BalanceGatePolicy internal erc20GatePolicy;
     ReservationPolicy internal reservationPolicy;
     MerkleWhitelistPolicy internal whitelistPolicy;
@@ -52,6 +72,20 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         whitelistPolicy = new MerkleWhitelistPolicy(address(controller));
         lengthPricing = new LengthBasedPricing(address(controller));
         splitProcessor = new ERC20SplitProcessor(address(controller));
+
+        hcaFactory = new MockBenchmarkHCAFactoryBasic();
+        metadata = new SimpleRegistryMetadata(hcaFactory);
+        permissionedRegistry = new PermissionedRegistry(
+            hcaFactory,
+            metadata,
+            address(this),
+            RegistryRolesLib.ROLE_REGISTRAR_ADMIN | RegistryRolesLib.ROLE_RENEW_ADMIN
+                | RegistryRolesLib.ROLE_REGISTER_RESERVED_ADMIN
+        );
+        permissionedRegistry.grantRootRoles(RegistryRolesLib.ROLE_REGISTRAR_ADMIN, accounts.alice.addr);
+        permissionedRegistry.grantRootRoles(
+            RegistryRolesLib.ROLE_REGISTRAR | RegistryRolesLib.ROLE_RENEW, address(controller)
+        );
 
         freeActivationId = _activate("free", 0, 0, false, false, false);
         onePolicyActivationId = _activate("onepolicy", 1, 0, false, false, false);
@@ -110,8 +144,9 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
     function _mint(bytes32 activationId, string memory label, NamespaceTypes.RuntimeData memory runtimeData) private {
         vm.prank(accounts.buyer.addr);
         uint256 tokenId = controller.mint(activationId, label, 365 days, runtimeData);
-        IPermissionedRegistry.State memory state = registry.getState(tokenId);
+        IPermissionedRegistry.State memory state = permissionedRegistry.getState(tokenId);
         assertEq(uint256(state.status), uint256(IPermissionedRegistry.Status.REGISTERED));
+        assertEq(permissionedRegistry.ownerOf(tokenId), accounts.buyer.addr);
     }
 
     function _activate(
@@ -123,7 +158,7 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         bool useMerkleProof
     ) private returns (bytes32 activationId) {
         NamespaceTypes.ActivationConfig memory config = NamespaceTypes.ActivationConfig({
-            registry: IPermissionedRegistry(address(registry)),
+            registry: IPermissionedRegistry(address(permissionedRegistry)),
             parentNode: keccak256("alice.eth"),
             resolver: address(0xBEEF),
             buyerRoleBitmap: BUYER_ROLES,
