@@ -1,3 +1,6 @@
-forge-std/=dependencies/forge-std-1.9.7/src/
+@ens/contracts/=lib/contracts-v2/contracts/lib/ens-contracts/contracts/
+@ensv2/=lib/contracts-v2/contracts/src/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+forge-std/=lib/forge-std/src/
 src/=src/
 test/=test/
