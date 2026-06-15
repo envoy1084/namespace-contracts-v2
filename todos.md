@@ -40,7 +40,7 @@
 - [x] `ERC20PaymentModule`
 - [x] `SplitProcessor`
 - [x] `NoopProcessor`
-- [ ] `SetAddrToBuyerHook`
+- [x] `SetAddrToBuyerHook`
 
 ### Phase 3: Tests
 
@@ -74,3 +74,4 @@
   mint orchestration, sale window policy, and label length policy.
 - 2026-06-16: Added `LengthBasedPricing` and module tests for fixed pricing,
   length pricing, ERC20 payment collection, and ERC20 split processing.
+- 2026-06-16: Added `SetAddrToBuyerHook` and resolver hook tests.
