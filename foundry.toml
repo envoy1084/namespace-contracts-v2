@@ -13,21 +13,17 @@ gas_reports = ["*"]
 # Fuzz testing
 [fuzz]
 runs = 200
-timeout = 300 # seconds
 
 # Invariant testing
 [invariant]
 runs = 200
-min_successful = 40 # 20% of runs
-timeout = 600
 
 # CI-specific profile
 [profile.ci]
 verbosity = 4
-timeout = 1200        # allow longer CI tests
-fuzz_runs = 2000
-invariant_runs = 2000
 
-# Formatting & linting
-[fmt]
-auto_format = true
+[profile.ci.fuzz]
+runs = 2000
+
+[profile.ci.invariant]
+runs = 2000

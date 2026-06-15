@@ -100,3 +100,5 @@
   for status changes and activation ownership transfers.
 - 2026-06-16: Added optional controller-level module approval enforcement for
   production deployments that want audited module allowlists.
+- 2026-06-16: Cleaned unsupported Foundry config keys so build/test output no
+  longer reports local configuration warnings.
