@@ -42,6 +42,7 @@
 - [x] `NoopProcessor`
 - [x] `SetAddrToBuyerHook`
 - [x] `ReservationPolicy`
+- [x] `MerkleWhitelistPolicy`
 
 ### Phase 3: Tests
 
@@ -60,7 +61,7 @@
 - [x] Add renewal flow.
 - [x] Add reservation policy module.
 - [ ] Add ERC721/ERC20 gate policies.
-- [ ] Add Merkle whitelist policy.
+- [x] Add Merkle whitelist policy.
 - [ ] Add USD oracle pricing.
 
 ## Progress Log
@@ -80,3 +81,5 @@
   payment, processor, registry renewal, post-hook execution, and unit tests.
 - 2026-06-16: Added `ReservationPolicy` for activation-scoped reserved labels,
   with standalone policy tests and controller integration coverage.
+- 2026-06-16: Added `MerkleWhitelistPolicy` with account and account-label
+  leaf modes, separate mint/renew roots, disabled-root bypasses, and unit tests.
