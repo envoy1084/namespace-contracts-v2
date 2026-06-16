@@ -7,12 +7,16 @@ ETH_PRICE_USD="${ETH_PRICE_USD:-3000}"
 
 forge snapshot --match-path 'test/benchmarks/*.t.sol' --snap "$SNAPSHOT"
 
-cat >"$OUTPUT" <<'MARKDOWN'
+tmp_output="$(mktemp)"
+trap 'rm -f "$tmp_output"' EXIT
+
+{
+  cat <<'MARKDOWN'
 # Namespace Issuance Gas Benchmarks
 
-These benchmarks isolate Namespace subname issuance paths. Activations and approvals are created in `setUp()`, then each benchmark test performs one `controller.mint(...)`.
+These benchmarks measure activation setup, end-to-end minting, and individual module functions for Namespace subname issuance.
 
-Each benchmark is end to end for the Namespace mint path: buyer calls `NamespaceController.mint`, configured policies are checked, pricing modules are evaluated, ERC20 payment is collected, the processor and post-hooks run when configured, and the mint is executed against the official ENSv2 `PermissionedRegistry` implementation from `lib/contracts-v2`.
+The minting benchmarks are end to end for the Namespace mint path: buyer calls `NamespaceController.mint`, configured policies are checked, pricing modules are evaluated, ERC20 payment is collected, the processor and post-hooks run when configured, and the mint is executed against the official ENSv2 `PermissionedRegistry` implementation from `lib/contracts-v2`.
 
 Reference: [Foundry gas tracking](https://www.getfoundry.sh/forge/gas-tracking).
 
@@ -22,64 +26,94 @@ Run and regenerate this file:
 ./scripts/generate-benchmarks.sh
 ```
 
-Assumptions:
+## Assumptions
 
 MARKDOWN
 
-{
   echo "- ETH price: \`\$$ETH_PRICE_USD\`"
   echo "- USD cost formula: \`gasUsed * gasPriceGwei * 1e-9 * ETH_PRICE_USD\`"
   echo "- \`Gas consumed @ 1 gwei\` is the transaction fee in gwei at a 1 gwei gas price."
+  echo "- Reservation and whitelist set sizes are represented by Merkle proof depth. Activation stores one root, so activation gas is intentionally flat across 10, 100, 200, or 1000-entry sets."
+  echo '- Resolver record benchmarks use repeated `SetAddrToBuyerHook` addr writes because the current hook surface benchmarks resolver post-hook count, not distinct resolver record types.'
   echo
-  echo "| Benchmark | Gas used | Gas consumed @ 1 gwei (gwei) | USD @ 0.1 gwei | USD @ 0.5 gwei | USD @ 1 gwei | USD @ 3 gwei | USD @ 5 gwei |"
-  echo "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
-} >>"$OUTPUT"
+} >"$tmp_output"
 
-awk -v eth="$ETH_PRICE_USD" '
-  function usd(gas, gwei) {
-    return gas * gwei * 1e-9 * eth
-  }
+append_table() {
+  local title="$1"
+  local pattern="$2"
+  local strip_pattern="$3"
+
   {
-    name=$1
-    sub(/NamespaceIssuanceGasBenchmarks:/, "", name)
-    gas=$3
-    gsub(/[()]/, "", gas)
-    rows[name]=gas
-  }
-  END {
-    order[1]="testBenchmark_freeMint_noPolicyNoPricing()"
-    order[2]="testBenchmark_freeMint_onePolicy()"
-    order[3]="testBenchmark_freeMint_threePolicies()"
-    order[4]="testBenchmark_freeMint_fivePolicies()"
-    order[5]="testBenchmark_erc20FixedPrice_noPolicy()"
-    order[6]="testBenchmark_lengthPricing_twoPolicies()"
-    order[7]="testBenchmark_erc20Split_threePolicies()"
-    order[8]="testBenchmark_fullStack_fivePoliciesTwoPricingSplitHook()"
+    echo "## $title"
+    echo
+    echo "| Benchmark | Scenario | Gas used | Gas consumed @ 1 gwei (gwei) | USD @ 0.1 gwei | USD @ 0.5 gwei | USD @ 1 gwei | USD @ 3 gwei | USD @ 5 gwei |"
+    echo "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+  } >>"$tmp_output"
 
-    for (i = 1; i <= 8; i++) {
-      name=order[i]
-      gas=rows[name]
-      if (gas == "") {
-        continue
-      }
-      printf "| `%s` | %d | %d | $%.6f | $%.6f | $%.6f | $%.6f | $%.6f |\n", \
-        name, gas, gas, usd(gas, 0.1), usd(gas, 0.5), usd(gas, 1), usd(gas, 3), usd(gas, 5)
+  awk -v eth="$ETH_PRICE_USD" -v pattern="$pattern" -v strip="$strip_pattern" '
+    function usd(gas, gwei) {
+      return gas * gwei * 1e-9 * eth
     }
-  }
-' "$SNAPSHOT" >>"$OUTPUT"
+    function humanize(value, out, i, c, prev) {
+      sub(strip, "", value)
+      sub(/\(\)$/, "", value)
+      gsub(/_/, " ", value)
+      out = substr(value, 1, 1)
+      for (i = 2; i <= length(value); i++) {
+        c = substr(value, i, 1)
+        prev = substr(value, i - 1, 1)
+        if (c ~ /[[:upper:]]/ && prev ~ /[[:lower:][:digit:]]/) {
+          out = out " "
+        }
+        out = out c
+      }
+      return out
+    }
+    $1 ~ pattern {
+      name=$1
+      sub(/^NamespaceIssuanceGasBenchmarks:/, "", name)
+      gas=$3
+      gsub(/[()]/, "", gas)
+      printf "| `%s` | %s | %d | %d | $%.6f | $%.6f | $%.6f | $%.6f | $%.6f |\n", \
+        name, humanize(name), gas, gas, usd(gas, 0.1), usd(gas, 0.5), usd(gas, 1), usd(gas, 3), usd(gas, 5)
+    }
+  ' "$SNAPSHOT" >>"$tmp_output"
 
-cat >>"$OUTPUT" <<'MARKDOWN'
+  echo >>"$tmp_output"
+}
 
+append_table "Activation Benchmarks" \
+  "^NamespaceIssuanceGasBenchmarks:testBenchmark_activation_" \
+  "^testBenchmark_activation_[0-9]+_"
+
+append_table "Minting Benchmarks" \
+  "^NamespaceIssuanceGasBenchmarks:testBenchmark_mint_" \
+  "^testBenchmark_mint_[0-9]+_"
+
+append_table "Policy Function Profile" \
+  "^NamespaceIssuanceGasBenchmarks:testBenchmark_profile_policy_" \
+  "^testBenchmark_profile_policy_[0-9]+_"
+
+append_table "Pricing Function Profile" \
+  "^NamespaceIssuanceGasBenchmarks:testBenchmark_profile_pricing_" \
+  "^testBenchmark_profile_pricing_[0-9]+_"
+
+append_table "Payment, Processor, And Hook Function Profile" \
+  "^NamespaceIssuanceGasBenchmarks:testBenchmark_profile_(payment|processor|hook)_" \
+  "^testBenchmark_profile_(payment|processor|hook)_[0-9]+_"
+
+cat <<'MARKDOWN' >>"$tmp_output"
 ## Scenario Notes
 
-| Benchmark | Scenario |
+| Area | Notes |
 | --- | --- |
-| `testBenchmark_freeMint_noPolicyNoPricing()` | Free subname mint with no policies, no pricing modules, no split processor, and no hooks. |
-| `testBenchmark_freeMint_onePolicy()` | Free mint with one sale-window policy. |
-| `testBenchmark_freeMint_threePolicies()` | Free mint with sale-window, label-length, and ERC20 balance-gate policies. |
-| `testBenchmark_freeMint_fivePolicies()` | Free mint with sale-window, label-length, ERC20 gate, reservation, and Merkle whitelist policies. |
-| `testBenchmark_erc20FixedPrice_noPolicy()` | ERC20 fixed-price mint with no policies and direct treasury payment. |
-| `testBenchmark_lengthPricing_twoPolicies()` | Mint with sale-window and label-length policies, fixed pricing plus length-based pricing, and direct treasury payment. |
-| `testBenchmark_erc20Split_threePolicies()` | Mint with three policies, ERC20 fixed pricing, ERC20 payment collection, and split processor payout. |
-| `testBenchmark_fullStack_fivePoliciesTwoPricingSplitHook()` | Mint with five policies, fixed plus length pricing, ERC20 split processing, and one post-mint hook. |
+| Activations | Activation benchmarks call `NamespaceController.activate` with the named policy, pricing, processor, and hook configuration. |
+| Minting | Minting benchmarks execute one `NamespaceController.mint` transaction after activation setup in `setUp()`. |
+| Reservations | Reservation proof scenarios use proofs for the named set size. Larger sets increase proof depth and mint gas, while activation gas remains root-only. |
+| Whitelists | Whitelist scenarios use `ACCOUNT_LABEL` leaves so both buyer and requested label are proven. |
+| Resolver hooks | 1, 3, and 5 record scenarios benchmark 1, 3, and 5 post-mint resolver addr hook calls. |
+| Full stack | The full-stack benchmark combines sale window, label length, ERC20 gate, reservation, whitelist, class pricing, fixed pricing, length pricing, ERC20 payment, split processing, and five resolver hooks. |
+| Function profiles | Profile rows call individual module functions directly with realistic activation config so hotspots can be compared before optimizing internals. |
 MARKDOWN
+
+mv "$tmp_output" "$OUTPUT"
