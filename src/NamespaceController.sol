@@ -56,7 +56,7 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
     bool public moduleApprovalRequired;
 
     mapping(bytes32 activationId => ActivationData activation) private _activations;
-    mapping(address module => bool approved) public approvedModules;
+    mapping(bytes32 kind => mapping(address module => bool approved)) public approvedModules;
 
     /// @notice Activation does not exist.
     error ActivationNotFound(bytes32 activationId);
@@ -88,7 +88,9 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
     error LabelNotRenewable(string label, IPermissionedRegistry.Status status);
 
     /// @param initialOwner Owner of controller-level administration.
-    constructor(address initialOwner) Ownable(initialOwner) {}
+    constructor(address initialOwner) Ownable(initialOwner) {
+        moduleApprovalRequired = true;
+    }
 
     /// @inheritdoc INamespaceController
     function activate(NamespaceTypes.ActivationConfig calldata config)
@@ -170,8 +172,20 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
         if (module == address(0)) {
             revert ZeroModule(bytes32(0));
         }
-        approvedModules[module] = approved;
-        emit ModuleApprovalSet(module, approved);
+        _setModuleApproval(MODULE_KIND_POLICY, module, approved);
+        _setModuleApproval(MODULE_KIND_PRICING, module, approved);
+        _setModuleApproval(MODULE_KIND_PAYMENT, module, approved);
+        _setModuleApproval(MODULE_KIND_PROCESSOR, module, approved);
+        _setModuleApproval(MODULE_KIND_POST_HOOK, module, approved);
+    }
+
+    /// @inheritdoc INamespaceController
+    function setModuleApproval(bytes32 kind, address module, bool approved) external onlyOwner {
+        _checkKnownModuleKind(kind);
+        if (module == address(0)) {
+            revert ZeroModule(kind);
+        }
+        _setModuleApproval(kind, module, approved);
     }
 
     /// @inheritdoc INamespaceController
@@ -341,8 +355,22 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
         if (module == address(0)) {
             revert ZeroModule(kind);
         }
-        if (moduleApprovalRequired && !approvedModules[module]) {
+        if (moduleApprovalRequired && !approvedModules[kind][module]) {
             revert UnapprovedModule(module, kind);
+        }
+    }
+
+    function _setModuleApproval(bytes32 kind, address module, bool approved) private {
+        approvedModules[kind][module] = approved;
+        emit ModuleApprovalSet(kind, module, approved);
+    }
+
+    function _checkKnownModuleKind(bytes32 kind) private pure {
+        if (
+            kind != MODULE_KIND_POLICY && kind != MODULE_KIND_PRICING && kind != MODULE_KIND_PAYMENT
+                && kind != MODULE_KIND_PROCESSOR && kind != MODULE_KIND_POST_HOOK
+        ) {
+            revert ZeroModule(kind);
         }
     }
 

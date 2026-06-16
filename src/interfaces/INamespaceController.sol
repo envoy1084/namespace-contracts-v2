@@ -26,7 +26,7 @@ interface INamespaceController {
     event ModuleApprovalRequiredSet(bool required);
 
     /// @notice Emitted when a module approval status changes.
-    event ModuleApprovalSet(address indexed module, bool approved);
+    event ModuleApprovalSet(bytes32 indexed kind, address indexed module, bool approved);
 
     /// @notice Emitted after a subname is minted.
     event SubnameMinted(
@@ -69,10 +69,16 @@ interface INamespaceController {
     /// @param required Whether activations must use approved module contracts.
     function setModuleApprovalRequired(bool required) external;
 
-    /// @notice Approve or revoke a module contract.
+    /// @notice Approve or revoke a module contract for every module kind.
     /// @param module Module contract address.
     /// @param approved Whether the module is approved.
     function setModuleApproval(address module, bool approved) external;
+
+    /// @notice Approve or revoke a module contract for one module kind.
+    /// @param kind Module kind, such as `MODULE_KIND_POLICY`.
+    /// @param module Module contract address.
+    /// @param approved Whether the module is approved.
+    function setModuleApproval(bytes32 kind, address module, bool approved) external;
 
     /// @notice Mint a subname through a stored activation.
     /// @param activationId Activation id.

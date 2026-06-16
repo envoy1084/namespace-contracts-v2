@@ -20,14 +20,14 @@ Assumptions:
 
 | Benchmark | Gas used | Gas consumed @ 1 gwei (gwei) | USD @ 0.1 gwei | USD @ 0.5 gwei | USD @ 1 gwei | USD @ 3 gwei | USD @ 5 gwei |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `testBenchmark_freeMint_noPolicyNoPricing()` | 202877 | 202877 | $0.060863 | $0.304316 | $0.608631 | $1.825893 | $3.043155 |
-| `testBenchmark_freeMint_onePolicy()` | 215183 | 215183 | $0.064555 | $0.322775 | $0.645549 | $1.936647 | $3.227745 |
-| `testBenchmark_freeMint_threePolicies()` | 247493 | 247493 | $0.074248 | $0.371240 | $0.742479 | $2.227437 | $3.712395 |
-| `testBenchmark_freeMint_fivePolicies()` | 284559 | 284559 | $0.085368 | $0.426839 | $0.853677 | $2.561031 | $4.268385 |
-| `testBenchmark_erc20FixedPrice_noPolicy()` | 253495 | 253495 | $0.076049 | $0.380243 | $0.760485 | $2.281455 | $3.802425 |
-| `testBenchmark_lengthPricing_twoPolicies()` | 296615 | 296615 | $0.088985 | $0.444923 | $0.889845 | $2.669535 | $4.449225 |
-| `testBenchmark_erc20Split_threePolicies()` | 332590 | 332590 | $0.099777 | $0.498885 | $0.997770 | $2.993310 | $4.988850 |
-| `testBenchmark_fullStack_fivePoliciesTwoPricingSplitHook()` | 509401 | 509401 | $0.152820 | $0.764102 | $1.528203 | $4.584609 | $7.641015 |
+| `testBenchmark_freeMint_noPolicyNoPricing()` | 202899 | 202899 | $0.060870 | $0.304349 | $0.608697 | $1.826091 | $3.043485 |
+| `testBenchmark_freeMint_onePolicy()` | 215205 | 215205 | $0.064562 | $0.322808 | $0.645615 | $1.936845 | $3.228075 |
+| `testBenchmark_freeMint_threePolicies()` | 247515 | 247515 | $0.074255 | $0.371273 | $0.742545 | $2.227635 | $3.712725 |
+| `testBenchmark_freeMint_fivePolicies()` | 284581 | 284581 | $0.085374 | $0.426872 | $0.853743 | $2.561229 | $4.268715 |
+| `testBenchmark_erc20FixedPrice_noPolicy()` | 256521 | 256521 | $0.076956 | $0.384781 | $0.769563 | $2.308689 | $3.847815 |
+| `testBenchmark_lengthPricing_twoPolicies()` | 299641 | 299641 | $0.089892 | $0.449462 | $0.898923 | $2.696769 | $4.494615 |
+| `testBenchmark_erc20Split_threePolicies()` | 335616 | 335616 | $0.100685 | $0.503424 | $1.006848 | $3.020544 | $5.034240 |
+| `testBenchmark_fullStack_fivePoliciesTwoPricingSplitHook()` | 512427 | 512427 | $0.153728 | $0.768640 | $1.537281 | $4.611843 | $7.686405 |
 
 ## Scenario Notes
 

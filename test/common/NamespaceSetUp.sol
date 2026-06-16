@@ -68,6 +68,8 @@ contract NamespaceSetUp is Test {
         registry.grantRootRoles(ROLE_REGISTRAR_ADMIN, accounts.alice.addr);
         registry.grantRootRoles(ROLE_REGISTRAR | ROLE_RENEW, address(controller));
         token.mint(accounts.buyer.addr, 1_000_000 ether);
+
+        _approveDefaultModules();
     }
 
     function _defaultActivationConfig() internal view returns (NamespaceTypes.ActivationConfig memory config) {
@@ -85,7 +87,12 @@ contract NamespaceSetUp is Test {
         pricingModules[0] = NamespaceTypes.ModuleConfig({
             module: address(fixedPricePricing),
             configData: abi.encode(
-                FixedPricePricing.Params({token: address(token), mintAmount: 100 ether, renewAmount: 50 ether})
+                FixedPricePricing.Params({
+                    token: address(token),
+                    defaultMintAmount: 100 ether,
+                    defaultRenewAmount: 50 ether,
+                    lengthPrices: new FixedPricePricing.LengthPrice[](0)
+                })
             )
         });
 
@@ -121,5 +128,22 @@ contract NamespaceSetUp is Test {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
         vm.prank(accounts.alice.addr);
         activationId = controller.activate(config);
+    }
+
+    function _approveDefaultModules() internal {
+        bytes32 policyKind = controller.MODULE_KIND_POLICY();
+        bytes32 pricingKind = controller.MODULE_KIND_PRICING();
+        bytes32 paymentKind = controller.MODULE_KIND_PAYMENT();
+        bytes32 processorKind = controller.MODULE_KIND_PROCESSOR();
+        bytes32 postHookKind = controller.MODULE_KIND_POST_HOOK();
+
+        vm.startPrank(accounts.owner.addr);
+        controller.setModuleApproval(policyKind, address(saleWindowPolicy), true);
+        controller.setModuleApproval(policyKind, address(labelLengthPolicy), true);
+        controller.setModuleApproval(pricingKind, address(fixedPricePricing), true);
+        controller.setModuleApproval(paymentKind, address(erc20Payment), true);
+        controller.setModuleApproval(processorKind, address(noopProcessor), true);
+        controller.setModuleApproval(postHookKind, address(postHook), true);
+        vm.stopPrank();
     }
 }

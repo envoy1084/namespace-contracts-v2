@@ -86,7 +86,12 @@ contract NamespacePermissionedRegistryE2ETest is NamespaceSetUp {
         pricingModules[0] = NamespaceTypes.ModuleConfig({
             module: address(fixedPricePricing),
             configData: abi.encode(
-                FixedPricePricing.Params({token: address(token), mintAmount: 100 ether, renewAmount: 50 ether})
+                FixedPricePricing.Params({
+                    token: address(token),
+                    defaultMintAmount: 100 ether,
+                    defaultRenewAmount: 50 ether,
+                    lengthPrices: new FixedPricePricing.LengthPrice[](0)
+                })
             )
         });
 

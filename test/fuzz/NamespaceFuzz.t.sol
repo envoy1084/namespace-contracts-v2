@@ -16,6 +16,11 @@ contract NamespaceFuzzTest is NamespaceSetUp {
         super.setUp();
         lengthPricing = new LengthBasedPricing(address(controller));
         splitProcessor = new ERC20SplitProcessor(address(controller));
+
+        vm.startPrank(accounts.owner.addr);
+        controller.setModuleApproval(controller.MODULE_KIND_PRICING(), address(lengthPricing), true);
+        controller.setModuleApproval(controller.MODULE_KIND_PROCESSOR(), address(splitProcessor), true);
+        vm.stopPrank();
     }
 
     function testFuzz_mint_registersBoundedLabelAndDuration(bytes32 seed, uint64 duration) public {

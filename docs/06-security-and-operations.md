@@ -17,14 +17,18 @@ This prevents Namespace from minting in a registry unless the registry owner exp
 
 Modules are external contracts called by the controller.
 
-Production deployments should enable module approval:
+Module approval is enabled by default. Production deployments should keep it enabled and approve modules by kind:
 
 ```solidity
-setModuleApprovalRequired(true)
-setModuleApproval(module, true)
+setModuleApproval(MODULE_KIND_POLICY, policyModule, true)
+setModuleApproval(MODULE_KIND_PRICING, pricingModule, true)
+setModuleApproval(MODULE_KIND_PAYMENT, paymentModule, true)
+setModuleApproval(MODULE_KIND_PROCESSOR, processorModule, true)
 ```
 
-Without approval mode, a namespace owner can activate arbitrary module contracts. That is flexible for experimentation but risky for curated production sales.
+Approvals are module-kind scoped. A contract approved as pricing cannot be used as a policy unless it is also approved for `MODULE_KIND_POLICY`.
+
+If approval mode is disabled, a namespace owner can activate arbitrary module contracts. That is flexible for experimentation but risky for curated production sales.
 
 ## Reentrancy
 
@@ -90,4 +94,3 @@ solhint 'src/**/*.sol' 'test/**/*.sol'
 ```
 
 `scripts/slither-build.sh` exists because Slither 0.11.x cannot parse metadata-only Foundry build-info files emitted for some dependency paths.
-

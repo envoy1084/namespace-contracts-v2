@@ -29,6 +29,14 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
         whitelistPolicy = new MerkleWhitelistPolicy(address(controller));
         lengthPricing = new LengthBasedPricing(address(controller));
         splitProcessor = new ERC20SplitProcessor(address(controller));
+
+        vm.startPrank(accounts.owner.addr);
+        controller.setModuleApproval(controller.MODULE_KIND_POLICY(), address(erc20GatePolicy), true);
+        controller.setModuleApproval(controller.MODULE_KIND_POLICY(), address(reservationPolicy), true);
+        controller.setModuleApproval(controller.MODULE_KIND_POLICY(), address(whitelistPolicy), true);
+        controller.setModuleApproval(controller.MODULE_KIND_PRICING(), address(lengthPricing), true);
+        controller.setModuleApproval(controller.MODULE_KIND_PROCESSOR(), address(splitProcessor), true);
+        vm.stopPrank();
     }
 
     function test_mint_executesFullPolicyPricingPaymentProcessorRegistryFlow() public {
@@ -120,7 +128,12 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
         pricingModules[0] = NamespaceTypes.ModuleConfig({
             module: address(fixedPricePricing),
             configData: abi.encode(
-                FixedPricePricing.Params({token: address(token), mintAmount: 100 ether, renewAmount: 50 ether})
+                FixedPricePricing.Params({
+                    token: address(token),
+                    defaultMintAmount: 100 ether,
+                    defaultRenewAmount: 50 ether,
+                    lengthPrices: new FixedPricePricing.LengthPrice[](0)
+                })
             )
         });
 

@@ -101,12 +101,13 @@ This prevents an old activation owner from continuing to manage a sale after los
 
 ## Module Approval Mode
 
-The controller owner can turn on module allowlisting:
+Module allowlisting is enabled by default. The controller owner approves modules by kind:
 
 ```solidity
-setModuleApprovalRequired(true)
-setModuleApproval(module, true)
+setModuleApproval(MODULE_KIND_POLICY, policyModule, true)
+setModuleApproval(MODULE_KIND_PRICING, pricingModule, true)
+setModuleApproval(MODULE_KIND_PAYMENT, paymentModule, true)
+setModuleApproval(MODULE_KIND_PROCESSOR, processorModule, true)
 ```
 
-When enabled, activation can only use approved modules. This is useful for a curated production deployment where user activations should not point at arbitrary external modules.
-
+When approval mode is enabled, activation can only use modules approved for the exact module kind where they are used. A module approved as pricing is not approved as a policy. This is useful for a curated production deployment where user activations should not point at arbitrary external modules.

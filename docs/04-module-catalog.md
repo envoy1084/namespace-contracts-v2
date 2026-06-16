@@ -161,17 +161,36 @@ All pricing modules enforce token compatibility. A later pricing module cannot s
 
 ### FixedPricePricing
 
-Adds fixed mint and renewal amounts.
+Adds fixed mint and renewal amounts with optional sparse exact byte-length overrides.
 
 Config:
 
 ```solidity
 FixedPricePricing.Params({
     token: address,
+    defaultMintAmount: uint128,
+    defaultRenewAmount: uint128,
+    lengthPrices: FixedPricePricing.LengthPrice[]
+})
+```
+
+Each `LengthPrice` is:
+
+```solidity
+FixedPricePricing.LengthPrice({
+    length: uint16,
     mintAmount: uint128,
     renewAmount: uint128
 })
 ```
+
+Flow:
+
+1. Compute `bytes(label).length`.
+2. Use the first exact `length` match.
+3. If nothing matches, use the default mint or renewal amount.
+
+This avoids padding array entries for unused lengths. For example, a sale can price length 4 and length 8 labels without storing empty buckets for lengths 1-3 or 5-7.
 
 ### LengthBasedPricing
 
@@ -212,6 +231,34 @@ Flow:
 2. Reject non-positive answer.
 3. Reject stale answer when `maxStaleness != 0`.
 4. Convert USD amount to token amount and round up.
+
+### OnlyNumberPricing
+
+Adds a premium when the entire label is ASCII number-only, such as `1234`.
+
+Config:
+
+```solidity
+LabelClassPricing.Params({
+    token: address,
+    mintAmount: uint128,
+    renewAmount: uint128
+})
+```
+
+Non-matching labels pass through without changing the current price.
+
+### OnlyLetterPricing
+
+Adds a premium when the entire label is ASCII letter-only, such as `alice` or `Team`.
+
+It uses the same `LabelClassPricing.Params` config as `OnlyNumberPricing`.
+
+### OnlyEmojiPricing
+
+Adds a premium when the entire label is emoji-only.
+
+It accepts common emoji codepoint ranges, variation selector `U+FE0F`, zero-width joiner `U+200D`, and skin-tone modifiers when attached to emoji content. It uses the same `LabelClassPricing.Params` config as `OnlyNumberPricing`.
 
 ## Payment Module
 
@@ -285,4 +332,3 @@ Flow:
 4. Call `resolver.setAddr(node, address)`.
 
 Renewal is intentionally a no-op.
-

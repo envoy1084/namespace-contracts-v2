@@ -27,7 +27,8 @@ Key functions:
 | `setActivationStatus(activationId, active)` | Pause or resume an activation. |
 | `transferActivationOwnership(activationId, newOwner)` | Transfer activation control to another registry admin. |
 | `setModuleApprovalRequired(required)` | Enable/disable module allowlisting. |
-| `setModuleApproval(module, approved)` | Update module allowlist state. |
+| `setModuleApproval(module, approved)` | Update module allowlist state for every module kind. |
+| `setModuleApproval(kind, module, approved)` | Update module allowlist state for one module kind. |
 | `getActivation/getPolicies/getPricingModules/getPostHooks` | Read activation configuration. |
 
 ### NamespaceTypes
@@ -88,6 +89,10 @@ Responsibilities:
 | `FixedPricePricing` | Fixed mint and renewal amounts. |
 | `LengthBasedPricing` | Per-second rates selected by label byte length. |
 | `USDOraclePricing` | USD-denominated prices converted through an oracle. |
+| `OnlyNumberPricing` | Premium for labels made only of ASCII numbers. |
+| `OnlyLetterPricing` | Premium for labels made only of ASCII letters. |
+| `OnlyEmojiPricing` | Premium for emoji-only labels. |
+| `LabelClassPricing` | Shared base for special label-class pricing modules. |
 
 ## Payment And Processing
 
@@ -102,4 +107,3 @@ Responsibilities:
 | Contract | Purpose |
 | --- | --- |
 | `SetAddrToBuyerHook` | Sets resolver `addr` record after mint. |
-

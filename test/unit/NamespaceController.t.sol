@@ -7,6 +7,7 @@ import {Vm} from "forge-std/Vm.sol";
 import {NamespaceController} from "src/NamespaceController.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {ReservationPolicy} from "src/modules/policies/ReservationPolicy.sol";
+import {SaleWindowPolicy} from "src/modules/policies/SaleWindowPolicy.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
 
 contract NamespaceControllerTest is NamespaceSetUp {
@@ -14,7 +15,7 @@ contract NamespaceControllerTest is NamespaceSetUp {
         bytes32 indexed activationId, address indexed previousOwner, address indexed newOwner
     );
     event ModuleApprovalRequiredSet(bool required);
-    event ModuleApprovalSet(address indexed module, bool approved);
+    event ModuleApprovalSet(bytes32 indexed kind, address indexed module, bool approved);
 
     function test_activate_storesActivationAndConfiguresModules() public {
         bytes32 activationId = _activateDefault();
@@ -106,15 +107,17 @@ contract NamespaceControllerTest is NamespaceSetUp {
     }
 
     function test_activate_revertsWhenModuleApprovalRequiredAndModuleIsUnapproved() public {
-        vm.prank(accounts.owner.addr);
-        controller.setModuleApprovalRequired(true);
-
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        SaleWindowPolicy unapprovedPolicy = new SaleWindowPolicy(address(controller));
+        config.policies[0] = NamespaceTypes.ModuleConfig({
+            module: address(unapprovedPolicy),
+            configData: abi.encode(SaleWindowPolicy.Params({startTime: 0, endTime: 0}))
+        });
 
         vm.expectRevert(
             abi.encodeWithSelector(
                 NamespaceController.UnapprovedModule.selector,
-                address(saleWindowPolicy),
+                address(unapprovedPolicy),
                 controller.MODULE_KIND_POLICY()
             )
         );
@@ -122,14 +125,31 @@ contract NamespaceControllerTest is NamespaceSetUp {
         controller.activate(config);
     }
 
-    function test_activate_succeedsWhenAllModulesAreApproved() public {
-        _approveDefaultModules();
+    function test_activate_revertsWhenModuleIsApprovedForDifferentKind() public {
+        bytes32 pricingKind = controller.MODULE_KIND_PRICING();
+        bytes32 policyKind = controller.MODULE_KIND_POLICY();
+        SaleWindowPolicy unapprovedPolicy = new SaleWindowPolicy(address(controller));
 
-        vm.expectEmit(false, false, false, true, address(controller));
-        emit ModuleApprovalRequiredSet(true);
         vm.prank(accounts.owner.addr);
         controller.setModuleApprovalRequired(true);
 
+        vm.prank(accounts.owner.addr);
+        controller.setModuleApproval(pricingKind, address(unapprovedPolicy), true);
+
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        config.policies[0] = NamespaceTypes.ModuleConfig({
+            module: address(unapprovedPolicy),
+            configData: abi.encode(SaleWindowPolicy.Params({startTime: 0, endTime: 0}))
+        });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(NamespaceController.UnapprovedModule.selector, address(unapprovedPolicy), policyKind)
+        );
+        vm.prank(accounts.alice.addr);
+        controller.activate(config);
+    }
+
+    function test_activate_succeedsWhenAllModulesAreApproved() public {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
         vm.prank(accounts.alice.addr);
         bytes32 activationId = controller.activate(config);
@@ -218,6 +238,10 @@ contract NamespaceControllerTest is NamespaceSetUp {
         ReservationPolicy reservationPolicy = new ReservationPolicy(address(controller));
         Vm.Wallet memory reservedBuyer = vm.createWallet("reservedBuyer");
         token.mint(reservedBuyer.addr, 1_000 ether);
+        bytes32 policyKind = controller.MODULE_KIND_POLICY();
+
+        vm.prank(accounts.owner.addr);
+        controller.setModuleApproval(policyKind, address(reservationPolicy), true);
 
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
         NamespaceTypes.ModuleConfig[] memory policies = new NamespaceTypes.ModuleConfig[](3);
@@ -261,21 +285,5 @@ contract NamespaceControllerTest is NamespaceSetUp {
         vm.stopPrank();
 
         assertEq(registry.ownerOf(tokenId), reservedBuyer.addr);
-    }
-
-    function _approveDefaultModules() private {
-        _approveModule(address(saleWindowPolicy));
-        _approveModule(address(labelLengthPolicy));
-        _approveModule(address(fixedPricePricing));
-        _approveModule(address(erc20Payment));
-        _approveModule(address(noopProcessor));
-        _approveModule(address(postHook));
-    }
-
-    function _approveModule(address module) private {
-        vm.expectEmit(true, false, false, true, address(controller));
-        emit ModuleApprovalSet(module, true);
-        vm.prank(accounts.owner.addr);
-        controller.setModuleApproval(module, true);
     }
 }
