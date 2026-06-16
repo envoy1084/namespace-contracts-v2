@@ -19,9 +19,6 @@ interface INamespaceController {
         bytes32 indexed activationId, address indexed previousOwner, address indexed newOwner
     );
 
-    /// @notice Emitted after a module is configured for an activation.
-    event ModuleConfigured(bytes32 indexed activationId, address indexed module, bytes32 indexed kind);
-
     /// @notice Emitted after an existing activation module receives updated config.
     event ModuleConfigUpdated(
         bytes32 indexed activationId, address indexed module, bytes32 indexed kind, uint256 index

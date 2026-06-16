@@ -6,6 +6,7 @@ import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedReg
 import {Ownable} from "solady/auth/Ownable.sol";
 import {Initializable} from "solady/utils/Initializable.sol";
 import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
+import {SSTORE2} from "solady/utils/SSTORE2.sol";
 import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
 
 import {IConfigurableModule} from "src/interfaces/IConfigurableModule.sol";
@@ -44,11 +45,14 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         address resolver;
         uint256 buyerRoleBitmap;
         bool active;
+        uint8 policyCount;
+        uint8 pricingCount;
+        uint8 postHookCount;
         address paymentModule;
         address processor;
-        bytes policies;
-        bytes pricingModules;
-        bytes postHooks;
+        address policies;
+        address pricingModules;
+        address postHooks;
     }
 
     /// @notice Total number of activations created by this controller.
@@ -72,8 +76,6 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
     error UnapprovedModule(address module, bytes32 kind);
     /// @notice Registry address is zero.
     error ZeroRegistry();
-    /// @notice Payment processor address is zero.
-    error ZeroProcessor();
     /// @notice Activation owner address is zero.
     error ZeroActivationOwner();
     /// @notice Activator does not have registry-level authority to create an activation.
@@ -86,8 +88,8 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
     error RuntimeDataLengthMismatch(bytes32 kind, uint256 expected, uint256 actual);
     /// @notice Module index does not exist for the requested activation and kind.
     error ModuleIndexOutOfBounds(bytes32 activationId, bytes32 kind, uint256 index, uint256 length);
-    /// @notice Label is not available in the configured ENSv2 registry.
-    error LabelNotAvailable(string label, IPermissionedRegistry.Status status);
+    /// @notice Activation has too many modules for one module kind.
+    error ModuleListTooLong(bytes32 kind, uint256 length);
     /// @notice Label cannot be renewed because it is not currently registered or reserved.
     error LabelNotRenewable(string label, IPermissionedRegistry.Status status);
 
@@ -110,41 +112,32 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         nonReentrant
         returns (bytes32 activationId)
     {
-        if (address(config.registry) == address(0)) {
-            revert ZeroRegistry();
-        }
-        if (config.paymentModule.module == address(0)) {
-            revert ZeroModule(MODULE_KIND_PAYMENT);
-        }
-        if (config.processor.module == address(0)) {
-            revert ZeroProcessor();
-        }
+        _checkActivationPreconditions(config);
+
         uint256 nonce = ++activationNonce;
         activationId =
             keccak256(abi.encode(block.chainid, address(config.registry), config.parentNode, msg.sender, nonce));
 
-        bytes memory policies = _packModules(MODULE_KIND_POLICY, config.policies);
-        bytes memory pricingModules = _packModules(MODULE_KIND_PRICING, config.pricingModules);
-        bytes memory postHooks = _packModules(MODULE_KIND_POST_HOOK, config.postHooks);
-        _checkModule(config.paymentModule.module, MODULE_KIND_PAYMENT);
-        _checkModule(config.processor.module, MODULE_KIND_PROCESSOR);
-        _checkRegistryAdminAuthority(msg.sender, config.registry);
-        if (!config.registry.hasRootRoles(_ROLE_REGISTRAR | _ROLE_RENEW, address(this))) {
-            revert ControllerMissingRegistryRoles(address(config.registry), _ROLE_REGISTRAR | _ROLE_RENEW);
-        }
+        (address policies, uint8 policyCount) = _storeModuleList(MODULE_KIND_POLICY, config.policies);
+        (address pricingModules, uint8 pricingCount) = _storeModuleList(MODULE_KIND_PRICING, config.pricingModules);
+        (address postHooks, uint8 postHookCount) = _storeModuleList(MODULE_KIND_POST_HOOK, config.postHooks);
 
-        _storeActivation(activationId, config, policies, pricingModules, postHooks);
+        _storeActivation(
+            activationId, config, policies, policyCount, pricingModules, pricingCount, postHooks, postHookCount
+        );
 
         emit ActivationCreated(activationId, msg.sender, address(config.registry), config.parentNode);
         emit ActivationStatusChanged(activationId, true);
 
-        _configureModules(activationId, MODULE_KIND_POLICY, config.policies);
-        _configureModules(activationId, MODULE_KIND_PRICING, config.pricingModules);
-        if (config.pricingModules.length != 0) {
+        _configureModules(activationId, config.policies);
+        _configureModules(activationId, config.pricingModules);
+        if (config.paymentModule.module != address(0)) {
             _configureSingleModule(activationId, MODULE_KIND_PAYMENT, config.paymentModule);
+        }
+        if (config.processor.module != address(0)) {
             _configureSingleModule(activationId, MODULE_KIND_PROCESSOR, config.processor);
         }
-        _configureModules(activationId, MODULE_KIND_POST_HOOK, config.postHooks);
+        _configureModules(activationId, config.postHooks);
     }
 
     /// @inheritdoc INamespaceController
@@ -231,25 +224,17 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         _checkRuntimeDataLengths(activation, runtimeData);
 
         uint256 labelId = uint256(keccak256(bytes(label)));
-        IPermissionedRegistry.State memory state = activation.registry.getState(labelId);
-        if (state.status != IPermissionedRegistry.Status.AVAILABLE) {
-            revert LabelNotAvailable(label, state.status);
-        }
-
         NamespaceTypes.MintContext memory ctx = _mintContext(activation, activationId, label, labelId, duration);
 
         _checkMintPolicies(activation, ctx, runtimeData.policyData);
         NamespaceTypes.Price memory price = _quoteMint(activation, ctx, runtimeData.pricingData);
 
-        if (price.amount != 0 || msg.value != 0) {
-            IPaymentModule(activation.paymentModule).collectMint{value: msg.value}(ctx, price, runtimeData.paymentData);
-            IProcessorModule(activation.processor).processMint(ctx, price, runtimeData.processorData);
-        }
-
         tokenId = activation.registry
             .register(
                 label, msg.sender, IRegistry(address(0)), activation.resolver, activation.buyerRoleBitmap, ctx.expiry
             );
+
+        _settleMint(activation, ctx, price, runtimeData);
 
         _runPostMintHooks(activation, ctx, tokenId, runtimeData.postHookData);
 
@@ -298,10 +283,7 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         _checkRenewPolicies(activation, ctx, runtimeData.policyData);
         NamespaceTypes.Price memory price = _quoteRenew(activation, ctx, runtimeData.pricingData);
 
-        if (price.amount != 0 || msg.value != 0) {
-            IPaymentModule(activation.paymentModule).collectRenew{value: msg.value}(ctx, price, runtimeData.paymentData);
-            IProcessorModule(activation.processor).processRenew(ctx, price, runtimeData.processorData);
-        }
+        _settleRenew(activation, ctx, price, runtimeData);
 
         activation.registry.renew(state.tokenId, newExpiry);
 
@@ -327,28 +309,34 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
 
     /// @notice Return configured policy modules for an activation.
     function getPolicies(bytes32 activationId) external view returns (address[] memory policies) {
-        bytes memory packedModules = _requireActivationView(activationId).policies;
+        ActivationData storage activation = _requireActivationView(activationId);
+        bytes memory packedModules = _readModuleList(activation.policies, activation.policyCount);
         policies = _unpackModules(packedModules);
     }
 
     /// @notice Return configured pricing modules for an activation.
     function getPricingModules(bytes32 activationId) external view returns (address[] memory pricingModules) {
-        bytes memory packedModules = _requireActivationView(activationId).pricingModules;
+        ActivationData storage activation = _requireActivationView(activationId);
+        bytes memory packedModules = _readModuleList(activation.pricingModules, activation.pricingCount);
         pricingModules = _unpackModules(packedModules);
     }
 
     /// @notice Return configured post-mint hooks for an activation.
     function getPostHooks(bytes32 activationId) external view returns (address[] memory postHooks) {
-        bytes memory packedModules = _requireActivationView(activationId).postHooks;
+        ActivationData storage activation = _requireActivationView(activationId);
+        bytes memory packedModules = _readModuleList(activation.postHooks, activation.postHookCount);
         postHooks = _unpackModules(packedModules);
     }
 
     function _storeActivation(
         bytes32 activationId,
         NamespaceTypes.ActivationConfig calldata config,
-        bytes memory policies,
-        bytes memory pricingModules,
-        bytes memory postHooks
+        address policies,
+        uint8 policyCount,
+        address pricingModules,
+        uint8 pricingCount,
+        address postHooks,
+        uint8 postHookCount
     ) private {
         ActivationData storage activation = _activations[activationId];
         activation.owner = msg.sender;
@@ -357,6 +345,9 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         activation.resolver = config.resolver;
         activation.buyerRoleBitmap = config.buyerRoleBitmap;
         activation.active = true;
+        activation.policyCount = policyCount;
+        activation.pricingCount = pricingCount;
+        activation.postHookCount = postHookCount;
         activation.paymentModule = config.paymentModule.module;
         activation.processor = config.processor.module;
         activation.policies = policies;
@@ -364,13 +355,80 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         activation.postHooks = postHooks;
     }
 
-    function _packModules(bytes32 kind, NamespaceTypes.ModuleConfig[] calldata configs)
+    function _checkActivationPreconditions(NamespaceTypes.ActivationConfig calldata config) private view {
+        if (address(config.registry) == address(0)) {
+            revert ZeroRegistry();
+        }
+        if (config.paymentModule.module == address(0) && config.pricingModules.length != 0) {
+            revert ZeroModule(MODULE_KIND_PAYMENT);
+        }
+        if (config.paymentModule.module != address(0)) {
+            _checkModule(config.paymentModule.module, MODULE_KIND_PAYMENT);
+        }
+        if (config.processor.module != address(0)) {
+            _checkModule(config.processor.module, MODULE_KIND_PROCESSOR);
+        }
+        _checkRegistryAdminAuthority(msg.sender, config.registry);
+        if (!config.registry.hasRootRoles(_ROLE_REGISTRAR | _ROLE_RENEW, address(this))) {
+            revert ControllerMissingRegistryRoles(address(config.registry), _ROLE_REGISTRAR | _ROLE_RENEW);
+        }
+    }
+
+    function _settleMint(
+        ActivationData storage activation,
+        NamespaceTypes.MintContext memory ctx,
+        NamespaceTypes.Price memory price,
+        NamespaceTypes.RuntimeData calldata runtimeData
+    ) private {
+        if (price.amount != 0 || msg.value != 0) {
+            if (activation.paymentModule == address(0)) {
+                revert ZeroModule(MODULE_KIND_PAYMENT);
+            }
+            IPaymentModule(activation.paymentModule).collectMint{value: msg.value}(ctx, price, runtimeData.paymentData);
+            if (activation.processor != address(0)) {
+                IProcessorModule(activation.processor).processMint(ctx, price, runtimeData.processorData);
+            }
+        }
+    }
+
+    function _settleRenew(
+        ActivationData storage activation,
+        NamespaceTypes.RenewContext memory ctx,
+        NamespaceTypes.Price memory price,
+        NamespaceTypes.RuntimeData calldata runtimeData
+    ) private {
+        if (price.amount != 0 || msg.value != 0) {
+            if (activation.paymentModule == address(0)) {
+                revert ZeroModule(MODULE_KIND_PAYMENT);
+            }
+            IPaymentModule(activation.paymentModule).collectRenew{value: msg.value}(ctx, price, runtimeData.paymentData);
+            if (activation.processor != address(0)) {
+                IProcessorModule(activation.processor).processRenew(ctx, price, runtimeData.processorData);
+            }
+        }
+    }
+
+    function _storeModuleList(bytes32 kind, NamespaceTypes.ModuleConfig[] calldata configs)
         private
-        view
-        returns (bytes memory modules)
+        returns (address moduleData, uint8 count)
     {
         uint256 length = configs.length;
-        modules = new bytes(length * 20);
+        if (length > type(uint8).max) {
+            revert ModuleListTooLong(kind, length);
+        }
+        // casting to `uint8` is safe because `length` is bounded above.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        count = uint8(length);
+        if (length == 0) {
+            return (address(0), count);
+        }
+        if (length == 1) {
+            moduleData = configs[0].module;
+            _checkModule(moduleData, kind);
+            return (moduleData, count);
+        }
+
+        bytes memory modules = new bytes(length * 20);
         for (uint256 i; i < length;) {
             NamespaceTypes.ModuleConfig calldata config = configs[i];
             _checkModule(config.module, kind);
@@ -379,15 +437,13 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
                 ++i;
             }
         }
+        moduleData = SSTORE2.write(modules);
     }
 
-    function _configureModules(bytes32 activationId, bytes32 kind, NamespaceTypes.ModuleConfig[] calldata configs)
-        private
-    {
+    function _configureModules(bytes32 activationId, NamespaceTypes.ModuleConfig[] calldata configs) private {
         uint256 length = configs.length;
         for (uint256 i; i < length;) {
             NamespaceTypes.ModuleConfig calldata config = configs[i];
-            emit ModuleConfigured(activationId, config.module, kind);
             IConfigurableModule(config.module).configure(activationId, config.configData);
             unchecked {
                 ++i;
@@ -399,7 +455,6 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         private
     {
         _checkModule(config.module, kind);
-        emit ModuleConfigured(activationId, config.module, kind);
         IConfigurableModule(config.module).configure(activationId, config.configData);
     }
 
@@ -423,32 +478,40 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         returns (address module)
     {
         if (kind == MODULE_KIND_PAYMENT) {
-            if (index != 0) {
-                revert ModuleIndexOutOfBounds(activationId, kind, index, 1);
+            uint256 paymentLength = activation.paymentModule == address(0) ? 0 : 1;
+            if (index >= paymentLength) {
+                revert ModuleIndexOutOfBounds(activationId, kind, index, paymentLength);
             }
             return activation.paymentModule;
         }
         if (kind == MODULE_KIND_PROCESSOR) {
-            if (index != 0) {
-                revert ModuleIndexOutOfBounds(activationId, kind, index, 1);
+            uint256 processorLength = activation.processor == address(0) ? 0 : 1;
+            if (index >= processorLength) {
+                revert ModuleIndexOutOfBounds(activationId, kind, index, processorLength);
             }
             return activation.processor;
         }
 
-        bytes storage modules;
+        address moduleData;
+        uint8 moduleCount;
         if (kind == MODULE_KIND_POLICY) {
-            modules = activation.policies;
+            moduleData = activation.policies;
+            moduleCount = activation.policyCount;
         } else if (kind == MODULE_KIND_PRICING) {
-            modules = activation.pricingModules;
+            moduleData = activation.pricingModules;
+            moduleCount = activation.pricingCount;
         } else {
-            modules = activation.postHooks;
+            moduleData = activation.postHooks;
+            moduleCount = activation.postHookCount;
         }
 
-        uint256 length = modules.length / 20;
-        if (index >= length) {
-            revert ModuleIndexOutOfBounds(activationId, kind, index, length);
+        if (index >= moduleCount) {
+            revert ModuleIndexOutOfBounds(activationId, kind, index, moduleCount);
         }
-        bytes memory packedModules = modules;
+        if (moduleCount == 1) {
+            return moduleData;
+        }
+        bytes memory packedModules = SSTORE2.read(moduleData);
         module = _moduleAt(packedModules, index);
     }
 
@@ -466,8 +529,12 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         NamespaceTypes.MintContext memory ctx,
         bytes[] calldata policyData
     ) private {
-        bytes memory policies = activation.policies;
-        uint256 length = policies.length / 20;
+        uint256 length = activation.policyCount;
+        if (length == 1) {
+            IPolicyModule(activation.policies).checkMint(ctx, policyData[0]);
+            return;
+        }
+        bytes memory policies = _readModuleList(activation.policies, length);
         for (uint256 i; i < length;) {
             IPolicyModule(_moduleAt(policies, i)).checkMint(ctx, policyData[i]);
             unchecked {
@@ -481,8 +548,11 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         NamespaceTypes.MintContext memory ctx,
         bytes[] calldata pricingData
     ) private view returns (NamespaceTypes.Price memory price) {
-        bytes memory pricingModules = activation.pricingModules;
-        uint256 length = pricingModules.length / 20;
+        uint256 length = activation.pricingCount;
+        if (length == 1) {
+            return IPricingModule(activation.pricingModules).quoteMint(ctx, price, pricingData[0]);
+        }
+        bytes memory pricingModules = _readModuleList(activation.pricingModules, length);
         for (uint256 i; i < length;) {
             price = IPricingModule(_moduleAt(pricingModules, i)).quoteMint(ctx, price, pricingData[i]);
             unchecked {
@@ -518,8 +588,12 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         NamespaceTypes.RenewContext memory ctx,
         bytes[] calldata policyData
     ) private {
-        bytes memory policies = activation.policies;
-        uint256 length = policies.length / 20;
+        uint256 length = activation.policyCount;
+        if (length == 1) {
+            IPolicyModule(activation.policies).checkRenew(ctx, policyData[0]);
+            return;
+        }
+        bytes memory policies = _readModuleList(activation.policies, length);
         for (uint256 i; i < length;) {
             IPolicyModule(_moduleAt(policies, i)).checkRenew(ctx, policyData[i]);
             unchecked {
@@ -533,8 +607,11 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         NamespaceTypes.RenewContext memory ctx,
         bytes[] calldata pricingData
     ) private view returns (NamespaceTypes.Price memory price) {
-        bytes memory pricingModules = activation.pricingModules;
-        uint256 length = pricingModules.length / 20;
+        uint256 length = activation.pricingCount;
+        if (length == 1) {
+            return IPricingModule(activation.pricingModules).quoteRenew(ctx, price, pricingData[0]);
+        }
+        bytes memory pricingModules = _readModuleList(activation.pricingModules, length);
         for (uint256 i; i < length;) {
             price = IPricingModule(_moduleAt(pricingModules, i)).quoteRenew(ctx, price, pricingData[i]);
             unchecked {
@@ -549,8 +626,12 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         uint256 tokenId,
         bytes[] calldata postHookData
     ) private {
-        bytes memory postHooks = activation.postHooks;
-        uint256 length = postHooks.length / 20;
+        uint256 length = activation.postHookCount;
+        if (length == 1) {
+            IPostHookModule(activation.postHooks).afterMint(ctx, tokenId, postHookData[0]);
+            return;
+        }
+        bytes memory postHooks = _readModuleList(activation.postHooks, length);
         for (uint256 i; i < length;) {
             IPostHookModule(_moduleAt(postHooks, i)).afterMint(ctx, tokenId, postHookData[i]);
             unchecked {
@@ -564,8 +645,12 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         NamespaceTypes.RenewContext memory ctx,
         bytes[] calldata postHookData
     ) private {
-        bytes memory postHooks = activation.postHooks;
-        uint256 length = postHooks.length / 20;
+        uint256 length = activation.postHookCount;
+        if (length == 1) {
+            IPostHookModule(activation.postHooks).afterRenew(ctx, postHookData[0]);
+            return;
+        }
+        bytes memory postHooks = _readModuleList(activation.postHooks, length);
         for (uint256 i; i < length;) {
             IPostHookModule(_moduleAt(postHooks, i)).afterRenew(ctx, postHookData[i]);
             unchecked {
@@ -578,18 +663,30 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         ActivationData storage activation,
         NamespaceTypes.RuntimeData calldata runtimeData
     ) private view {
-        uint256 policyLength = activation.policies.length / 20;
+        uint256 policyLength = activation.policyCount;
         if (runtimeData.policyData.length != policyLength) {
             revert RuntimeDataLengthMismatch(MODULE_KIND_POLICY, policyLength, runtimeData.policyData.length);
         }
-        uint256 pricingLength = activation.pricingModules.length / 20;
+        uint256 pricingLength = activation.pricingCount;
         if (runtimeData.pricingData.length != pricingLength) {
             revert RuntimeDataLengthMismatch(MODULE_KIND_PRICING, pricingLength, runtimeData.pricingData.length);
         }
-        uint256 postHookLength = activation.postHooks.length / 20;
+        uint256 postHookLength = activation.postHookCount;
         if (runtimeData.postHookData.length != postHookLength) {
             revert RuntimeDataLengthMismatch(MODULE_KIND_POST_HOOK, postHookLength, runtimeData.postHookData.length);
         }
+    }
+
+    function _readModuleList(address moduleData, uint256 length) private view returns (bytes memory modules) {
+        if (length == 0) {
+            return new bytes(0);
+        }
+        if (length == 1) {
+            modules = new bytes(20);
+            _packModule(modules, 0, moduleData);
+            return modules;
+        }
+        modules = SSTORE2.read(moduleData);
     }
 
     function _packModule(bytes memory modules, uint256 index, address module) private pure {

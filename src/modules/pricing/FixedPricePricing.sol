@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {SSTORE2} from "solady/utils/SSTORE2.sol";
+
 import {IPricingModule} from "src/interfaces/IPricingModule.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {NamespaceModule} from "src/modules/NamespaceModule.sol";
@@ -34,42 +36,51 @@ contract FixedPricePricing is NamespaceModule, IPricingModule {
         address token;
         uint128 defaultMintAmount;
         uint128 defaultRenewAmount;
+        uint8 lengthPriceCount;
+        address lengthPricesPointer;
     }
 
-    mapping(bytes32 activationId => StoredParams params) public params;
-    mapping(bytes32 activationId => LengthPrice[] lengthPrices) private _lengthPrices;
+    mapping(bytes32 activationId => StoredParams params) private _params;
 
     error PaymentTokenMismatch(address expected, address actual);
     error DuplicateLengthPrice(bytes32 activationId, uint16 length);
     error EmptyLabel();
+    error TooManyLengthPrices(bytes32 activationId, uint256 length);
 
     /// @notice Store fixed price parameters for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         Params memory decoded = abi.decode(configData, (Params));
-        params[activationId] = StoredParams({
-            token: decoded.token,
-            defaultMintAmount: decoded.defaultMintAmount,
-            defaultRenewAmount: decoded.defaultRenewAmount
-        });
-
-        delete _lengthPrices[activationId];
         uint256 length = decoded.lengthPrices.length;
+        if (length > type(uint8).max) {
+            revert TooManyLengthPrices(activationId, length);
+        }
+
+        bytes memory packedPrices = new bytes(length * 34);
         for (uint256 i; i < length;) {
             LengthPrice memory lengthPrice = decoded.lengthPrices[i];
-            uint256 storedLength = _lengthPrices[activationId].length;
-            for (uint256 j; j < storedLength;) {
-                if (_lengthPrices[activationId][j].length == lengthPrice.length) {
+            for (uint256 j; j < i;) {
+                if (decoded.lengthPrices[j].length == lengthPrice.length) {
                     revert DuplicateLengthPrice(activationId, lengthPrice.length);
                 }
                 unchecked {
                     ++j;
                 }
             }
-            _lengthPrices[activationId].push(lengthPrice);
+            _packLengthPrice(packedPrices, i, lengthPrice);
             unchecked {
                 ++i;
             }
         }
+
+        _params[activationId] = StoredParams({
+            token: decoded.token,
+            defaultMintAmount: decoded.defaultMintAmount,
+            defaultRenewAmount: decoded.defaultRenewAmount,
+            // casting to `uint8` is safe because `length` is bounded above.
+            // forge-lint: disable-next-line(unsafe-typecast)
+            lengthPriceCount: uint8(length),
+            lengthPricesPointer: length == 0 ? address(0) : SSTORE2.write(packedPrices)
+        });
     }
 
     /// @inheritdoc IPricingModule
@@ -78,7 +89,7 @@ contract FixedPricePricing is NamespaceModule, IPricingModule {
         NamespaceTypes.Price calldata currentPrice,
         bytes calldata
     ) external view returns (NamespaceTypes.Price memory price) {
-        StoredParams memory stored = params[ctx.activationId];
+        StoredParams memory stored = _params[ctx.activationId];
         (, uint256 mintAmount) = _amountFor(ctx.activationId, ctx.label, true);
         price = _add(currentPrice, stored.token, mintAmount);
     }
@@ -89,14 +100,37 @@ contract FixedPricePricing is NamespaceModule, IPricingModule {
         NamespaceTypes.Price calldata currentPrice,
         bytes calldata
     ) external view returns (NamespaceTypes.Price memory price) {
-        StoredParams memory stored = params[ctx.activationId];
+        StoredParams memory stored = _params[ctx.activationId];
         (, uint256 renewAmount) = _amountFor(ctx.activationId, ctx.label, false);
         price = _add(currentPrice, stored.token, renewAmount);
     }
 
+    /// @notice Return configured default fixed price parameters for an activation.
+    function params(bytes32 activationId)
+        external
+        view
+        returns (address token, uint128 defaultMintAmount, uint128 defaultRenewAmount)
+    {
+        StoredParams memory stored = _params[activationId];
+        return (stored.token, stored.defaultMintAmount, stored.defaultRenewAmount);
+    }
+
     /// @notice Return configured exact-length price overrides for an activation.
     function lengthPrices(bytes32 activationId) external view returns (LengthPrice[] memory) {
-        return _lengthPrices[activationId];
+        StoredParams memory stored = _params[activationId];
+        LengthPrice[] memory prices = new LengthPrice[](stored.lengthPriceCount);
+        if (stored.lengthPriceCount == 0) {
+            return prices;
+        }
+
+        bytes memory packedPrices = SSTORE2.read(stored.lengthPricesPointer);
+        for (uint256 i; i < stored.lengthPriceCount;) {
+            prices[i] = _unpackLengthPrice(packedPrices, i);
+            unchecked {
+                ++i;
+            }
+        }
+        return prices;
     }
 
     function _amountFor(bytes32 activationId, string calldata label, bool mint)
@@ -109,19 +143,42 @@ contract FixedPricePricing is NamespaceModule, IPricingModule {
             revert EmptyLabel();
         }
 
-        LengthPrice[] storage prices = _lengthPrices[activationId];
-        uint256 length = prices.length;
+        StoredParams memory stored = _params[activationId];
+        uint256 length = stored.lengthPriceCount;
+        bytes memory prices = length == 0 ? bytes("") : SSTORE2.read(stored.lengthPricesPointer);
         for (uint256 i; i < length;) {
-            if (prices[i].length == labelLength) {
-                return (labelLength, mint ? prices[i].mintAmount : prices[i].renewAmount);
+            LengthPrice memory lengthPrice = _unpackLengthPrice(prices, i);
+            if (lengthPrice.length == labelLength) {
+                return (labelLength, mint ? lengthPrice.mintAmount : lengthPrice.renewAmount);
             }
             unchecked {
                 ++i;
             }
         }
 
-        StoredParams memory stored = params[activationId];
         amount = mint ? stored.defaultMintAmount : stored.defaultRenewAmount;
+    }
+
+    function _packLengthPrice(bytes memory packedPrices, uint256 index, LengthPrice memory lengthPrice) private pure {
+        uint256 offset = 32 + index * 34;
+        assembly ("memory-safe") {
+            mstore(add(packedPrices, offset), shl(240, mload(lengthPrice)))
+            mstore(add(packedPrices, add(offset, 2)), shl(128, mload(add(lengthPrice, 0x20))))
+            mstore(add(packedPrices, add(offset, 18)), shl(128, mload(add(lengthPrice, 0x40))))
+        }
+    }
+
+    function _unpackLengthPrice(bytes memory packedPrices, uint256 index)
+        private
+        pure
+        returns (LengthPrice memory lengthPrice)
+    {
+        uint256 offset = 32 + index * 34;
+        assembly ("memory-safe") {
+            mstore(lengthPrice, shr(240, mload(add(packedPrices, offset))))
+            mstore(add(lengthPrice, 0x20), shr(128, mload(add(packedPrices, add(offset, 2)))))
+            mstore(add(lengthPrice, 0x40), shr(128, mload(add(packedPrices, add(offset, 18)))))
+        }
     }
 
     function _add(NamespaceTypes.Price calldata currentPrice, address token, uint256 amount)

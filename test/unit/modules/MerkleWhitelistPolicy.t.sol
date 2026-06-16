@@ -76,6 +76,36 @@ contract MerkleWhitelistPolicyTest is NamespaceSetUp {
         whitelistPolicy.checkMint(ctx, abi.encode(proof));
     }
 
+    function test_checkMint_revertsForMalformedProofData() public {
+        bytes32 activationId = keccak256("activation");
+        bytes32 buyerLeaf = _accountLeaf(accounts.buyer.addr);
+        bytes32 aliceLeaf = _accountLeaf(accounts.alice.addr);
+        bytes32 root = _hashPair(buyerLeaf, aliceLeaf);
+        bytes32 labelHash = keccak256(bytes("pay"));
+
+        vm.prank(address(controller));
+        whitelistPolicy.configure(
+            activationId,
+            abi.encode(
+                MerkleWhitelistPolicy.Params({
+                    mintRoot: root, renewRoot: bytes32(0), leafMode: MerkleWhitelistPolicy.LeafMode.ACCOUNT
+                })
+            )
+        );
+
+        NamespaceTypes.MintContext memory ctx;
+        ctx.activationId = activationId;
+        ctx.buyer = accounts.buyer.addr;
+        ctx.labelHash = labelHash;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                MerkleWhitelistPolicy.InvalidWhitelistProof.selector, activationId, accounts.buyer.addr, labelHash, root
+            )
+        );
+        whitelistPolicy.checkMint(ctx, hex"1234");
+    }
+
     function test_checkMint_revertsWhenAccountLabelDoesNotMatch() public {
         bytes32 activationId = keccak256("activation");
         bytes32 vipLabel = keccak256(bytes("vip"));

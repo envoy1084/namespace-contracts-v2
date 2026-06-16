@@ -121,7 +121,7 @@ contract NamespaceSetUp is Test {
                 module: address(erc20Payment),
                 configData: abi.encode(ERC20PaymentModule.Params({token: token, recipient: accounts.treasury.addr}))
             }),
-            processor: NamespaceTypes.ModuleConfig({module: address(noopProcessor), configData: ""}),
+            processor: NamespaceTypes.ModuleConfig({module: address(0), configData: ""}),
             postHooks: postHooks
         });
     }
@@ -163,7 +163,6 @@ contract NamespaceSetUp is Test {
         bytes32 policyKind = controller.MODULE_KIND_POLICY();
         bytes32 pricingKind = controller.MODULE_KIND_PRICING();
         bytes32 paymentKind = controller.MODULE_KIND_PAYMENT();
-        bytes32 processorKind = controller.MODULE_KIND_PROCESSOR();
         bytes32 postHookKind = controller.MODULE_KIND_POST_HOOK();
 
         vm.startPrank(accounts.owner.addr);
@@ -171,7 +170,6 @@ contract NamespaceSetUp is Test {
         controller.setModuleApproval(policyKind, address(labelLengthPolicy), true);
         controller.setModuleApproval(pricingKind, address(fixedPricePricing), true);
         controller.setModuleApproval(paymentKind, address(erc20Payment), true);
-        controller.setModuleApproval(processorKind, address(noopProcessor), true);
         controller.setModuleApproval(postHookKind, address(postHook), true);
         vm.stopPrank();
     }

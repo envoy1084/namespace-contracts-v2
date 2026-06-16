@@ -22,8 +22,8 @@ library NamespaceTypes {
     /// @param buyerRoleBitmap ENSv2 registry roles granted to subname buyers.
     /// @param policies Stacked policy modules; every policy must pass.
     /// @param pricingModules Sequential pricing modules used to compose the final price.
-    /// @param paymentModule Module that collects payment from the payer.
-    /// @param processor Module that accounts for or distributes collected payment.
+    /// @param paymentModule Optional module that collects payment from the payer; required when pricing can return non-zero.
+    /// @param processor Optional module that accounts for or distributes collected payment.
     /// @param postHooks Hooks called after the ENSv2 registry mint succeeds.
     struct ActivationConfig {
         IPermissionedRegistry registry;
@@ -45,7 +45,7 @@ library NamespaceTypes {
     /// @param buyerRoleBitmap ENSv2 registry roles granted to minted-name owners.
     /// @param active Whether mints are currently enabled for this activation.
     /// @param paymentModule Active payment module.
-    /// @param processor Active processor module.
+    /// @param processor Active processor module, or zero for direct settlement.
     struct Activation {
         address owner;
         IPermissionedRegistry registry;

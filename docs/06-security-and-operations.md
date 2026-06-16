@@ -98,13 +98,16 @@ Operational rules:
 
 For split payments:
 
-1. Configure `ERC20PaymentModule.recipient` as `ERC20SplitProcessor`.
-2. Configure `ERC20SplitProcessor` with recipients totaling `10_000` bps.
-3. Processor distributes the ERC20 balance after collection.
+1. Gas-sensitive path: configure `ERC20SplitPaymentModule` with recipients totaling `10_000` bps and set the activation processor to zero.
+2. Two-step path: configure `ERC20PaymentModule.recipient` as `ERC20SplitProcessor`, then configure `ERC20SplitProcessor` with recipients totaling `10_000` bps.
+
+For direct payments, set the activation processor to zero and configure `ERC20PaymentModule.recipient` as the final recipient. This avoids an unnecessary processor proxy call.
+
+For free activations, set both payment and processor to zero. If a mint or renewal sends native value or a pricing module returns a non-zero price, the controller requires a configured payment module.
 
 Native ETH pricing is represented by `address(0)` in `NamespaceTypes.Price`, but the current payment implementation is ERC20-only and rejects `msg.value`.
 
-Zero-price mints and renewals skip payment and processor calls when no native value is supplied. This reduces gas for free activations and avoids unnecessary proxy calls.
+Zero-price mints and renewals skip payment and processor calls when no native value is supplied. Paid direct-settlement flows skip the processor call when the activation has no processor. This reduces gas for free and simple sales.
 
 ## Static Analysis Notes
 

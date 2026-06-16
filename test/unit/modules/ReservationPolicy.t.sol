@@ -78,6 +78,24 @@ contract ReservationPolicyTest is NamespaceSetUp {
         reservationPolicy.checkMint(ctx, "");
     }
 
+    function test_checkMint_revertsForMalformedProofData() public {
+        bytes32 activationId = keccak256("activation");
+        bytes32 labelHash = keccak256(bytes("vip"));
+        bytes32 publicLeaf = reservationPolicy.leaf(labelHash, address(0), 0);
+
+        vm.prank(address(controller));
+        reservationPolicy.configure(activationId, abi.encode(ReservationPolicy.Params({reservationRoot: publicLeaf})));
+
+        NamespaceTypes.MintContext memory ctx = _mintContext(activationId, "vip", labelHash, accounts.buyer.addr);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ReservationPolicy.InvalidReservationProof.selector, activationId, labelHash, address(0), 0
+            )
+        );
+        reservationPolicy.checkMint(ctx, hex"1234");
+    }
+
     function test_checkMint_allowsPublicMintAfterReservationExpiry() public {
         bytes32 activationId = keccak256("activation");
         bytes32 labelHash = keccak256(bytes("vip"));

@@ -190,6 +190,56 @@ Leaf modes:
 
 If a root is `bytes32(0)`, that side of the whitelist is disabled.
 
+### CompositeMintPolicy
+
+Purpose: bundle common sale-window, label-length, ERC20 balance, reservation, and whitelist checks into one policy module call.
+
+This is a gas-optimized path for activations that would otherwise configure several standard policy modules. The individual modules remain useful when a namespace needs independent policy composition or different policy ownership boundaries.
+
+Config:
+
+```solidity
+CompositeMintPolicy.Params({
+    startTime: uint64,
+    endTime: uint64,
+    minLength: uint16,
+    maxLength: uint16,
+    gateToken: ERC20,
+    minBalance: uint256,
+    reservationRoot: bytes32,
+    whitelistMintRoot: bytes32,
+    whitelistRenewRoot: bytes32,
+    whitelistLeafMode: MerkleWhitelistPolicy.LeafMode
+})
+```
+
+Mint runtime data:
+
+```solidity
+abi.encode(
+    CompositeMintPolicy.ReservationProofData({
+        account: address,
+        expiry: uint64,
+        proof: bytes32[]
+    }),
+    bytes32[] whitelistProof
+)
+```
+
+Renew runtime data:
+
+```solidity
+abi.encode(bytes32[] whitelistProof)
+```
+
+Flow:
+
+1. Check sale window.
+2. Check label byte length.
+3. Check ERC20 balance if `gateToken` is non-zero.
+4. Check reservation proof if `reservationRoot` is non-zero.
+5. Check whitelist proof against the mint or renewal root if configured.
+
 ## Pricing Modules
 
 Pricing modules run in order. Each module receives the current price and returns an updated price.
@@ -237,6 +287,8 @@ Flow:
 
 This avoids padding array entries for unused lengths. For example, a sale can price length 4 and length 8 labels without storing empty buckets for lengths 1-3 or 5-7.
 
+The sparse override rows are packed into an `SSTORE2` blob during activation. This avoids one storage slot per override while preserving the `lengthPrices(activationId)` getter.
+
 ### LengthBasedPricing
 
 Adds `ratePerSecond * duration` based on label byte length.
@@ -252,6 +304,8 @@ LengthBasedPricing.Params({
 ```
 
 Index `0` prices one-byte labels. Labels longer than the table use the final bucket.
+
+Mint and renewal rate tables are packed into `SSTORE2` blobs during activation. Quotes copy only the selected `uint128` rate from bytecode instead of loading the whole table.
 
 ### USDOraclePricing
 
@@ -305,6 +359,41 @@ Adds a premium when the entire label is emoji-only.
 
 It accepts common emoji codepoint ranges, variation selector `U+FE0F`, zero-width joiner `U+200D`, and skin-tone modifiers when attached to emoji content. It uses the same `LabelClassPricing.Params` config as `OnlyNumberPricing`.
 
+### CompositePricing
+
+Combines the common price stack into one pricing module:
+
+- optional label-class premium for number-only, letter-only, or emoji-only labels;
+- fixed mint and renewal amounts;
+- exact-length fixed overrides;
+- per-second length-based renewal rates.
+
+Config:
+
+```solidity
+CompositePricing.Params({
+    token: address,
+    labelClass: CompositePricing.LabelClass,
+    classMintAmount: uint128,
+    classRenewAmount: uint128,
+    fixedMintAmount: uint128,
+    fixedRenewAmount: uint128,
+    lengthPrices: CompositePricing.LengthPrice[],
+    mintRates: LengthBasedPricing.LengthRule[],
+    renewRates: LengthBasedPricing.LengthRule[]
+})
+```
+
+Flow:
+
+1. Reject mixed payment tokens.
+2. Add the class premium if the label matches the configured class.
+3. Add the fixed mint or renewal amount.
+4. Add the exact-length fixed override when one exists.
+5. Add the matching per-second length rate multiplied by duration.
+
+Use this when an activation needs several standard pricing dimensions and gas is more important than swapping each pricing component independently.
+
 ## Payment Module
 
 ### ERC20PaymentModule
@@ -328,13 +417,41 @@ Flow:
 
 For split sales, set `recipient` to an `ERC20SplitProcessor`.
 
+### ERC20SplitPaymentModule
+
+Collects ERC20 payment from the payer and sends it directly to split recipients in the same payment module call.
+
+Config:
+
+```solidity
+ERC20SplitPaymentModule.Params({
+    token: address,
+    splits: ERC20SplitPaymentModule.Split[]
+})
+```
+
+Rules:
+
+- every recipient must be non-zero;
+- total bps must equal `10_000`;
+- native token payment is not supported.
+
+Flow:
+
+1. Reject native ETH sent to ERC20 payment.
+2. Ensure final price token equals configured token.
+3. Transfer each recipient share from payer with `safeTransferFrom`.
+4. Send the final recipient the remainder to avoid dust.
+
+Use this instead of `ERC20PaymentModule + ERC20SplitProcessor` when the activation wants ERC20 revenue splits and does not need a separate processor step.
+
 ## Processor Modules
 
-Processors run after payment collection.
+Processors run after payment collection. They are optional; direct-settlement activations can use a zero processor and have the payment module send funds directly to the final recipient.
 
 ### NoopProcessor
 
-Does nothing. Use when the payment module already sends funds to the final recipient.
+Does nothing. It is kept as a module example and for deployments that want an explicit processor address, but the gas-efficient direct-settlement path is to set the activation processor to zero.
 
 ### ERC20SplitProcessor
 
@@ -377,3 +494,23 @@ Flow:
 4. Call `resolver.setAddr(node, address)`.
 
 Renewal is intentionally a no-op.
+
+### BatchSetAddrToBuyerHook
+
+Sets one or more resolver `addr(node)` values in a single post-hook module call.
+
+Runtime data:
+
+- empty bytes: set `addr` to buyer once;
+- tightly packed 20-byte addresses: one resolver write per address;
+- zero packed address: use buyer for that write.
+
+Flow:
+
+1. Require resolver is configured.
+2. Compute child node from parent node and label hash once.
+3. If runtime data is empty, call `resolver.setAddr(node, buyer)`.
+4. Otherwise require runtime data length is a multiple of 20.
+5. Loop through packed addresses and call `resolver.setAddr(node, address)` for each value.
+
+Use this when an activation needs multiple resolver writes from the same hook. It keeps the controller hook list shorter and avoids repeated controller-to-hook calls.

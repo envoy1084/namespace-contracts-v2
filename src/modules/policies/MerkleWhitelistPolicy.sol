@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {MerkleProofLib} from "solady/utils/MerkleProofLib.sol";
-
 import {IPolicyModule} from "src/interfaces/IPolicyModule.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {NamespaceModule} from "src/modules/NamespaceModule.sol";
@@ -61,9 +59,9 @@ contract MerkleWhitelistPolicy is NamespaceModule, IPolicyModule {
             return;
         }
 
-        bytes32[] memory proof = abi.decode(runtimeData, (bytes32[]));
+        (uint256 proofOffset, uint256 proofLength, bool valid) = _decodeProof(runtimeData);
         bytes32 leaf = _leaf(account, labelHash, leafMode);
-        if (!MerkleProofLib.verify(proof, root, leaf)) {
+        if (!valid || !_verifyProofCalldata(root, leaf, proofOffset, proofLength)) {
             revert InvalidWhitelistProof(activationId, account, labelHash, root);
         }
     }
@@ -95,6 +93,51 @@ contract MerkleWhitelistPolicy is NamespaceModule, IPolicyModule {
             inner := keccak256(ptr, 0x40)
             mstore(ptr, inner)
             result := keccak256(ptr, 0x20)
+        }
+    }
+
+    function _decodeProof(bytes calldata runtimeData)
+        private
+        pure
+        returns (uint256 proofOffset, uint256 proofLength, bool valid)
+    {
+        assembly ("memory-safe") {
+            let offset := runtimeData.offset
+            let length := runtimeData.length
+            if iszero(lt(length, 0x40)) {
+                let proofRelativeOffset := calldataload(offset)
+                if eq(proofRelativeOffset, 0x20) {
+                    proofLength := calldataload(add(offset, 0x20))
+                    let proofByteLength := shl(5, proofLength)
+                    if eq(length, add(0x40, proofByteLength)) {
+                        valid := 1
+                        proofOffset := add(offset, 0x40)
+                    }
+                }
+            }
+        }
+    }
+
+    function _verifyProofCalldata(bytes32 root, bytes32 leaf, uint256 proofOffset, uint256 proofLength)
+        private
+        pure
+        returns (bool isValid)
+    {
+        assembly ("memory-safe") {
+            if proofLength {
+                let offset := proofOffset
+                let end := add(offset, shl(5, proofLength))
+                for {} 1 {} {
+                    let proofElement := calldataload(offset)
+                    let scratch := shl(5, gt(leaf, proofElement))
+                    mstore(scratch, leaf)
+                    mstore(xor(scratch, 0x20), proofElement)
+                    leaf := keccak256(0x00, 0x40)
+                    offset := add(offset, 0x20)
+                    if iszero(lt(offset, end)) { break }
+                }
+            }
+            isValid := eq(leaf, root)
         }
     }
 }

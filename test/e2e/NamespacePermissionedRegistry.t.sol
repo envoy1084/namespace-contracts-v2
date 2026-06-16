@@ -81,7 +81,7 @@ contract NamespacePermissionedRegistryE2ETest is NamespaceSetUp {
                 module: address(erc20Payment),
                 configData: abi.encode(ERC20PaymentModule.Params({token: token, recipient: accounts.treasury.addr}))
             }),
-            processor: NamespaceTypes.ModuleConfig({module: address(noopProcessor), configData: ""}),
+            processor: NamespaceTypes.ModuleConfig({module: address(0), configData: ""}),
             postHooks: postHooks
         });
     }

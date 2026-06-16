@@ -34,7 +34,7 @@ MARKDOWN
   echo "- USD cost formula: \`gasUsed * gasPriceGwei * 1e-9 * ETH_PRICE_USD\`"
   echo "- \`Gas consumed @ 1 gwei\` is the transaction fee in gwei at a 1 gwei gas price."
   echo "- Reservation and whitelist set sizes are represented by Merkle proof depth. Activation stores one root, so activation gas is intentionally flat across 10, 100, 200, or 1000-entry sets."
-  echo '- Resolver record benchmarks use repeated `SetAddrToBuyerHook` addr writes because the current hook surface benchmarks resolver post-hook count, not distinct resolver record types.'
+  echo '- Resolver record benchmarks use `BatchSetAddrToBuyerHook` for multi-record scenarios so one hook module can execute multiple resolver writes.'
   echo
 } >"$tmp_output"
 
@@ -111,8 +111,8 @@ cat <<'MARKDOWN' >>"$tmp_output"
 | Minting | Minting benchmarks execute one `NamespaceController.mint` transaction after activation setup in `setUp()`. |
 | Reservations | Reservation proof scenarios use proofs for the named set size. Larger sets increase proof depth and mint gas, while activation gas remains root-only. |
 | Whitelists | Whitelist scenarios use `ACCOUNT_LABEL` leaves so both buyer and requested label are proven. |
-| Resolver hooks | 1, 3, and 5 record scenarios benchmark 1, 3, and 5 post-mint resolver addr hook calls. |
-| Full stack | The full-stack benchmark combines sale window, label length, ERC20 gate, reservation, whitelist, class pricing, fixed pricing, length pricing, ERC20 payment, split processing, and five resolver hooks. |
+| Resolver hooks | 1, 3, and 5 record scenarios benchmark resolver addr writes; multi-record scenarios use one batched post-hook module. |
+| Full stack | The full-stack benchmark uses `CompositeMintPolicy` for sale window, label length, ERC20 gate, reservation, and whitelist checks, `CompositePricing` for class, fixed, and length pricing, `ERC20SplitPaymentModule` for direct ERC20 split settlement, and `BatchSetAddrToBuyerHook` for five resolver writes. |
 | Function profiles | Profile rows call individual module functions directly with realistic activation config so hotspots can be compared before optimizing internals. |
 MARKDOWN
 

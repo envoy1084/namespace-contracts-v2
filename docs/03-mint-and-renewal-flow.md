@@ -1,6 +1,6 @@
 # Mint And Renewal Flow
 
-Mint and renew are the buyer-facing execution paths. Both load an activation, validate runtime data sizes, run policies, compose price, collect payment, process funds, and call the ENSv2 registry.
+Mint and renew are the buyer-facing execution paths. Both load an activation, validate runtime data sizes, run policies, compose price, call the ENSv2 registry, collect payment, process funds, and then run post hooks.
 
 ## Runtime Data
 
@@ -44,8 +44,6 @@ sequenceDiagram
     Buyer->>Controller: mint(activationId, label, duration, runtimeData)
     Controller->>Controller: require duration > 0 and activation active
     Controller->>Controller: check runtime data lengths
-    Controller->>Registry: getState(labelHash)
-    Registry-->>Controller: AVAILABLE
     Controller->>Controller: build MintContext
     loop each policy
         Controller->>Policy: checkMint(ctx, policyData[i])
@@ -54,10 +52,12 @@ sequenceDiagram
         Controller->>Pricing: quoteMint(ctx, currentPrice, pricingData[i])
         Pricing-->>Controller: updated price
     end
-    Controller->>Payment: collectMint{value}(ctx, price, paymentData)
-    Controller->>Processor: processMint(ctx, price, processorData)
     Controller->>Registry: register(label, buyer, zeroSubregistry, resolver, buyerRoles, expiry)
     Registry-->>Controller: tokenId
+    Controller->>Payment: collectMint{value}(ctx, price, paymentData)
+    opt processor configured
+        Controller->>Processor: processMint(ctx, price, processorData)
+    end
     loop each post hook
         Controller->>Hook: afterMint(ctx, tokenId, postHookData[i])
     end
@@ -106,7 +106,9 @@ sequenceDiagram
         Controller->>Pricing: quoteRenew(ctx, currentPrice, pricingData[i])
     end
     Controller->>Payment: collectRenew{value}(ctx, price, paymentData)
-    Controller->>Processor: processRenew(ctx, price, processorData)
+    opt processor configured
+        Controller->>Processor: processRenew(ctx, price, processorData)
+    end
     Controller->>Registry: renew(tokenId, newExpiry)
     loop each post hook
         Controller->>Hook: afterRenew(ctx, postHookData[i])
@@ -116,12 +118,16 @@ sequenceDiagram
 
 ## Execution Order Matters
 
-The current order is deliberate:
+The current mint order is deliberate:
 
-1. availability/state check first;
-2. policies before pricing/payment;
-3. payment before registry write;
-4. processor before registry write;
+1. policies before pricing/payment;
+2. pricing before registry write;
+3. registry write before payment settlement;
+4. payment and optional processor before post hooks;
 5. hooks after registry write.
+
+Mint does not preflight `getState` because `PermissionedRegistry.register` already enforces availability and reserved-label rules. The controller calls `register` before payment settlement, so an unavailable label reverts before any payment transfer. If payment, processor, or hook execution later reverts, the whole transaction reverts, including the registry write and any ERC20 transfers already made in the same transaction.
+
+Renewal still reads registry state first because it needs the existing token id and expiry to compute the new expiry.
 
 Post hooks run after the registry mutation because they may need the minted token id or a resolver node that should only be updated after a successful mint.

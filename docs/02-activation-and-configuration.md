@@ -9,7 +9,7 @@ Before activation:
 1. The target ENSv2 registry must exist.
 2. The namespace owner must have root registrar admin authority on that registry.
 3. The `NamespaceController` must have root `ROLE_REGISTRAR` and `ROLE_RENEW` on the same registry.
-4. The payment module and processor must be non-zero.
+4. A payment module is required when pricing modules can return a non-zero price. Free activations can use zero payment and zero processor.
 5. If module approval is required, every configured module must be approved by the controller owner.
 
 ## Activation Config
@@ -24,8 +24,8 @@ Before activation:
 | `buyerRoleBitmap` | ENSv2 roles granted to the buyer on the minted label. |
 | `policies` | Ordered policy modules that must all pass. |
 | `pricingModules` | Ordered pricing modules that compose the final price. |
-| `paymentModule` | Single module that collects funds. |
-| `processor` | Single module that distributes or accounts for collected funds. |
+| `paymentModule` | Optional single module that collects funds. Required for paid activations. |
+| `processor` | Optional single module that distributes or accounts for collected funds. Use zero for direct settlement. |
 | `postHooks` | Ordered hooks executed after registry writes. |
 
 Each module config is:
@@ -49,7 +49,7 @@ sequenceDiagram
     participant Module as Module Contracts
 
     Owner->>Controller: activate(config)
-    Controller->>Controller: require registry/payment/processor
+    Controller->>Controller: require registry and paid activations have payment
     Controller->>Registry: hasRootRoles(REGISTRAR_ADMIN, owner)
     Registry-->>Controller: true
     Controller->>Registry: hasRootRoles(REGISTRAR | RENEW, controller)
@@ -62,8 +62,10 @@ sequenceDiagram
     loop pricing modules
         Controller->>Module: configure(activationId, configData)
     end
-    alt pricing modules configured
+    opt payment configured
         Controller->>Module: configure payment
+    end
+    opt processor configured
         Controller->>Module: configure processor
     end
     loop post hooks
@@ -82,13 +84,23 @@ The controller stores only orchestration data:
 - resolver;
 - buyer role bitmap;
 - active status;
-- packed module address lists.
+- compact module address list references.
 
 Each module stores its own configuration keyed by `activationId`.
 
 This keeps the controller generic and makes future features additive. A future "human verification" feature, for example, can be a new policy module with the same `configure/checkMint/checkRenew` shape.
 
-No-pricing activations still store their payment and processor module addresses, but skip payment and processor configuration during activation and skip settlement calls during zero-price mint and renewal. This avoids paying proxy-call overhead for free sales.
+Module address lists use a gas-oriented hybrid layout:
+
+- zero modules: store no module data;
+- one module: store the module address directly;
+- two or more modules: pack 20-byte addresses into a Solady `SSTORE2` pointer.
+
+This avoids storage slots for empty/free activations, keeps common one-module paths cheap, and avoids expensive multi-slot dynamic storage for larger policy/pricing/hook stacks.
+
+No-pricing activations can set payment and processor to zero. They skip settlement calls during zero-price mint and renewal, which avoids paying proxy-call overhead for free sales.
+
+For direct-settlement paid sales, set `processor.module` to zero and configure the payment module to send funds directly to the final recipient. Use a processor only when an extra accounting or distribution step is required, such as ERC20 revenue splits.
 
 ## Activation Ownership
 
@@ -123,7 +135,7 @@ Then it calls `configure(activationId, newConfigData)` on the existing module. T
 - update `SaleWindowPolicy` times;
 - rotate `ReservationPolicy` or `MerkleWhitelistPolicy` roots;
 - change fixed-price or length-price values;
-- update payment recipient or split recipients.
+- update payment recipient or split recipients. If an activation was created with a zero processor, there is no processor module to update.
 
 ## Module Approval Mode
 

@@ -31,7 +31,7 @@ contract NamespaceControllerTest is NamespaceSetUp {
         assertEq(activation.buyerRoleBitmap, BUYER_ROLES);
         assertTrue(activation.active);
         assertEq(activation.paymentModule, address(erc20Payment));
-        assertEq(activation.processor, address(noopProcessor));
+        assertEq(activation.processor, address(0));
 
         address[] memory policies = controller.getPolicies(activationId);
         assertEq(policies.length, 2);

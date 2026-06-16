@@ -5,25 +5,27 @@ import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 import {PermissionedResolverLib} from "@ensv2/resolver/libraries/PermissionedResolverLib.sol";
 import {PermissionedResolver} from "@ensv2/resolver/PermissionedResolver.sol";
-import {ERC20} from "solady/tokens/ERC20.sol";
 import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 import {VerifiableFactory} from "lib/contracts-v2/contracts/lib/verifiable-factory/src/VerifiableFactory.sol";
 
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
-import {SetAddrToBuyerHook} from "src/modules/hooks/SetAddrToBuyerHook.sol";
+import {BatchSetAddrToBuyerHook} from "src/modules/hooks/BatchSetAddrToBuyerHook.sol";
 import {ERC20PaymentModule} from "src/modules/payment/ERC20PaymentModule.sol";
+import {ERC20SplitPaymentModule} from "src/modules/payment/ERC20SplitPaymentModule.sol";
 import {ERC20BalanceGatePolicy} from "src/modules/policies/ERC20BalanceGatePolicy.sol";
 import {LabelLengthPolicy} from "src/modules/policies/LabelLengthPolicy.sol";
 import {MerkleWhitelistPolicy} from "src/modules/policies/MerkleWhitelistPolicy.sol";
 import {PausePolicy} from "src/modules/policies/PausePolicy.sol";
 import {ReservationPolicy} from "src/modules/policies/ReservationPolicy.sol";
 import {SaleWindowPolicy} from "src/modules/policies/SaleWindowPolicy.sol";
+import {CompositeMintPolicy} from "src/modules/policies/CompositeMintPolicy.sol";
 import {FixedPricePricing} from "src/modules/pricing/FixedPricePricing.sol";
 import {LabelClassPricing} from "src/modules/pricing/LabelClassPricing.sol";
 import {LengthBasedPricing} from "src/modules/pricing/LengthBasedPricing.sol";
 import {OnlyEmojiPricing} from "src/modules/pricing/OnlyEmojiPricing.sol";
 import {OnlyLetterPricing} from "src/modules/pricing/OnlyLetterPricing.sol";
 import {OnlyNumberPricing} from "src/modules/pricing/OnlyNumberPricing.sol";
+import {CompositePricing} from "src/modules/pricing/CompositePricing.sol";
 import {ERC20SplitProcessor} from "src/modules/processors/ERC20SplitProcessor.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
 
@@ -40,12 +42,15 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
     ReservationPolicy internal reservationPolicy;
     MerkleWhitelistPolicy internal whitelistPolicy;
     PausePolicy internal pausePolicy;
+    CompositeMintPolicy internal compositePolicy;
     LengthBasedPricing internal lengthPricing;
     OnlyEmojiPricing internal emojiPricing;
     OnlyNumberPricing internal numberPricing;
     OnlyLetterPricing internal letterPricing;
+    CompositePricing internal compositePricing;
+    ERC20SplitPaymentModule internal splitPayment;
     ERC20SplitProcessor internal splitProcessor;
-    SetAddrToBuyerHook internal resolverHook;
+    BatchSetAddrToBuyerHook internal batchResolverHook;
     PermissionedResolver internal resolver;
 
     MintScenario internal mintFree;
@@ -98,19 +103,24 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         reservationPolicy = ReservationPolicy(_deployModule(address(new ReservationPolicy())));
         whitelistPolicy = MerkleWhitelistPolicy(_deployModule(address(new MerkleWhitelistPolicy())));
         pausePolicy = PausePolicy(_deployModule(address(new PausePolicy())));
+        compositePolicy = CompositeMintPolicy(_deployModule(address(new CompositeMintPolicy())));
         lengthPricing = LengthBasedPricing(_deployModule(address(new LengthBasedPricing())));
         emojiPricing = OnlyEmojiPricing(_deployModule(address(new OnlyEmojiPricing())));
         numberPricing = OnlyNumberPricing(_deployModule(address(new OnlyNumberPricing())));
         letterPricing = OnlyLetterPricing(_deployModule(address(new OnlyLetterPricing())));
+        compositePricing = CompositePricing(_deployModule(address(new CompositePricing())));
+        splitPayment = ERC20SplitPaymentModule(_deployModule(address(new ERC20SplitPaymentModule())));
         splitProcessor = ERC20SplitProcessor(_deployModule(address(new ERC20SplitProcessor())));
-        resolverHook = SetAddrToBuyerHook(_deployModule(address(new SetAddrToBuyerHook())));
-        resolver = _deployResolver(address(resolverHook), PermissionedResolverLib.ROLE_SET_ADDR);
+        batchResolverHook = BatchSetAddrToBuyerHook(_deployModule(address(new BatchSetAddrToBuyerHook())));
+        resolver = _deployResolver(address(batchResolverHook), PermissionedResolverLib.ROLE_SET_ADDR);
 
         _approveBenchmarkModules();
 
         token.mint(address(splitProcessor), 1_000_000 ether);
         vm.prank(accounts.buyer.addr);
         token.approve(address(erc20Payment), type(uint256).max);
+        vm.prank(accounts.buyer.addr);
+        token.approve(address(splitPayment), type(uint256).max);
 
         mintFree = _prepareMintScenario("free", 0, 0, 0, 0, 0, false, false, false, false);
         mintTwoPolicies = _prepareMintScenario("twopolicy", 2, 0, 0, 0, 0, false, false, false, false);
@@ -130,7 +140,7 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         mintResolverOneRecord = _prepareMintScenario("resolve1", 0, 0, 0, 0, 1, false, true, false, false);
         mintResolverThreeRecords = _prepareMintScenario("resolve3", 0, 0, 0, 0, 3, false, true, false, false);
         mintResolverFiveRecords = _prepareMintScenario("resolve5", 0, 0, 0, 0, 5, false, true, false, false);
-        mintFullStack = _prepareMintScenario("fullstack", 5, 1000, 1000, 6, 5, true, true, true, true);
+        mintFullStack = _prepareCompositeFullStackScenario("fullstack");
 
         _configureProfileModules();
     }
@@ -191,8 +201,8 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         _activate("actnumber", 0, 0, 0, 5, 0, false, false, false, false);
     }
 
-    function testBenchmark_activation_13_allPoliciesPricingSplitFiveHooks() public {
-        _activate("actall", 5, 1000, 1000, 6, 5, true, true, true, true);
+    function testBenchmark_activation_13_compositePolicyCompositePricingDirectSplitFiveResolverWrites() public {
+        _activateCompositeFullStack("actall");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -271,7 +281,7 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         _mint(mintResolverFiveRecords);
     }
 
-    function testBenchmark_mint_18_fullStackAllPoliciesPricingSplitFiveHooks() public {
+    function testBenchmark_mint_18_fullStackCompositePolicyCompositePricingDirectSplitFiveResolverWrites() public {
         _mint(mintFullStack);
     }
 
@@ -360,7 +370,7 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
 
     function testBenchmark_profile_hook_00_setAddrToBuyer_afterMint() public {
         vm.prank(address(controller));
-        resolverHook.afterMint(profileMintCtx, 1, "");
+        batchResolverHook.afterMint(profileMintCtx, 1, "");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -396,6 +406,12 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
             _runtimeData(label, policyCount, reservationSetSize, whitelistSetSize, pricingMode, resolverRecordCount);
     }
 
+    function _prepareCompositeFullStackScenario(string memory label) private returns (MintScenario memory scenario) {
+        scenario.activationId = _activateCompositeFullStack(label);
+        scenario.label = label;
+        scenario.runtimeData = _compositeRuntimeData(label, 1000, 1000, 5);
+    }
+
     function _activate(
         string memory label,
         uint256 policyCount,
@@ -415,21 +431,58 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
             buyerRoleBitmap: BUYER_ROLES,
             policies: _policies(label, policyCount, reservationSetSize, whitelistSetSize, useReservation, useWhitelist),
             pricingModules: _pricingModules(pricingMode),
-            paymentModule: NamespaceTypes.ModuleConfig({
-                module: address(erc20Payment),
-                configData: abi.encode(
-                    ERC20PaymentModule.Params({
-                        token: pricingMode == 0 ? ERC20(address(0)) : token,
-                        recipient: useSplitProcessor ? address(splitProcessor) : accounts.treasury.addr
-                    })
-                )
-            }),
+            paymentModule: _paymentModule(pricingMode, useSplitProcessor),
             processor: _processor(useSplitProcessor),
             postHooks: _postHooks(resolverRecordCount)
         });
 
         vm.prank(accounts.alice.addr);
         activationId = controller.activate(config);
+    }
+
+    function _activateCompositeFullStack(string memory label) private returns (bytes32 activationId) {
+        NamespaceTypes.ActivationConfig memory config = NamespaceTypes.ActivationConfig({
+            registry: IPermissionedRegistry(address(registry)),
+            parentNode: keccak256("alice.eth"),
+            resolver: address(resolver),
+            buyerRoleBitmap: BUYER_ROLES,
+            policies: _compositePolicies(label, 1000, 1000),
+            pricingModules: _compositePricingModules(),
+            paymentModule: _splitPaymentModule(),
+            processor: _processor(false),
+            postHooks: _postHooks(5)
+        });
+
+        vm.prank(accounts.alice.addr);
+        activationId = controller.activate(config);
+    }
+
+    function _compositePolicies(string memory label, uint256 reservationSetSize, uint256 whitelistSetSize)
+        private
+        view
+        returns (NamespaceTypes.ModuleConfig[] memory policies)
+    {
+        bytes32 labelHash = keccak256(bytes(label));
+        bytes32 reservationLeaf = compositePolicy.leaf(labelHash, accounts.buyer.addr, _reservationExpiry());
+        bytes32 whitelistLeaf = _accountLabelLeaf(accounts.buyer.addr, labelHash);
+        policies = new NamespaceTypes.ModuleConfig[](1);
+        policies[0] = NamespaceTypes.ModuleConfig({
+            module: address(compositePolicy),
+            configData: abi.encode(
+                CompositeMintPolicy.Params({
+                    startTime: 0,
+                    endTime: 0,
+                    minLength: 1,
+                    maxLength: 32,
+                    gateToken: token,
+                    minBalance: 100 ether,
+                    reservationRoot: _rootFor(reservationLeaf, reservationSetSize),
+                    whitelistMintRoot: _rootFor(whitelistLeaf, whitelistSetSize),
+                    whitelistRenewRoot: bytes32(0),
+                    whitelistLeafMode: MerkleWhitelistPolicy.LeafMode.ACCOUNT_LABEL
+                })
+            )
+        });
     }
 
     function _policies(
@@ -517,6 +570,41 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         }
     }
 
+    function _compositePricingModules() private view returns (NamespaceTypes.ModuleConfig[] memory pricingModules) {
+        pricingModules = new NamespaceTypes.ModuleConfig[](1);
+        CompositePricing.LengthPrice[] memory lengthPrices = new CompositePricing.LengthPrice[](5);
+        uint128[] memory mintRates = new uint128[](5);
+        uint128[] memory renewRates = new uint128[](5);
+        for (uint256 i; i < 5;) {
+            lengthPrices[i] = CompositePricing.LengthPrice({
+                length: SafeCastLib.toUint16(i + 1),
+                mintAmount: SafeCastLib.toUint128((i + 1) * 1 ether),
+                renewAmount: SafeCastLib.toUint128((i + 1) * 0.5 ether)
+            });
+            mintRates[i] = uint128((i + 1) * 1 gwei);
+            renewRates[i] = uint128((i + 1) * 0.5 gwei);
+            unchecked {
+                ++i;
+            }
+        }
+        pricingModules[0] = NamespaceTypes.ModuleConfig({
+            module: address(compositePricing),
+            configData: abi.encode(
+                CompositePricing.Params({
+                    token: address(token),
+                    labelClass: LabelClassPricing.LabelClass.LETTER,
+                    classMintAmount: 10 ether,
+                    classRenewAmount: 5 ether,
+                    defaultMintAmount: 100 ether,
+                    defaultRenewAmount: 50 ether,
+                    lengthPrices: lengthPrices,
+                    mintPricePerSecondByLength: mintRates,
+                    renewPricePerSecondByLength: renewRates
+                })
+            )
+        });
+    }
+
     function _runtimeData(
         string memory label,
         uint256 policyCount,
@@ -529,7 +617,7 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         runtimeData.pricingData = new bytes[](pricingMode == 0 ? 0 : pricingMode == 6 ? 3 : 1);
         runtimeData.paymentData = "";
         runtimeData.processorData = "";
-        runtimeData.postHookData = new bytes[](resolverRecordCount);
+        runtimeData.postHookData = new bytes[](resolverRecordCount == 0 ? 0 : 1);
 
         if (policyCount > 3) {
             runtimeData.policyData[3] = _reservationProof(label, reservationSetSize);
@@ -537,12 +625,33 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         if (policyCount > 4) {
             runtimeData.policyData[4] = _whitelistProof(label, whitelistSetSize);
         }
-        for (uint256 i; i < resolverRecordCount;) {
-            runtimeData.postHookData[i] = i == 0 ? bytes("") : abi.encode(_resolverOverride(i));
-            unchecked {
-                ++i;
-            }
+        if (resolverRecordCount == 1) {
+            runtimeData.postHookData[0] = "";
+        } else if (resolverRecordCount > 1) {
+            runtimeData.postHookData[0] = _packedResolverOverrides(resolverRecordCount);
         }
+    }
+
+    function _compositeRuntimeData(
+        string memory label,
+        uint256 reservationSetSize,
+        uint256 whitelistSetSize,
+        uint256 resolverRecordCount
+    ) private view returns (NamespaceTypes.RuntimeData memory runtimeData) {
+        runtimeData.policyData = new bytes[](1);
+        runtimeData.pricingData = new bytes[](1);
+        runtimeData.paymentData = "";
+        runtimeData.processorData = "";
+        runtimeData.postHookData = new bytes[](1);
+        runtimeData.policyData[0] = abi.encode(
+            CompositeMintPolicy.ReservationProofData({
+                account: accounts.buyer.addr,
+                expiry: _reservationExpiry(),
+                proof: _proofFor(_compositeReservationLeaf(label), reservationSetSize)
+            }),
+            _proofFor(_accountLabelLeaf(accounts.buyer.addr, keccak256(bytes(label))), whitelistSetSize)
+        );
+        runtimeData.postHookData[0] = _packedResolverOverrides(resolverRecordCount);
     }
 
     function _mint(MintScenario memory scenario) private {
@@ -601,6 +710,7 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
     function _approveBenchmarkModules() private {
         bytes32 policyKind = controller.MODULE_KIND_POLICY();
         bytes32 pricingKind = controller.MODULE_KIND_PRICING();
+        bytes32 paymentKind = controller.MODULE_KIND_PAYMENT();
         bytes32 processorKind = controller.MODULE_KIND_PROCESSOR();
         bytes32 postHookKind = controller.MODULE_KIND_POST_HOOK();
 
@@ -609,12 +719,15 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         controller.setModuleApproval(policyKind, address(reservationPolicy), true);
         controller.setModuleApproval(policyKind, address(whitelistPolicy), true);
         controller.setModuleApproval(policyKind, address(pausePolicy), true);
+        controller.setModuleApproval(policyKind, address(compositePolicy), true);
         controller.setModuleApproval(pricingKind, address(lengthPricing), true);
         controller.setModuleApproval(pricingKind, address(emojiPricing), true);
         controller.setModuleApproval(pricingKind, address(numberPricing), true);
         controller.setModuleApproval(pricingKind, address(letterPricing), true);
+        controller.setModuleApproval(pricingKind, address(compositePricing), true);
+        controller.setModuleApproval(paymentKind, address(splitPayment), true);
         controller.setModuleApproval(processorKind, address(splitProcessor), true);
-        controller.setModuleApproval(postHookKind, address(resolverHook), true);
+        controller.setModuleApproval(postHookKind, address(batchResolverHook), true);
         vm.stopPrank();
     }
 
@@ -667,7 +780,7 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
 
     function _processor(bool useSplitProcessor) private view returns (NamespaceTypes.ModuleConfig memory processor) {
         if (!useSplitProcessor) {
-            return NamespaceTypes.ModuleConfig({module: address(noopProcessor), configData: ""});
+            return NamespaceTypes.ModuleConfig({module: address(0), configData: ""});
         }
 
         ERC20SplitProcessor.Split[] memory splits = new ERC20SplitProcessor.Split[](2);
@@ -676,14 +789,41 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         processor = NamespaceTypes.ModuleConfig({module: address(splitProcessor), configData: abi.encode(splits)});
     }
 
-    function _postHooks(uint256 count) private view returns (NamespaceTypes.ModuleConfig[] memory postHooks) {
-        postHooks = new NamespaceTypes.ModuleConfig[](count);
-        for (uint256 i; i < count;) {
-            postHooks[i] = NamespaceTypes.ModuleConfig({module: address(resolverHook), configData: ""});
-            unchecked {
-                ++i;
-            }
+    function _paymentModule(uint256 pricingMode, bool useSplitProcessor)
+        private
+        view
+        returns (NamespaceTypes.ModuleConfig memory paymentModule)
+    {
+        if (pricingMode == 0) {
+            return NamespaceTypes.ModuleConfig({module: address(0), configData: ""});
         }
+
+        paymentModule = NamespaceTypes.ModuleConfig({
+            module: address(erc20Payment),
+            configData: abi.encode(
+                ERC20PaymentModule.Params({
+                    token: token, recipient: useSplitProcessor ? address(splitProcessor) : accounts.treasury.addr
+                })
+            )
+        });
+    }
+
+    function _splitPaymentModule() private view returns (NamespaceTypes.ModuleConfig memory paymentModule) {
+        ERC20SplitPaymentModule.Split[] memory splits = new ERC20SplitPaymentModule.Split[](2);
+        splits[0] = ERC20SplitPaymentModule.Split({recipient: accounts.alice.addr, bps: 7500});
+        splits[1] = ERC20SplitPaymentModule.Split({recipient: accounts.treasury.addr, bps: 2500});
+        paymentModule = NamespaceTypes.ModuleConfig({
+            module: address(splitPayment),
+            configData: abi.encode(ERC20SplitPaymentModule.Params({token: address(token), splits: splits}))
+        });
+    }
+
+    function _postHooks(uint256 count) private view returns (NamespaceTypes.ModuleConfig[] memory postHooks) {
+        if (count == 0) {
+            return new NamespaceTypes.ModuleConfig[](0);
+        }
+        postHooks = new NamespaceTypes.ModuleConfig[](1);
+        postHooks[0] = NamespaceTypes.ModuleConfig({module: address(batchResolverHook), configData: ""});
     }
 
     function _reservationProof(string memory label, uint256 setSize) private view returns (bytes memory) {
@@ -702,6 +842,10 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
 
     function _reservationLeaf(string memory label) private view returns (bytes32) {
         return reservationPolicy.leaf(keccak256(bytes(label)), accounts.buyer.addr, _reservationExpiry());
+    }
+
+    function _compositeReservationLeaf(string memory label) private view returns (bytes32) {
+        return compositePolicy.leaf(keccak256(bytes(label)), accounts.buyer.addr, _reservationExpiry());
     }
 
     function _rootFor(bytes32 leaf, uint256 setSize) private pure returns (bytes32 root) {
@@ -772,6 +916,21 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
             mstore(ptr, first)
             mstore(add(ptr, 0x20), second)
             result := keccak256(ptr, 0x40)
+        }
+    }
+
+    function _packedResolverOverrides(uint256 count) private view returns (bytes memory packed) {
+        packed = new bytes(count * 20);
+        for (uint256 i; i < count;) {
+            address override_ = i == 0 ? address(0) : _resolverOverride(i);
+            uint256 offset = 32 + i * 20;
+            assembly ("memory-safe") {
+                let word := mload(add(packed, offset))
+                mstore(add(packed, offset), or(shl(96, override_), and(word, 0xffffffffffffffffffffffff)))
+            }
+            unchecked {
+                ++i;
+            }
         }
     }
 

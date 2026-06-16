@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {MerkleProofLib} from "solady/utils/MerkleProofLib.sol";
-
 import {IPolicyModule} from "src/interfaces/IPolicyModule.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {NamespaceModule} from "src/modules/NamespaceModule.sol";
@@ -50,18 +48,19 @@ contract ReservationPolicy is NamespaceModule, IPolicyModule {
             revert MissingReservationProof(ctx.activationId, ctx.label);
         }
 
-        ProofData memory proofData = abi.decode(runtimeData, (ProofData));
-        bytes32 reservationLeaf = leaf(ctx.labelHash, proofData.account, proofData.expiry);
-        if (!MerkleProofLib.verify(proofData.proof, root, reservationLeaf)) {
-            revert InvalidReservationProof(ctx.activationId, ctx.labelHash, proofData.account, proofData.expiry);
+        (address account, uint64 expiry, uint256 proofOffset, uint256 proofLength, bool valid) =
+            _decodeProofData(runtimeData);
+        bytes32 reservationLeaf = leaf(ctx.labelHash, account, expiry);
+        if (!valid || !_verifyProofCalldata(root, reservationLeaf, proofOffset, proofLength)) {
+            revert InvalidReservationProof(ctx.activationId, ctx.labelHash, account, expiry);
         }
 
         uint256 currentTime = block.timestamp;
-        if (proofData.expiry != 0 && currentTime >= proofData.expiry) {
+        if (expiry != 0 && currentTime >= expiry) {
             return;
         }
-        if (proofData.account != address(0) && proofData.account != ctx.buyer) {
-            revert ReservedLabel(ctx.activationId, ctx.label, proofData.account, proofData.expiry, ctx.buyer);
+        if (account != address(0) && account != ctx.buyer) {
+            revert ReservedLabel(ctx.activationId, ctx.label, account, expiry, ctx.buyer);
         }
     }
 
@@ -79,6 +78,61 @@ contract ReservationPolicy is NamespaceModule, IPolicyModule {
             inner := keccak256(ptr, 0x60)
             mstore(ptr, inner)
             result := keccak256(ptr, 0x20)
+        }
+    }
+
+    function _decodeProofData(bytes calldata runtimeData)
+        private
+        pure
+        returns (address account, uint64 expiry, uint256 proofOffset, uint256 proofLength, bool valid)
+    {
+        assembly ("memory-safe") {
+            let offset := runtimeData.offset
+            let length := runtimeData.length
+            if iszero(lt(length, 0xa0)) {
+                let tupleRelativeOffset := calldataload(offset)
+                if eq(tupleRelativeOffset, 0x20) {
+                    let tupleOffset := add(offset, tupleRelativeOffset)
+                    let accountWord := calldataload(tupleOffset)
+                    let expiryWord := calldataload(add(tupleOffset, 0x20))
+                    let proofRelativeOffset := calldataload(add(tupleOffset, 0x40))
+                    if and(eq(proofRelativeOffset, 0x60), iszero(shr(160, accountWord))) {
+                        if iszero(shr(64, expiryWord)) {
+                            proofLength := calldataload(add(tupleOffset, proofRelativeOffset))
+                            let proofByteLength := shl(5, proofLength)
+                            if eq(length, add(0xa0, proofByteLength)) {
+                                valid := 1
+                                account := accountWord
+                                expiry := expiryWord
+                                proofOffset := add(add(tupleOffset, proofRelativeOffset), 0x20)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function _verifyProofCalldata(bytes32 root, bytes32 leaf_, uint256 proofOffset, uint256 proofLength)
+        private
+        pure
+        returns (bool isValid)
+    {
+        assembly ("memory-safe") {
+            if proofLength {
+                let offset := proofOffset
+                let end := add(offset, shl(5, proofLength))
+                for {} 1 {} {
+                    let proofElement := calldataload(offset)
+                    let scratch := shl(5, gt(leaf_, proofElement))
+                    mstore(scratch, leaf_)
+                    mstore(xor(scratch, 0x20), proofElement)
+                    leaf_ := keccak256(0x00, 0x40)
+                    offset := add(offset, 0x20)
+                    if iszero(lt(offset, end)) { break }
+                }
+            }
+            isValid := eq(leaf_, root)
         }
     }
 }

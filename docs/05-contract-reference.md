@@ -96,6 +96,7 @@ The owner authorizes `upgradeToAndCall` for the controller or module proxy. Modu
 | `ReservationPolicy` | Merkle-root label reservations by account and expiry. |
 | `MerkleWhitelistPolicy` | Merkle allowlists for mints and renewals. |
 | `PausePolicy` | Activation-owner pause switch for minting and renewals. |
+| `CompositeMintPolicy` | Gas-optimized bundle of sale window, length, ERC20 gate, reservation, and whitelist checks. |
 
 ## Pricing
 
@@ -108,13 +109,15 @@ The owner authorizes `upgradeToAndCall` for the controller or module proxy. Modu
 | `OnlyLetterPricing` | Premium for labels made only of ASCII letters. |
 | `OnlyEmojiPricing` | Premium for emoji-only labels. |
 | `LabelClassPricing` | Shared base for special label-class pricing modules. |
+| `CompositePricing` | Gas-optimized bundle of label-class, fixed, exact-length, and length-rate pricing. |
 
 ## Payment And Processing
 
 | Contract | Purpose |
 | --- | --- |
 | `ERC20PaymentModule` | Pulls ERC20 payment from payer to recipient. |
-| `NoopProcessor` | Empty processor for direct-settlement flows. |
+| `ERC20SplitPaymentModule` | Pulls ERC20 payment from payer directly to split recipients. |
+| `NoopProcessor` | Empty processor example; zero processor is preferred for gas-efficient direct settlement. |
 | `ERC20SplitProcessor` | Splits ERC20 funds by basis points. |
 
 ## Hooks
@@ -122,3 +125,4 @@ The owner authorizes `upgradeToAndCall` for the controller or module proxy. Modu
 | Contract | Purpose |
 | --- | --- |
 | `SetAddrToBuyerHook` | Sets resolver `addr` record after mint. |
+| `BatchSetAddrToBuyerHook` | Sets one or more resolver `addr` records from one post-hook call. |
