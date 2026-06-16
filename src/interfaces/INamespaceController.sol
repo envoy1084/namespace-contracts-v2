@@ -22,6 +22,11 @@ interface INamespaceController {
     /// @notice Emitted after a module is configured for an activation.
     event ModuleConfigured(bytes32 indexed activationId, address indexed module, bytes32 indexed kind);
 
+    /// @notice Emitted after an existing activation module receives updated config.
+    event ModuleConfigUpdated(
+        bytes32 indexed activationId, address indexed module, bytes32 indexed kind, uint256 index
+    );
+
     /// @notice Emitted when module approval enforcement is enabled or disabled.
     event ModuleApprovalRequiredSet(bool required);
 
@@ -64,6 +69,14 @@ interface INamespaceController {
     /// @param activationId Activation id.
     /// @param newOwner New activation owner.
     function transferActivationOwnership(bytes32 activationId, address newOwner) external;
+
+    /// @notice Update config for an existing module attached to an activation.
+    /// @dev For payment and processor modules, pass `index == 0`.
+    /// @param activationId Activation id.
+    /// @param kind Module kind, such as `MODULE_KIND_POLICY`.
+    /// @param index Module index in that kind's activation module list.
+    /// @param configData New ABI-encoded module config.
+    function updateModuleConfig(bytes32 activationId, bytes32 kind, uint256 index, bytes calldata configData) external;
 
     /// @notice Enable or disable controller-level module approval enforcement.
     /// @param required Whether activations must use approved module contracts.

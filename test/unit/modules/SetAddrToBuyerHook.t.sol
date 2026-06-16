@@ -15,7 +15,7 @@ contract SetAddrToBuyerHookTest is NamespaceSetUp {
 
     function setUp() public override {
         super.setUp();
-        hook = new SetAddrToBuyerHook(address(controller));
+        hook = SetAddrToBuyerHook(_deployModule(address(new SetAddrToBuyerHook())));
         resolver = _deployResolver(address(hook), PermissionedResolverLib.ROLE_SET_ADDR);
     }
 

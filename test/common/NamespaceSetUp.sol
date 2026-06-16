@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
+import {LibClone} from "solady/utils/LibClone.sol";
 
 import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
@@ -59,7 +60,7 @@ contract NamespaceSetUp is Test {
         vm.deal(accounts.buyer.addr, 100 ether);
         vm.deal(accounts.owner.addr, 100 ether);
 
-        controller = new NamespaceController(accounts.owner.addr);
+        controller = _deployController(accounts.owner.addr);
         registryMetadata = new SimpleRegistryMetadata(IHCAFactoryBasic(address(0)));
         registry = new PermissionedRegistry(
             IHCAFactoryBasic(address(0)),
@@ -68,12 +69,12 @@ contract NamespaceSetUp is Test {
             ROLE_REGISTRAR_ADMIN | RegistryRolesLib.ROLE_RENEW_ADMIN | RegistryRolesLib.ROLE_REGISTER_RESERVED_ADMIN
         );
         token = new MockERC20("Mock USDC", "mUSDC");
-        saleWindowPolicy = new SaleWindowPolicy(address(controller));
-        labelLengthPolicy = new LabelLengthPolicy(address(controller));
-        fixedPricePricing = new FixedPricePricing(address(controller));
-        erc20Payment = new ERC20PaymentModule(address(controller));
-        noopProcessor = new NoopProcessor(address(controller));
-        postHook = new RecordingPostHook(address(controller));
+        saleWindowPolicy = SaleWindowPolicy(_deployModule(address(new SaleWindowPolicy())));
+        labelLengthPolicy = LabelLengthPolicy(_deployModule(address(new LabelLengthPolicy())));
+        fixedPricePricing = FixedPricePricing(_deployModule(address(new FixedPricePricing())));
+        erc20Payment = ERC20PaymentModule(_deployModule(address(new ERC20PaymentModule())));
+        noopProcessor = NoopProcessor(_deployModule(address(new NoopProcessor())));
+        postHook = RecordingPostHook(_deployModule(address(new RecordingPostHook())));
 
         registry.grantRootRoles(ROLE_REGISTRAR_ADMIN, accounts.alice.addr);
         registry.grantRootRoles(ROLE_REGISTRAR | ROLE_RENEW, address(controller));
@@ -138,6 +139,24 @@ contract NamespaceSetUp is Test {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
         vm.prank(accounts.alice.addr);
         activationId = controller.activate(config);
+    }
+
+    function _deployController(address owner_) internal returns (NamespaceController deployed) {
+        address implementation = address(new NamespaceController());
+        deployed = NamespaceController(payable(LibClone.deployERC1967(implementation)));
+        deployed.initialize(owner_);
+    }
+
+    function _deployModule(address implementation) internal returns (address deployed) {
+        deployed = LibClone.deployERC1967(implementation);
+        (bool success, bytes memory returndata) = deployed.call(
+            abi.encodeWithSignature("initialize(address,address)", address(controller), accounts.owner.addr)
+        );
+        if (!success) {
+            assembly ("memory-safe") {
+                revert(add(returndata, 0x20), mload(returndata))
+            }
+        }
     }
 
     function _approveDefaultModules() internal {

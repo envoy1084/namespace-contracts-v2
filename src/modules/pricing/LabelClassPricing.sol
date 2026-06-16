@@ -29,8 +29,6 @@ abstract contract LabelClassPricing is NamespaceModule, IPricingModule {
     error PaymentTokenMismatch(address expected, address actual);
     error InvalidUtf8Label(string label);
 
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     /// @notice Store class pricing parameters for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         params[activationId] = abi.decode(configData, (Params));

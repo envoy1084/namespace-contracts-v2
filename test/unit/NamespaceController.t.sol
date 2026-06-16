@@ -11,6 +11,9 @@ import {SaleWindowPolicy} from "src/modules/policies/SaleWindowPolicy.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
 
 contract NamespaceControllerTest is NamespaceSetUp {
+    bytes32 private constant _ERC1967_IMPLEMENTATION_SLOT =
+        0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+
     event ActivationOwnershipTransferred(
         bytes32 indexed activationId, address indexed previousOwner, address indexed newOwner
     );
@@ -47,6 +50,86 @@ contract NamespaceControllerTest is NamespaceSetUp {
         assertEq(priceToken, address(token));
         assertEq(mintAmount, 100 ether);
         assertEq(renewAmount, 50 ether);
+    }
+
+    function test_upgradeController_allowsOwner() public {
+        NamespaceController newImplementation = new NamespaceController();
+
+        vm.prank(accounts.owner.addr);
+        controller.upgradeToAndCall(address(newImplementation), "");
+
+        assertEq(
+            address(uint160(uint256(vm.load(address(controller), _ERC1967_IMPLEMENTATION_SLOT)))),
+            address(newImplementation)
+        );
+    }
+
+    function test_upgradeController_revertsForNonOwner() public {
+        NamespaceController newImplementation = new NamespaceController();
+
+        vm.expectRevert();
+        vm.prank(accounts.buyer.addr);
+        controller.upgradeToAndCall(address(newImplementation), "");
+    }
+
+    function test_upgradeModule_allowsOwner() public {
+        SaleWindowPolicy newImplementation = new SaleWindowPolicy();
+
+        vm.prank(accounts.owner.addr);
+        saleWindowPolicy.upgradeToAndCall(address(newImplementation), "");
+
+        assertEq(
+            address(uint160(uint256(vm.load(address(saleWindowPolicy), _ERC1967_IMPLEMENTATION_SLOT)))),
+            address(newImplementation)
+        );
+    }
+
+    function test_updateModuleConfig_allowsActivationOwner() public {
+        bytes32 activationId = _activateDefault();
+        bytes32 policyKind = controller.MODULE_KIND_POLICY();
+
+        vm.prank(accounts.alice.addr);
+        controller.updateModuleConfig(
+            activationId,
+            policyKind,
+            0,
+            abi.encode(
+                SaleWindowPolicy.Params({startTime: uint64(block.timestamp + 1), endTime: uint64(block.timestamp + 2)})
+            )
+        );
+
+        (uint64 startTime, uint64 endTime) = saleWindowPolicy.params(activationId);
+        assertEq(startTime, uint64(block.timestamp + 1));
+        assertEq(endTime, uint64(block.timestamp + 2));
+    }
+
+    function test_updateModuleConfig_revertsForNonActivationOwner() public {
+        bytes32 activationId = _activateDefault();
+        bytes32 policyKind = controller.MODULE_KIND_POLICY();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(NamespaceController.NotActivationOwner.selector, activationId, accounts.buyer.addr)
+        );
+        vm.prank(accounts.buyer.addr);
+        controller.updateModuleConfig(
+            activationId, policyKind, 0, abi.encode(SaleWindowPolicy.Params({startTime: 1, endTime: 2}))
+        );
+    }
+
+    function test_updateModuleConfig_revertsWhenOwnerLostRegistryAdmin() public {
+        bytes32 activationId = _activateDefault();
+        bytes32 policyKind = controller.MODULE_KIND_POLICY();
+        registry.revokeRootRoles(ROLE_REGISTRAR_ADMIN, accounts.alice.addr);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                NamespaceController.UnauthorizedActivationOwner.selector, accounts.alice.addr, address(registry)
+            )
+        );
+        vm.prank(accounts.alice.addr);
+        controller.updateModuleConfig(
+            activationId, policyKind, 0, abi.encode(SaleWindowPolicy.Params({startTime: 1, endTime: 2}))
+        );
     }
 
     function test_activate_revertsWhenCallerLacksRegistryAdmin() public {
@@ -108,7 +191,7 @@ contract NamespaceControllerTest is NamespaceSetUp {
 
     function test_activate_revertsWhenModuleApprovalRequiredAndModuleIsUnapproved() public {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
-        SaleWindowPolicy unapprovedPolicy = new SaleWindowPolicy(address(controller));
+        SaleWindowPolicy unapprovedPolicy = SaleWindowPolicy(_deployModule(address(new SaleWindowPolicy())));
         config.policies[0] = NamespaceTypes.ModuleConfig({
             module: address(unapprovedPolicy),
             configData: abi.encode(SaleWindowPolicy.Params({startTime: 0, endTime: 0}))
@@ -128,7 +211,7 @@ contract NamespaceControllerTest is NamespaceSetUp {
     function test_activate_revertsWhenModuleIsApprovedForDifferentKind() public {
         bytes32 pricingKind = controller.MODULE_KIND_PRICING();
         bytes32 policyKind = controller.MODULE_KIND_POLICY();
-        SaleWindowPolicy unapprovedPolicy = new SaleWindowPolicy(address(controller));
+        SaleWindowPolicy unapprovedPolicy = SaleWindowPolicy(_deployModule(address(new SaleWindowPolicy())));
 
         vm.prank(accounts.owner.addr);
         controller.setModuleApprovalRequired(true);
@@ -235,7 +318,7 @@ contract NamespaceControllerTest is NamespaceSetUp {
     }
 
     function test_mint_respectsReservationPolicy() public {
-        ReservationPolicy reservationPolicy = new ReservationPolicy(address(controller));
+        ReservationPolicy reservationPolicy = ReservationPolicy(_deployModule(address(new ReservationPolicy())));
         Vm.Wallet memory reservedBuyer = vm.createWallet("reservedBuyer");
         token.mint(reservedBuyer.addr, 1_000 ether);
         bytes32 policyKind = controller.MODULE_KIND_POLICY();

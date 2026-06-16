@@ -43,8 +43,6 @@ contract FixedPricePricing is NamespaceModule, IPricingModule {
     error DuplicateLengthPrice(bytes32 activationId, uint16 length);
     error EmptyLabel();
 
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     /// @notice Store fixed price parameters for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         Params memory decoded = abi.decode(configData, (Params));

@@ -14,8 +14,8 @@ contract TokenGatePoliciesTest is NamespaceSetUp {
 
     function setUp() public override {
         super.setUp();
-        erc20Gate = new ERC20BalanceGatePolicy(address(controller));
-        erc721Gate = new ERC721BalanceGatePolicy(address(controller));
+        erc20Gate = ERC20BalanceGatePolicy(_deployModule(address(new ERC20BalanceGatePolicy())));
+        erc721Gate = ERC721BalanceGatePolicy(_deployModule(address(new ERC721BalanceGatePolicy())));
         nft = new MockERC721("Mock NFT", "MNFT");
     }
 

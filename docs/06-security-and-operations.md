@@ -56,7 +56,7 @@ Operational rules:
 - pass `ProofData(account, expiry, proof)` at the reservation policy index in `runtimeData.policyData`;
 - use `account == address(0)` only for labels that should be public but still proof-gated;
 - use `expiry == 0` only for non-expiring reservations;
-- rotate the root by creating a new activation if the reservation list needs to change.
+- rotate the root with `NamespaceController.updateModuleConfig` if the reservation list needs to change.
 
 When a non-zero root is configured, buyers without a valid proof cannot mint, even if the intended result is public mint. That is the tradeoff that keeps reservation storage bounded.
 
@@ -72,6 +72,26 @@ pausePolicy.setPaused(activationId, true)
 
 Only the activation owner can toggle it. In this architecture, activation ownership is protected by ENSv2 registry admin checks in `NamespaceController`.
 
+For modules whose state is entirely stored through `configure`, the activation owner can also update parameters through:
+
+```solidity
+controller.updateModuleConfig(activationId, moduleKind, moduleIndex, configData)
+```
+
+This path is limited to existing modules already attached to the activation. It does not let the activation owner swap in a new module contract.
+
+## Upgrade Operations
+
+`NamespaceController` and production modules are UUPS upgradeable through Solady `UUPSUpgradeable`.
+
+Operational rules:
+
+- deploy implementation contracts with initializers locked;
+- deploy ERC1967 proxies and initialize them immediately;
+- keep proxy ownership under the intended upgrade admin;
+- review storage layout before every upgrade;
+- run full tests, Slither, and benchmarks against proxy deployments before upgrading.
+
 ## Payment Assumptions
 
 `ERC20PaymentModule` is controller-only. The controller currently sets `ctx.payer = msg.sender`, so the ERC20 transfer pulls from the caller who initiated mint or renew.
@@ -83,6 +103,8 @@ For split payments:
 3. Processor distributes the ERC20 balance after collection.
 
 Native ETH pricing is represented by `address(0)` in `NamespaceTypes.Price`, but the current payment implementation is ERC20-only and rejects `msg.value`.
+
+Zero-price mints and renewals skip payment and processor calls when no native value is supplied. This reduces gas for free activations and avoids unnecessary proxy calls.
 
 ## Static Analysis Notes
 

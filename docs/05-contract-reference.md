@@ -15,6 +15,7 @@ Responsibilities:
 - enforce optional module approval;
 - validate runtime data lengths;
 - orchestrate policy, pricing, payment, processor, registry, and hook calls;
+- update config for modules already attached to an activation;
 - expose activation metadata and module lists.
 
 Key functions:
@@ -26,6 +27,7 @@ Key functions:
 | `renew(activationId, label, duration, runtimeData)` | Renew a subname through the activation. |
 | `setActivationStatus(activationId, active)` | Pause or resume an activation. |
 | `transferActivationOwnership(activationId, newOwner)` | Transfer activation control to another registry admin. |
+| `updateModuleConfig(activationId, kind, index, configData)` | Reconfigure an existing activation module. |
 | `setModuleApprovalRequired(required)` | Enable/disable module allowlisting. |
 | `setModuleApproval(module, approved)` | Update module allowlist state for every module kind. |
 | `setModuleApproval(kind, module, approved)` | Update module allowlist state for one module kind. |
@@ -53,9 +55,21 @@ Base contract for modules.
 
 Responsibilities:
 
-- stores immutable `CONTROLLER`;
+- stores proxy-initialized `controller`;
 - provides `onlyController`;
-- standardizes controller-only configuration and execution.
+- standardizes controller-only configuration and execution;
+- adds Solady UUPS upgradeability with owner-gated upgrades.
+
+## Upgradeability
+
+`NamespaceController` and all production modules are Solady UUPS implementations. Implementations lock initializers in their constructors, and proxies must call:
+
+```solidity
+NamespaceController.initialize(owner)
+NamespaceModule.initialize(controller, owner)
+```
+
+The owner authorizes `upgradeToAndCall` for the controller or module proxy. Module configuration and execution remain controller-only after upgrade.
 
 ## Interfaces
 

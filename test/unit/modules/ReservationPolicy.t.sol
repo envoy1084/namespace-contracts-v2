@@ -10,7 +10,7 @@ contract ReservationPolicyTest is NamespaceSetUp {
 
     function setUp() public override {
         super.setUp();
-        reservationPolicy = new ReservationPolicy(address(controller));
+        reservationPolicy = ReservationPolicy(_deployModule(address(new ReservationPolicy())));
     }
 
     function test_checkMint_revertsWhenReservedForDifferentBuyer() public {

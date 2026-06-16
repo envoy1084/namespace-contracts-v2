@@ -24,8 +24,6 @@ contract LabelLengthPolicy is NamespaceModule, IPolicyModule {
     error LabelTooShort(bytes32 activationId, string label, uint256 length, uint16 minLength);
     error LabelTooLong(bytes32 activationId, string label, uint256 length, uint16 maxLength);
 
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     /// @notice Store label length bounds for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         Params memory decoded = abi.decode(configData, (Params));

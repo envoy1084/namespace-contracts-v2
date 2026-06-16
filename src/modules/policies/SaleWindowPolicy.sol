@@ -22,8 +22,6 @@ contract SaleWindowPolicy is NamespaceModule, IPolicyModule {
     error SaleNotStarted(bytes32 activationId, uint64 startTime, uint256 currentTime);
     error SaleEnded(bytes32 activationId, uint64 endTime, uint256 currentTime);
 
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     /// @notice Store sale window parameters for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         Params memory decoded = abi.decode(configData, (Params));

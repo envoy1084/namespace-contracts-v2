@@ -14,8 +14,8 @@ contract NamespaceFuzzTest is NamespaceSetUp {
 
     function setUp() public override {
         super.setUp();
-        lengthPricing = new LengthBasedPricing(address(controller));
-        splitProcessor = new ERC20SplitProcessor(address(controller));
+        lengthPricing = LengthBasedPricing(_deployModule(address(new LengthBasedPricing())));
+        splitProcessor = ERC20SplitProcessor(_deployModule(address(new ERC20SplitProcessor())));
 
         vm.startPrank(accounts.owner.addr);
         controller.setModuleApproval(controller.MODULE_KIND_PRICING(), address(lengthPricing), true);

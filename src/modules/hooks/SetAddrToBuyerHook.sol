@@ -15,8 +15,6 @@ contract SetAddrToBuyerHook is NamespaceModule, IPostHookModule {
     error ResolverNotConfigured(bytes32 activationId);
     error InvalidRuntimeDataLength(uint256 length);
 
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     /// @notice Accept activation configuration without storing hook state.
     function configure(bytes32, bytes calldata) external view onlyController {
         // Intentionally no-op.

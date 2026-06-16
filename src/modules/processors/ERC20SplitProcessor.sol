@@ -24,8 +24,6 @@ contract ERC20SplitProcessor is NamespaceModule, IProcessorModule {
     error InvalidSplitBps(uint256 totalBps);
     error NativeTokenNotSupported();
 
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     /// @notice Store split recipients and basis points for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         Split[] memory decoded = abi.decode(configData, (Split[]));

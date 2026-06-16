@@ -10,7 +10,7 @@ contract LengthBasedPricingTest is NamespaceSetUp {
 
     function setUp() public override {
         super.setUp();
-        pricing = new LengthBasedPricing(address(controller));
+        pricing = LengthBasedPricing(_deployModule(address(new LengthBasedPricing())));
     }
 
     function test_quoteMint_usesExactLengthBucket() public {

@@ -25,8 +25,6 @@ contract LengthBasedPricing is NamespaceModule, IPricingModule {
     error EmptyLabel();
     error PaymentTokenMismatch(address expected, address actual);
 
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     /// @notice Store length-based pricing parameters for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         Params memory decoded = abi.decode(configData, (Params));

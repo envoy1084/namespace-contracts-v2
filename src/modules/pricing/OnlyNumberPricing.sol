@@ -6,10 +6,7 @@ import {LabelClassPricing} from "src/modules/pricing/LabelClassPricing.sol";
 /// @title OnlyNumberPricing
 /// @notice Adds a premium when the complete label is ASCII number-only.
 contract OnlyNumberPricing is LabelClassPricing {
-    constructor(address controller_) LabelClassPricing(controller_) {}
-
     function labelClass() public pure override returns (LabelClass) {
         return LabelClass.NUMBER;
     }
 }
-

@@ -62,8 +62,10 @@ sequenceDiagram
     loop pricing modules
         Controller->>Module: configure(activationId, configData)
     end
-    Controller->>Module: configure payment
-    Controller->>Module: configure processor
+    alt pricing modules configured
+        Controller->>Module: configure payment
+        Controller->>Module: configure processor
+    end
     loop post hooks
         Controller->>Module: configure(activationId, configData)
     end
@@ -80,11 +82,13 @@ The controller stores only orchestration data:
 - resolver;
 - buyer role bitmap;
 - active status;
-- module addresses.
+- packed module address lists.
 
 Each module stores its own configuration keyed by `activationId`.
 
 This keeps the controller generic and makes future features additive. A future "human verification" feature, for example, can be a new policy module with the same `configure/checkMint/checkRenew` shape.
+
+No-pricing activations still store their payment and processor module addresses, but skip payment and processor configuration during activation and skip settlement calls during zero-price mint and renewal. This avoids paying proxy-call overhead for free sales.
 
 ## Activation Ownership
 
@@ -98,6 +102,28 @@ The controller checks root registrar admin authority:
 - for the new owner during ownership transfer.
 
 This prevents an old activation owner from continuing to manage a sale after losing registry admin authority.
+
+## Updating Activation Parameters
+
+Activation owners can update configuration for modules already attached to an activation:
+
+```solidity
+updateModuleConfig(activationId, MODULE_KIND_POLICY, 0, newConfigData)
+```
+
+The controller verifies:
+
+- the activation exists;
+- `msg.sender` is the activation owner;
+- the activation owner still has registry admin authority;
+- the requested module kind and index exist.
+
+Then it calls `configure(activationId, newConfigData)` on the existing module. This updates module parameters without changing the module address list. Examples:
+
+- update `SaleWindowPolicy` times;
+- rotate `ReservationPolicy` or `MerkleWhitelistPolicy` roots;
+- change fixed-price or length-price values;
+- update payment recipient or split recipients.
 
 ## Module Approval Mode
 

@@ -94,16 +94,16 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
     function setUp() public override {
         super.setUp();
 
-        erc20GatePolicy = new ERC20BalanceGatePolicy(address(controller));
-        reservationPolicy = new ReservationPolicy(address(controller));
-        whitelistPolicy = new MerkleWhitelistPolicy(address(controller));
-        pausePolicy = new PausePolicy(address(controller));
-        lengthPricing = new LengthBasedPricing(address(controller));
-        emojiPricing = new OnlyEmojiPricing(address(controller));
-        numberPricing = new OnlyNumberPricing(address(controller));
-        letterPricing = new OnlyLetterPricing(address(controller));
-        splitProcessor = new ERC20SplitProcessor(address(controller));
-        resolverHook = new SetAddrToBuyerHook(address(controller));
+        erc20GatePolicy = ERC20BalanceGatePolicy(_deployModule(address(new ERC20BalanceGatePolicy())));
+        reservationPolicy = ReservationPolicy(_deployModule(address(new ReservationPolicy())));
+        whitelistPolicy = MerkleWhitelistPolicy(_deployModule(address(new MerkleWhitelistPolicy())));
+        pausePolicy = PausePolicy(_deployModule(address(new PausePolicy())));
+        lengthPricing = LengthBasedPricing(_deployModule(address(new LengthBasedPricing())));
+        emojiPricing = OnlyEmojiPricing(_deployModule(address(new OnlyEmojiPricing())));
+        numberPricing = OnlyNumberPricing(_deployModule(address(new OnlyNumberPricing())));
+        letterPricing = OnlyLetterPricing(_deployModule(address(new OnlyLetterPricing())));
+        splitProcessor = ERC20SplitProcessor(_deployModule(address(new ERC20SplitProcessor())));
+        resolverHook = SetAddrToBuyerHook(_deployModule(address(new SetAddrToBuyerHook())));
         resolver = _deployResolver(address(resolverHook), PermissionedResolverLib.ROLE_SET_ADDR);
 
         _approveBenchmarkModules();

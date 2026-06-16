@@ -32,8 +32,6 @@ contract MerkleWhitelistPolicy is NamespaceModule, IPolicyModule {
 
     error InvalidWhitelistProof(bytes32 activationId, address account, bytes32 labelHash, bytes32 root);
 
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     /// @notice Store whitelist roots for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         params[activationId] = abi.decode(configData, (Params));

@@ -34,8 +34,6 @@ contract ReservationPolicy is NamespaceModule, IPolicyModule {
     error InvalidReservationProof(bytes32 activationId, bytes32 labelHash, address account, uint64 expiry);
     error ReservedLabel(bytes32 activationId, string label, address reservedFor, uint64 expiry, address buyer);
 
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     /// @notice Store the reservation Merkle root for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         Params memory decoded = abi.decode(configData, (Params));

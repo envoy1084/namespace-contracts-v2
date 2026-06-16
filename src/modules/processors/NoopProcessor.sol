@@ -8,8 +8,6 @@ import {NamespaceModule} from "src/modules/NamespaceModule.sol";
 /// @title NoopProcessor
 /// @notice Processor module for activations where payment collection already settles funds.
 contract NoopProcessor is NamespaceModule, IProcessorModule {
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     /// @notice Accept activation configuration without storing any processor state.
     function configure(bytes32, bytes calldata) external view onlyController {
         // Intentionally no-op.

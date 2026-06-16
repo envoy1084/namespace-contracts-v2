@@ -27,8 +27,6 @@ contract ERC20PaymentModule is NamespaceModule, IPaymentModule {
     error PaymentTokenMismatch(address expected, address actual);
     error NativeValueNotAccepted(uint256 value);
 
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     /// @notice Store ERC20 payment parameters for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         Params memory decoded = abi.decode(configData, (Params));

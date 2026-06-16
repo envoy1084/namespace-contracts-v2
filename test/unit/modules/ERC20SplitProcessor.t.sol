@@ -10,7 +10,7 @@ contract ERC20SplitProcessorTest is NamespaceSetUp {
 
     function setUp() public override {
         super.setUp();
-        processor = new ERC20SplitProcessor(address(controller));
+        processor = ERC20SplitProcessor(_deployModule(address(new ERC20SplitProcessor())));
     }
 
     function test_processMint_splitsProcessorBalance() public {

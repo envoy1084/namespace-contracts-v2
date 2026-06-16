@@ -10,7 +10,7 @@ contract MerkleWhitelistPolicyTest is NamespaceSetUp {
 
     function setUp() public override {
         super.setUp();
-        whitelistPolicy = new MerkleWhitelistPolicy(address(controller));
+        whitelistPolicy = MerkleWhitelistPolicy(_deployModule(address(new MerkleWhitelistPolicy())));
     }
 
     function test_checkMint_allowsAccountLeafProof() public {

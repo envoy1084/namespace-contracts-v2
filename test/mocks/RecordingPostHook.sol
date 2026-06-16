@@ -13,8 +13,6 @@ contract RecordingPostHook is NamespaceModule, IPostHookModule {
     bytes public lastRuntimeData;
     uint64 public lastNewExpiry;
 
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     function configure(bytes32, bytes calldata) external view onlyController {}
 
     function afterMint(NamespaceTypes.MintContext calldata ctx, uint256 tokenId, bytes calldata runtimeData)

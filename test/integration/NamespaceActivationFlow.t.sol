@@ -24,11 +24,11 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
 
     function setUp() public override {
         super.setUp();
-        erc20GatePolicy = new ERC20BalanceGatePolicy(address(controller));
-        reservationPolicy = new ReservationPolicy(address(controller));
-        whitelistPolicy = new MerkleWhitelistPolicy(address(controller));
-        lengthPricing = new LengthBasedPricing(address(controller));
-        splitProcessor = new ERC20SplitProcessor(address(controller));
+        erc20GatePolicy = ERC20BalanceGatePolicy(_deployModule(address(new ERC20BalanceGatePolicy())));
+        reservationPolicy = ReservationPolicy(_deployModule(address(new ReservationPolicy())));
+        whitelistPolicy = MerkleWhitelistPolicy(_deployModule(address(new MerkleWhitelistPolicy())));
+        lengthPricing = LengthBasedPricing(_deployModule(address(new LengthBasedPricing())));
+        splitProcessor = ERC20SplitProcessor(_deployModule(address(new ERC20SplitProcessor())));
 
         vm.startPrank(accounts.owner.addr);
         controller.setModuleApproval(controller.MODULE_KIND_POLICY(), address(erc20GatePolicy), true);

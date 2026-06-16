@@ -16,8 +16,6 @@ contract PausePolicy is NamespaceModule, IPolicyModule {
     error ActivationPaused(bytes32 activationId);
     error NotActivationOwner(bytes32 activationId, address caller, address owner);
 
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     /// @notice Accept activation configuration without storing policy state.
     function configure(bytes32, bytes calldata) external view onlyController {
         // Intentionally no-op.
@@ -26,7 +24,7 @@ contract PausePolicy is NamespaceModule, IPolicyModule {
     /// @notice Pause or unpause an activation.
     /// @dev The activation owner is the verified parent namespace controller in `NamespaceController`.
     function setPaused(bytes32 activationId, bool paused_) external {
-        NamespaceTypes.Activation memory activation = INamespaceController(CONTROLLER).getActivation(activationId);
+        NamespaceTypes.Activation memory activation = INamespaceController(controller).getActivation(activationId);
         if (msg.sender != activation.owner) {
             revert NotActivationOwner(activationId, msg.sender, activation.owner);
         }

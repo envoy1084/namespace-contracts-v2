@@ -26,8 +26,6 @@ contract ERC20BalanceGatePolicy is NamespaceModule, IPolicyModule {
         bytes32 activationId, address account, address token, uint256 balance, uint256 minBalance
     );
 
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     /// @notice Store ERC20 gate parameters for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         Params memory decoded = abi.decode(configData, (Params));

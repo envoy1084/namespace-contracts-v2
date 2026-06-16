@@ -13,7 +13,7 @@ contract USDOraclePricingTest is NamespaceSetUp {
 
     function setUp() public override {
         super.setUp();
-        pricing = new USDOraclePricing(address(controller));
+        pricing = USDOraclePricing(_deployModule(address(new USDOraclePricing())));
         oracle = new MockAggregatorV3(8, 2_000e8);
     }
 

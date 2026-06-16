@@ -40,8 +40,6 @@ contract USDOraclePricing is NamespaceModule, IPricingModule {
     error StaleOraclePrice(uint256 updatedAt, uint256 maxStaleness, uint256 currentTime);
     error PaymentTokenMismatch(address expected, address actual);
 
-    constructor(address controller_) NamespaceModule(controller_) {}
-
     /// @notice Store USD pricing parameters for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         Params memory decoded = abi.decode(configData, (Params));

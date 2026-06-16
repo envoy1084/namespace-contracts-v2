@@ -10,7 +10,7 @@ contract PausePolicyTest is NamespaceSetUp {
 
     function setUp() public override {
         super.setUp();
-        pausePolicy = new PausePolicy(address(controller));
+        pausePolicy = PausePolicy(_deployModule(address(new PausePolicy())));
         bytes32 policyKind = controller.MODULE_KIND_POLICY();
 
         vm.prank(accounts.owner.addr);

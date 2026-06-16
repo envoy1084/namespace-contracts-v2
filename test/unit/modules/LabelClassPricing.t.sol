@@ -15,9 +15,9 @@ contract LabelClassPricingTest is NamespaceSetUp {
 
     function setUp() public override {
         super.setUp();
-        emojiPricing = new OnlyEmojiPricing(address(controller));
-        letterPricing = new OnlyLetterPricing(address(controller));
-        numberPricing = new OnlyNumberPricing(address(controller));
+        emojiPricing = OnlyEmojiPricing(_deployModule(address(new OnlyEmojiPricing())));
+        letterPricing = OnlyLetterPricing(_deployModule(address(new OnlyLetterPricing())));
+        numberPricing = OnlyNumberPricing(_deployModule(address(new OnlyNumberPricing())));
     }
 
     function test_onlyNumberPricing_addsPriceForNumberOnlyLabel() public {
