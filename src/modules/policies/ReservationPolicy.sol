@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {MerkleProofLib} from "solady/utils/MerkleProofLib.sol";
 
 import {IPolicyModule} from "src/interfaces/IPolicyModule.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
@@ -9,7 +9,7 @@ import {NamespaceModule} from "src/modules/NamespaceModule.sol";
 
 /// @title ReservationPolicy
 /// @notice Enforces activation-scoped reservations through Merkle proofs.
-/// @dev Leaves are OpenZeppelin-style double hashes of ABI-encoded label hash, account, and expiry.
+/// @dev Leaves are double hashes of ABI-encoded label hash, account, and expiry.
 ///      `account == address(0)` means any buyer may mint the proved label.
 contract ReservationPolicy is NamespaceModule, IPolicyModule {
     /// @notice Activation configuration.
@@ -54,7 +54,7 @@ contract ReservationPolicy is NamespaceModule, IPolicyModule {
 
         ProofData memory proofData = abi.decode(runtimeData, (ProofData));
         bytes32 reservationLeaf = leaf(ctx.labelHash, proofData.account, proofData.expiry);
-        if (!MerkleProof.verify(proofData.proof, root, reservationLeaf)) {
+        if (!MerkleProofLib.verify(proofData.proof, root, reservationLeaf)) {
             revert InvalidReservationProof(ctx.activationId, ctx.labelHash, proofData.account, proofData.expiry);
         }
 
@@ -70,7 +70,7 @@ contract ReservationPolicy is NamespaceModule, IPolicyModule {
     /// @inheritdoc IPolicyModule
     function checkRenew(NamespaceTypes.RenewContext calldata, bytes calldata) external pure {}
 
-    /// @notice Compute an OpenZeppelin-compatible double-hashed reservation leaf.
+    /// @notice Compute the double-hashed reservation leaf used by Solady Merkle verification.
     function leaf(bytes32 labelHash, address account, uint64 expiry) public pure returns (bytes32 result) {
         bytes32 inner;
         assembly ("memory-safe") {

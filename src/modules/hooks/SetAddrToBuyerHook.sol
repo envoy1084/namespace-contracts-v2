@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {Hashes} from "@openzeppelin/contracts/utils/cryptography/Hashes.sol";
+import {EfficientHashLib} from "solady/utils/EfficientHashLib.sol";
 
 import {IAddrResolver} from "src/interfaces/IAddrResolver.sol";
 import {IPostHookModule} from "src/interfaces/IPostHookModule.sol";
@@ -48,6 +48,6 @@ contract SetAddrToBuyerHook is NamespaceModule, IPostHookModule {
     }
 
     function _childNode(bytes32 parentNode, bytes32 labelHash) private pure returns (bytes32) {
-        return Hashes.efficientKeccak256(parentNode, labelHash);
+        return EfficientHashLib.hash(parentNode, labelHash);
     }
 }

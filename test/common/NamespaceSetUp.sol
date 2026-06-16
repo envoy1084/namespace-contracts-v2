@@ -4,25 +4,28 @@ pragma solidity ^0.8.26;
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
+import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
+import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
+import {RegistryRolesLib} from "@ensv2/registry/libraries/RegistryRolesLib.sol";
+import {PermissionedRegistry} from "@ensv2/registry/PermissionedRegistry.sol";
+import {SimpleRegistryMetadata} from "@ensv2/registry/SimpleRegistryMetadata.sol";
 import {NamespaceController} from "src/NamespaceController.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {ERC20PaymentModule} from "src/modules/payment/ERC20PaymentModule.sol";
-import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 import {LabelLengthPolicy} from "src/modules/policies/LabelLengthPolicy.sol";
 import {SaleWindowPolicy} from "src/modules/policies/SaleWindowPolicy.sol";
 import {FixedPricePricing} from "src/modules/pricing/FixedPricePricing.sol";
 import {NoopProcessor} from "src/modules/processors/NoopProcessor.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
-import {MockPermissionedRegistry} from "test/mocks/MockPermissionedRegistry.sol";
 import {RecordingPostHook} from "test/mocks/RecordingPostHook.sol";
 
 contract NamespaceSetUp is Test {
-    uint256 internal constant ROLE_REGISTRAR = 1 << 0;
-    uint256 internal constant ROLE_REGISTRAR_ADMIN = ROLE_REGISTRAR << 128;
-    uint256 internal constant ROLE_RENEW = 1 << 16;
-    uint256 internal constant ROLE_SET_RESOLVER = 1 << 24;
-    uint256 internal constant ROLE_SET_RESOLVER_ADMIN = ROLE_SET_RESOLVER << 128;
-    uint256 internal constant ROLE_CAN_TRANSFER_ADMIN = (1 << 28) << 128;
+    uint256 internal constant ROLE_REGISTRAR = RegistryRolesLib.ROLE_REGISTRAR;
+    uint256 internal constant ROLE_REGISTRAR_ADMIN = RegistryRolesLib.ROLE_REGISTRAR_ADMIN;
+    uint256 internal constant ROLE_RENEW = RegistryRolesLib.ROLE_RENEW;
+    uint256 internal constant ROLE_SET_RESOLVER = RegistryRolesLib.ROLE_SET_RESOLVER;
+    uint256 internal constant ROLE_SET_RESOLVER_ADMIN = RegistryRolesLib.ROLE_SET_RESOLVER_ADMIN;
+    uint256 internal constant ROLE_CAN_TRANSFER_ADMIN = RegistryRolesLib.ROLE_CAN_TRANSFER_ADMIN;
     uint256 internal constant BUYER_ROLES = ROLE_SET_RESOLVER | ROLE_SET_RESOLVER_ADMIN | ROLE_CAN_TRANSFER_ADMIN;
 
     struct Accounts {
@@ -34,7 +37,8 @@ contract NamespaceSetUp is Test {
 
     Accounts internal accounts;
     NamespaceController internal controller;
-    MockPermissionedRegistry internal registry;
+    SimpleRegistryMetadata internal registryMetadata;
+    PermissionedRegistry internal registry;
     MockERC20 internal token;
     SaleWindowPolicy internal saleWindowPolicy;
     LabelLengthPolicy internal labelLengthPolicy;
@@ -56,7 +60,13 @@ contract NamespaceSetUp is Test {
         vm.deal(accounts.owner.addr, 100 ether);
 
         controller = new NamespaceController(accounts.owner.addr);
-        registry = new MockPermissionedRegistry();
+        registryMetadata = new SimpleRegistryMetadata(IHCAFactoryBasic(address(0)));
+        registry = new PermissionedRegistry(
+            IHCAFactoryBasic(address(0)),
+            registryMetadata,
+            address(this),
+            ROLE_REGISTRAR_ADMIN | RegistryRolesLib.ROLE_RENEW_ADMIN | RegistryRolesLib.ROLE_REGISTER_RESERVED_ADMIN
+        );
         token = new MockERC20("Mock USDC", "mUSDC");
         saleWindowPolicy = new SaleWindowPolicy(address(controller));
         labelLengthPolicy = new LabelLengthPolicy(address(controller));

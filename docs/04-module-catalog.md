@@ -64,7 +64,7 @@ Config:
 
 ```solidity
 ERC20BalanceGatePolicy.Params({
-    token: IERC20,
+    token: ERC20,
     minBalance: uint256
 })
 ```
@@ -84,12 +84,12 @@ Config:
 
 ```solidity
 ERC721BalanceGatePolicy.Params({
-    token: IERC721,
+    token: ERC721,
     minBalance: uint256
 })
 ```
 
-Flow is the same as ERC20 gating, but uses `IERC721.balanceOf(account)`.
+Flow is the same as ERC20 gating, but uses `ERC721.balanceOf(account)`.
 
 ### ReservationPolicy
 
@@ -119,7 +119,7 @@ Each Merkle leaf represents:
 - reserved `account`;
 - `expiry`.
 
-Leaves are compatible with OpenZeppelin Merkle proofs and can be computed on-chain with:
+Leaves are compatible with Solady Merkle proof verification and can be computed on-chain with:
 
 ```solidity
 reservationPolicy.leaf(labelHash, account, expiry)
@@ -315,7 +315,7 @@ Config:
 
 ```solidity
 ERC20PaymentModule.Params({
-    token: IERC20,
+    token: ERC20,
     recipient: address
 })
 ```

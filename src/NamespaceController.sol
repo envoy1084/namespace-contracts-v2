@@ -3,8 +3,8 @@ pragma solidity ^0.8.26;
 
 import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 
 import {IConfigurableModule} from "src/interfaces/IConfigurableModule.sol";
 import {INamespaceController} from "src/interfaces/INamespaceController.sol";
@@ -88,7 +88,8 @@ contract NamespaceController is INamespaceController, Ownable, ReentrancyGuard {
     error LabelNotRenewable(string label, IPermissionedRegistry.Status status);
 
     /// @param initialOwner Owner of controller-level administration.
-    constructor(address initialOwner) Ownable(initialOwner) {
+    constructor(address initialOwner) {
+        _initializeOwner(initialOwner);
         moduleApprovalRequired = true;
     }
 

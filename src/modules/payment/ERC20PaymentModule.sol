@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC20} from "solady/tokens/ERC20.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 import {IPaymentModule} from "src/interfaces/IPaymentModule.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
@@ -13,13 +13,11 @@ import {NamespaceModule} from "src/modules/NamespaceModule.sol";
 /// @dev Funds are transferred to the activation-scoped recipient. For split processing, configure
 ///      the recipient as the processor contract and call a split processor after collection.
 contract ERC20PaymentModule is NamespaceModule, IPaymentModule {
-    using SafeERC20 for IERC20;
-
     /// @notice ERC20 payment params for one activation.
     /// @param token ERC20 token accepted by this payment module.
     /// @param recipient Address receiving collected funds.
     struct Params {
-        IERC20 token;
+        ERC20 token;
         address recipient;
     }
 
@@ -68,7 +66,7 @@ contract ERC20PaymentModule is NamespaceModule, IPaymentModule {
             revert PaymentTokenMismatch(address(stored.token), price.token);
         }
         if (price.amount != 0) {
-            stored.token.safeTransferFrom(payer, stored.recipient, price.amount);
+            SafeTransferLib.safeTransferFrom(address(stored.token), payer, stored.recipient, price.amount);
         }
     }
 }

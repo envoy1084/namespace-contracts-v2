@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+
 import {IAggregatorV3} from "src/interfaces/IAggregatorV3.sol";
 import {IPricingModule} from "src/interfaces/IPricingModule.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {NamespaceModule} from "src/modules/NamespaceModule.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title USDOraclePricing
 /// @notice Converts fixed USD-denominated mint and renewal prices into a payment token amount.
@@ -103,7 +104,7 @@ contract USDOraclePricing is NamespaceModule, IPricingModule {
         uint256 tokenUnit = 10 ** stored.tokenDecimals;
         uint256 oracleUnit = 10 ** stored.oracle.decimals();
         uint256 numerator = usdAmount * tokenUnit * oracleUnit;
-        uint256 denominator = SafeCast.toUint256(answer) * _USD_DECIMALS;
+        uint256 denominator = SafeCastLib.toUint256(answer) * _USD_DECIMALS;
         return _ceilDiv(numerator, denominator);
     }
 

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 import {IProcessorModule} from "src/interfaces/IProcessorModule.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
@@ -12,8 +11,6 @@ import {NamespaceModule} from "src/modules/NamespaceModule.sol";
 /// @notice Splits ERC20 funds held by this processor according to activation-scoped basis points.
 /// @dev Configure `ERC20PaymentModule.recipient` to this processor for split settlement.
 contract ERC20SplitProcessor is NamespaceModule, IProcessorModule {
-    using SafeERC20 for IERC20;
-
     uint256 public constant BPS_DENOMINATOR = 10_000;
 
     struct Split {
@@ -83,18 +80,17 @@ contract ERC20SplitProcessor is NamespaceModule, IProcessorModule {
         }
 
         Split[] storage stored = _splits[activationId];
-        IERC20 token = IERC20(price.token);
         uint256 remaining = price.amount;
         uint256 last = stored.length - 1;
 
         for (uint256 i; i < last;) {
             uint256 amount = (price.amount * stored[i].bps) / BPS_DENOMINATOR;
             remaining -= amount;
-            token.safeTransfer(stored[i].recipient, amount);
+            SafeTransferLib.safeTransfer(price.token, stored[i].recipient, amount);
             unchecked {
                 ++i;
             }
         }
-        token.safeTransfer(stored[last].recipient, remaining);
+        SafeTransferLib.safeTransfer(price.token, stored[last].recipient, remaining);
     }
 }

@@ -77,8 +77,8 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
         assertEq(uint256(state.status), uint256(IPermissionedRegistry.Status.REGISTERED));
         assertEq(state.latestOwner, accounts.buyer.addr);
         assertEq(registry.ownerOf(tokenId), accounts.buyer.addr);
-        assertEq(registry.resolverOf(tokenId), address(0xBEEF));
-        assertEq(registry.rolesOf(tokenId), BUYER_ROLES);
+        assertEq(registry.getResolver(label), address(0xBEEF));
+        assertEq(registry.roles(tokenId, accounts.buyer.addr), BUYER_ROLES);
 
         assertEq(token.balanceOf(accounts.alice.addr), 90 ether);
         assertEq(token.balanceOf(accounts.treasury.addr), 30 ether);

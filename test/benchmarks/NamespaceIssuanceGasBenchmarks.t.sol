@@ -2,10 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
-import {RegistryRolesLib} from "@ensv2/registry/libraries/RegistryRolesLib.sol";
-import {PermissionedRegistry} from "@ensv2/registry/PermissionedRegistry.sol";
-import {SimpleRegistryMetadata} from "@ensv2/registry/SimpleRegistryMetadata.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "solady/tokens/ERC20.sol";
 
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {ERC20PaymentModule} from "src/modules/payment/ERC20PaymentModule.sol";
@@ -18,16 +15,11 @@ import {FixedPricePricing} from "src/modules/pricing/FixedPricePricing.sol";
 import {LengthBasedPricing} from "src/modules/pricing/LengthBasedPricing.sol";
 import {ERC20SplitProcessor} from "src/modules/processors/ERC20SplitProcessor.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
-import {MockENSV2HCAFactoryBasic} from "test/mocks/MockENSV2HCAFactoryBasic.sol";
 
 /// @notice Gas benchmarks for Namespace subname issuance scenarios.
 /// @dev Run only these benchmarks with:
 ///      forge snapshot --match-path 'test/benchmarks/*.t.sol' --snap test/benchmarks/.gas-snapshot
 contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
-    MockENSV2HCAFactoryBasic internal hcaFactory;
-    SimpleRegistryMetadata internal metadata;
-    PermissionedRegistry internal permissionedRegistry;
-
     ERC20BalanceGatePolicy internal erc20GatePolicy;
     ReservationPolicy internal reservationPolicy;
     MerkleWhitelistPolicy internal whitelistPolicy;
@@ -68,20 +60,6 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         controller.setModuleApproval(controller.MODULE_KIND_PRICING(), address(lengthPricing), true);
         controller.setModuleApproval(controller.MODULE_KIND_PROCESSOR(), address(splitProcessor), true);
         vm.stopPrank();
-
-        hcaFactory = new MockENSV2HCAFactoryBasic();
-        metadata = new SimpleRegistryMetadata(hcaFactory);
-        permissionedRegistry = new PermissionedRegistry(
-            hcaFactory,
-            metadata,
-            address(this),
-            RegistryRolesLib.ROLE_REGISTRAR_ADMIN | RegistryRolesLib.ROLE_RENEW_ADMIN
-                | RegistryRolesLib.ROLE_REGISTER_RESERVED_ADMIN
-        );
-        permissionedRegistry.grantRootRoles(RegistryRolesLib.ROLE_REGISTRAR_ADMIN, accounts.alice.addr);
-        permissionedRegistry.grantRootRoles(
-            RegistryRolesLib.ROLE_REGISTRAR | RegistryRolesLib.ROLE_RENEW, address(controller)
-        );
 
         freeActivationId = _activate("free", 0, 0, false, false, false);
         onePolicyActivationId = _activate("onepolicy", 1, 0, false, false, false);
@@ -140,9 +118,9 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
     function _mint(bytes32 activationId, string memory label, NamespaceTypes.RuntimeData memory runtimeData) private {
         vm.prank(accounts.buyer.addr);
         uint256 tokenId = controller.mint(activationId, label, 365 days, runtimeData);
-        IPermissionedRegistry.State memory state = permissionedRegistry.getState(tokenId);
+        IPermissionedRegistry.State memory state = registry.getState(tokenId);
         assertEq(uint256(state.status), uint256(IPermissionedRegistry.Status.REGISTERED));
-        assertEq(permissionedRegistry.ownerOf(tokenId), accounts.buyer.addr);
+        assertEq(registry.ownerOf(tokenId), accounts.buyer.addr);
     }
 
     function _activate(
@@ -154,7 +132,7 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         bool useMerkleProof
     ) private returns (bytes32 activationId) {
         NamespaceTypes.ActivationConfig memory config = NamespaceTypes.ActivationConfig({
-            registry: IPermissionedRegistry(address(permissionedRegistry)),
+            registry: IPermissionedRegistry(address(registry)),
             parentNode: keccak256("alice.eth"),
             resolver: address(0xBEEF),
             buyerRoleBitmap: BUYER_ROLES,
@@ -164,7 +142,7 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
                 module: address(erc20Payment),
                 configData: abi.encode(
                     ERC20PaymentModule.Params({
-                        token: pricingCount == 0 ? IERC20(address(0)) : token,
+                        token: pricingCount == 0 ? ERC20(address(0)) : token,
                         recipient: useSplitProcessor ? address(splitProcessor) : accounts.treasury.addr
                     })
                 )

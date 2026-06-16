@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {MerkleProofLib} from "solady/utils/MerkleProofLib.sol";
 
 import {IPolicyModule} from "src/interfaces/IPolicyModule.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
@@ -9,7 +9,7 @@ import {NamespaceModule} from "src/modules/NamespaceModule.sol";
 
 /// @title MerkleWhitelistPolicy
 /// @notice Enforces activation-scoped allowlists with per-call Merkle proofs.
-/// @dev Leaves are double-hashed to match OpenZeppelin's safe Merkle tree convention.
+/// @dev Leaves are double-hashed before Solady Merkle proof verification.
 contract MerkleWhitelistPolicy is NamespaceModule, IPolicyModule {
     /// @notice Leaf shape used by the activation.
     /// @dev ACCOUNT gates only the wallet. ACCOUNT_LABEL gates the wallet and exact label.
@@ -65,7 +65,7 @@ contract MerkleWhitelistPolicy is NamespaceModule, IPolicyModule {
 
         bytes32[] memory proof = abi.decode(runtimeData, (bytes32[]));
         bytes32 leaf = _leaf(account, labelHash, leafMode);
-        if (!MerkleProof.verify(proof, root, leaf)) {
+        if (!MerkleProofLib.verify(proof, root, leaf)) {
             revert InvalidWhitelistProof(activationId, account, labelHash, root);
         }
     }

@@ -1,6 +1,9 @@
 @ens/contracts/=lib/contracts-v2/contracts/lib/ens-contracts/contracts/
+@ensdomains/verifiable-factory/=lib/contracts-v2/contracts/lib/verifiable-factory/src/
 @ensv2/=lib/contracts-v2/contracts/src/
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts-upgradeable/=lib/contracts-v2/contracts/lib/openzeppelin-contracts-upgradeable/contracts/
 forge-std/=lib/forge-std/src/
+solady/=lib/solady/src/
 src/=src/
 test/=test/

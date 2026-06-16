@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
+import {PermissionedResolverLib} from "@ensv2/resolver/libraries/PermissionedResolverLib.sol";
+import {PermissionedResolver} from "@ensv2/resolver/PermissionedResolver.sol";
+import {VerifiableFactory} from "lib/contracts-v2/contracts/lib/verifiable-factory/src/VerifiableFactory.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {SetAddrToBuyerHook} from "src/modules/hooks/SetAddrToBuyerHook.sol";
-import {MockAddrResolver} from "test/mocks/MockAddrResolver.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
 
 contract SetAddrToBuyerHookTest is NamespaceSetUp {
     SetAddrToBuyerHook internal hook;
-    MockAddrResolver internal resolver;
+    PermissionedResolver internal resolver;
 
     function setUp() public override {
         super.setUp();
         hook = new SetAddrToBuyerHook(address(controller));
-        resolver = new MockAddrResolver();
+        resolver = _deployResolver(address(hook), PermissionedResolverLib.ROLE_SET_ADDR);
     }
 
     function test_afterMint_setsAddrToBuyer() public {
@@ -31,7 +34,7 @@ contract SetAddrToBuyerHookTest is NamespaceSetUp {
         vm.prank(address(controller));
         hook.afterMint(ctx, 1, "");
 
-        assertEq(resolver.addrs(node), accounts.buyer.addr);
+        assertEq(resolver.addr(node), accounts.buyer.addr);
     }
 
     function test_afterMint_allowsAddressOverride() public {
@@ -50,7 +53,14 @@ contract SetAddrToBuyerHookTest is NamespaceSetUp {
         vm.prank(address(controller));
         hook.afterMint(ctx, 1, abi.encode(overrideAddress));
 
-        assertEq(resolver.addrs(node), overrideAddress);
+        assertEq(resolver.addr(node), overrideAddress);
+    }
+
+    function _deployResolver(address admin, uint256 roles) private returns (PermissionedResolver) {
+        VerifiableFactory factory = new VerifiableFactory();
+        PermissionedResolver resolverImpl = new PermissionedResolver(IHCAFactoryBasic(address(0)));
+        bytes memory initData = abi.encodeCall(PermissionedResolver.initialize, (admin, roles));
+        return PermissionedResolver(factory.deployProxy(address(resolverImpl), uint256(keccak256(initData)), initData));
     }
 
     function _childNode(bytes32 parentNode, bytes32 labelHash) private pure returns (bytes32 result) {

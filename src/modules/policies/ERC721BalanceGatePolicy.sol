@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {ERC721} from "solady/tokens/ERC721.sol";
 
 import {IPolicyModule} from "src/interfaces/IPolicyModule.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
@@ -14,7 +14,7 @@ contract ERC721BalanceGatePolicy is NamespaceModule, IPolicyModule {
     /// @param token ERC721 token used for gating.
     /// @param minBalance Minimum NFT balance required.
     struct Params {
-        IERC721 token;
+        ERC721 token;
         uint256 minBalance;
     }
 

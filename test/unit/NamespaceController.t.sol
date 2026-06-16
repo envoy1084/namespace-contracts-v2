@@ -168,13 +168,13 @@ contract NamespaceControllerTest is NamespaceSetUp {
         vm.stopPrank();
 
         uint256 labelId = uint256(keccak256(bytes("pay")));
-        assertEq(tokenId, labelId);
         assertEq(token.balanceOf(accounts.treasury.addr), 100 ether);
-        assertEq(registry.ownerOf(labelId), accounts.buyer.addr);
-        assertEq(registry.resolverOf(labelId), address(0xBEEF));
-        assertEq(registry.rolesOf(labelId), BUYER_ROLES);
-
         IPermissionedRegistry.State memory state = registry.getState(labelId);
+        assertEq(tokenId, state.tokenId);
+        assertEq(registry.ownerOf(tokenId), accounts.buyer.addr);
+        assertEq(registry.getResolver("pay"), address(0xBEEF));
+        assertEq(registry.roles(tokenId, accounts.buyer.addr), BUYER_ROLES);
+
         assertEq(uint256(state.status), uint256(IPermissionedRegistry.Status.REGISTERED));
         assertEq(state.latestOwner, accounts.buyer.addr);
 
