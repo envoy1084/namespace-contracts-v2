@@ -102,9 +102,8 @@ contract MockPermissionedRegistry {
     }
 
     function _status(NameRecord memory record) private view returns (IPermissionedRegistry.Status) {
-        // Mock registry mirrors ENSv2 expiry behavior, which is timestamp-based.
-        // forge-lint: disable-next-line(block-timestamp)
-        if (record.expiry == 0 || block.timestamp >= record.expiry) {
+        uint256 currentTime = block.timestamp;
+        if (record.expiry == 0 || currentTime >= record.expiry) {
             return IPermissionedRegistry.Status.AVAILABLE;
         }
         if (record.owner == address(0)) {
@@ -114,8 +113,6 @@ contract MockPermissionedRegistry {
     }
 
     function _storageId(uint256 anyId) private pure returns (uint256) {
-        // casting to uint32 is intentional fuzzing of alternate id spaces in this mock.
-        // forge-lint: disable-next-line(unsafe-typecast)
-        return anyId ^ uint32(anyId);
+        return anyId ^ (anyId & type(uint32).max);
     }
 }

@@ -110,6 +110,21 @@ contract USDOraclePricingTest is NamespaceSetUp {
         pricing.quoteMint(ctx, NamespaceTypes.Price(address(0), 0), "");
     }
 
+    function test_quoteMint_revertsOnInvalidOracleRound() public {
+        bytes32 activationId = keccak256("activation");
+        _configure(activationId, 100e18, 25e18, 18, 1 days);
+        oracle.setRoundData(2_000e8, block.timestamp);
+        oracle.setAnsweredInRound(1);
+
+        NamespaceTypes.MintContext memory ctx;
+        ctx.activationId = activationId;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(USDOraclePricing.InvalidOracleRound.selector, uint80(2), block.timestamp, uint80(1))
+        );
+        pricing.quoteMint(ctx, NamespaceTypes.Price(address(0), 0), "");
+    }
+
     function _configure(
         bytes32 activationId,
         uint128 mintUsdPrice,

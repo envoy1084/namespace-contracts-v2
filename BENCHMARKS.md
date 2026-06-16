@@ -23,11 +23,11 @@ Assumptions:
 | `testBenchmark_freeMint_noPolicyNoPricing()` | 202899 | 202899 | $0.060870 | $0.304349 | $0.608697 | $1.826091 | $3.043485 |
 | `testBenchmark_freeMint_onePolicy()` | 215205 | 215205 | $0.064562 | $0.322808 | $0.645615 | $1.936845 | $3.228075 |
 | `testBenchmark_freeMint_threePolicies()` | 247515 | 247515 | $0.074255 | $0.371273 | $0.742545 | $2.227635 | $3.712725 |
-| `testBenchmark_freeMint_fivePolicies()` | 284581 | 284581 | $0.085374 | $0.426872 | $0.853743 | $2.561229 | $4.268715 |
+| `testBenchmark_freeMint_fivePolicies()` | 296402 | 296402 | $0.088921 | $0.444603 | $0.889206 | $2.667618 | $4.446030 |
 | `testBenchmark_erc20FixedPrice_noPolicy()` | 256521 | 256521 | $0.076956 | $0.384781 | $0.769563 | $2.308689 | $3.847815 |
 | `testBenchmark_lengthPricing_twoPolicies()` | 299641 | 299641 | $0.089892 | $0.449462 | $0.898923 | $2.696769 | $4.494615 |
 | `testBenchmark_erc20Split_threePolicies()` | 335616 | 335616 | $0.100685 | $0.503424 | $1.006848 | $3.020544 | $5.034240 |
-| `testBenchmark_fullStack_fivePoliciesTwoPricingSplitHook()` | 512427 | 512427 | $0.153728 | $0.768640 | $1.537281 | $4.611843 | $7.686405 |
+| `testBenchmark_fullStack_fivePoliciesTwoPricingSplitHook()` | 524245 | 524245 | $0.157274 | $0.786367 | $1.572735 | $4.718205 | $7.863675 |
 
 ## Scenario Notes
 

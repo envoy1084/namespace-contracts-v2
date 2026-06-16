@@ -93,28 +93,73 @@ Flow is the same as ERC20 gating, but uses `IERC721.balanceOf(account)`.
 
 ### ReservationPolicy
 
-Purpose: reserve exact labels for specific buyers, or block labels until reservation expiry.
+Purpose: reserve exact labels for specific buyers without storing every reservation on-chain.
 
 Config:
 
 ```solidity
 ReservationPolicy.Params({
-    reservations: ReservationInput[]
+    reservationRoot: bytes32
 })
 ```
 
-Each reservation contains:
+Runtime data:
+
+```solidity
+abi.encode(ReservationPolicy.ProofData({
+    account: address,
+    expiry: uint64,
+    proof: bytes32[]
+}))
+```
+
+Each Merkle leaf represents:
 
 - `labelHash`;
-- allowed `account`;
+- reserved `account`;
 - `expiry`.
+
+Leaves are compatible with OpenZeppelin Merkle proofs and can be computed on-chain with:
+
+```solidity
+reservationPolicy.leaf(labelHash, account, expiry)
+```
+
+`account == address(0)` creates a public reservation leaf. That means the label must still provide a valid proof, but any buyer can mint it. `expiry == 0` means the reservation never expires.
 
 Flow:
 
-1. Load reservation for `ctx.labelHash`.
-2. If no reservation exists, allow.
-3. If reservation expired, allow.
-4. If reserved account is not the buyer, revert.
+1. If `reservationRoot == bytes32(0)`, allow.
+2. Decode runtime `ProofData`.
+3. Recompute the leaf from `ctx.labelHash`, `account`, and `expiry`.
+4. Verify the proof against the stored activation root.
+5. If the proof is expired, allow public mint.
+6. If `account != address(0)` and the buyer is not `account`, revert.
+
+Important: when a non-zero root is configured, every mint must provide a proof. This keeps storage small and moves large reservation lists off-chain while still enforcing them on-chain.
+
+### PausePolicy
+
+Purpose: let the activation owner pause both minting and renewal checks for a namespace activation.
+
+Config: none.
+
+Runtime data: none.
+
+Control function:
+
+```solidity
+pausePolicy.setPaused(activationId, true);
+pausePolicy.setPaused(activationId, false);
+```
+
+Flow:
+
+1. `setPaused` loads the activation from `NamespaceController`.
+2. Caller must equal the activation owner.
+3. `checkMint` and `checkRenew` revert while paused.
+
+The activation owner is the controller's verified namespace admin for that activation. This is the operational owner of the configured parent namespace sale.
 
 ### MerkleWhitelistPolicy
 

@@ -16,6 +16,18 @@ Mint and renew are the buyer-facing execution paths. Both load an activation, va
 
 The controller checks that array lengths match the activation. This prevents accidental proof/config misalignment.
 
+Runtime data is not configuration. Configuration is stored during activation, while runtime data proves facts that can change per buyer or per label. For example, `ReservationPolicy` stores one Merkle root during activation, and a buyer supplies `ReservationPolicy.ProofData` at the policy's array index when minting a reserved label.
+
+```solidity
+runtimeData.policyData[reservationPolicyIndex] = abi.encode(
+    ReservationPolicy.ProofData({
+        account: reservedBuyer,
+        expiry: reservationExpiry,
+        proof: merkleProof
+    })
+);
+```
+
 ## Mint Sequence
 
 ```mermaid
@@ -113,4 +125,3 @@ The current order is deliberate:
 5. hooks after registry write.
 
 Post hooks run after the registry mutation because they may need the minted token id or a resolver node that should only be updated after a successful mint.
-

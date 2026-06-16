@@ -202,15 +202,11 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
             });
         }
         if (count > 3) {
-            ReservationPolicy.ReservationInput[] memory reservations = new ReservationPolicy.ReservationInput[](1);
-            reservations[0] = ReservationPolicy.ReservationInput({
-                labelHash: keccak256(bytes(label)),
-                account: accounts.buyer.addr,
-                expiry: uint64(block.timestamp + 1 days)
-            });
+            bytes32 reservationRoot =
+                reservationPolicy.leaf(keccak256(bytes(label)), accounts.buyer.addr, uint64(block.timestamp + 1 days));
             policies[3] = NamespaceTypes.ModuleConfig({
                 module: address(reservationPolicy),
-                configData: abi.encode(ReservationPolicy.Params({reservations: reservations}))
+                configData: abi.encode(ReservationPolicy.Params({reservationRoot: reservationRoot}))
             });
         }
         if (count > 4) {
@@ -281,7 +277,7 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
 
     function _runtimeData(uint256 policyCount, uint256 pricingCount, bool useMerkleProof, bool usePostHook)
         private
-        pure
+        view
         returns (NamespaceTypes.RuntimeData memory runtimeData)
     {
         runtimeData.policyData = new bytes[](policyCount);
@@ -290,6 +286,13 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         runtimeData.processorData = "";
         runtimeData.postHookData = new bytes[](usePostHook ? 1 : 0);
 
+        if (policyCount > 3) {
+            runtimeData.policyData[3] = abi.encode(
+                ReservationPolicy.ProofData({
+                    account: accounts.buyer.addr, expiry: uint64(block.timestamp + 1 days), proof: new bytes32[](0)
+                })
+            );
+        }
         if (policyCount > 4 && useMerkleProof) {
             bytes32[] memory proof = new bytes32[](1);
             proof[0] = keccak256("sibling");
@@ -300,11 +303,30 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         }
     }
 
-    function _accountLabelLeaf(address account, bytes32 labelHash) private pure returns (bytes32) {
-        return keccak256(bytes.concat(keccak256(abi.encode(account, labelHash))));
+    function _accountLabelLeaf(address account, bytes32 labelHash) private pure returns (bytes32 result) {
+        bytes32 inner;
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            mstore(ptr, account)
+            mstore(add(ptr, 0x20), labelHash)
+            inner := keccak256(ptr, 0x40)
+            mstore(ptr, inner)
+            result := keccak256(ptr, 0x20)
+        }
     }
 
-    function _hashPair(bytes32 a, bytes32 b) private pure returns (bytes32) {
-        return uint256(a) < uint256(b) ? keccak256(abi.encodePacked(a, b)) : keccak256(abi.encodePacked(b, a));
+    function _hashPair(bytes32 a, bytes32 b) private pure returns (bytes32 result) {
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            let first := b
+            let second := a
+            if lt(a, b) {
+                first := a
+                second := b
+            }
+            mstore(ptr, first)
+            mstore(add(ptr, 0x20), second)
+            result := keccak256(ptr, 0x40)
+        }
     }
 }

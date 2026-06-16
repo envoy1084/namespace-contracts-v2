@@ -248,13 +248,12 @@ contract NamespaceControllerTest is NamespaceSetUp {
         policies[0] = config.policies[0];
         policies[1] = config.policies[1];
 
-        ReservationPolicy.ReservationInput[] memory reservations = new ReservationPolicy.ReservationInput[](1);
-        reservations[0] = ReservationPolicy.ReservationInput({
-            labelHash: keccak256(bytes("vip")), account: reservedBuyer.addr, expiry: uint64(block.timestamp + 1 days)
-        });
+        uint64 expiry = uint64(block.timestamp + 1 days);
+        bytes32 labelHash = keccak256(bytes("vip"));
+        bytes32 reservationRoot = reservationPolicy.leaf(labelHash, reservedBuyer.addr, expiry);
         policies[2] = NamespaceTypes.ModuleConfig({
             module: address(reservationPolicy),
-            configData: abi.encode(ReservationPolicy.Params({reservations: reservations}))
+            configData: abi.encode(ReservationPolicy.Params({reservationRoot: reservationRoot}))
         });
         config.policies = policies;
 
@@ -263,6 +262,9 @@ contract NamespaceControllerTest is NamespaceSetUp {
 
         NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
         runtimeData.policyData = new bytes[](3);
+        runtimeData.policyData[2] = abi.encode(
+            ReservationPolicy.ProofData({account: reservedBuyer.addr, expiry: expiry, proof: new bytes32[](0)})
+        );
 
         vm.startPrank(accounts.buyer.addr);
         token.approve(address(erc20Payment), 100 ether);
@@ -272,7 +274,7 @@ contract NamespaceControllerTest is NamespaceSetUp {
                 activationId,
                 "vip",
                 reservedBuyer.addr,
-                uint64(block.timestamp + 1 days),
+                expiry,
                 accounts.buyer.addr
             )
         );

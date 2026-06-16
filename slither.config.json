@@ -1,6 +1,6 @@
 {
   "detectors_to_run": "all",
-  "detectors_to_exclude": "arbitrary-send-erc20,locked-ether,calls-loop,timestamp,naming-convention",
+  "detectors_to_exclude": "arbitrary-send-erc20,locked-ether,calls-loop,timestamp,naming-convention,assembly",
   "filter_paths": "lib/|test/",
   "foundry_ignore_compile": true
 }

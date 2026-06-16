@@ -54,6 +54,11 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
 
         NamespaceTypes.RuntimeData memory runtimeData;
         runtimeData.policyData = new bytes[](5);
+        runtimeData.policyData[3] = abi.encode(
+            ReservationPolicy.ProofData({
+                account: accounts.buyer.addr, expiry: uint64(block.timestamp + 1 days), proof: new bytes32[](0)
+            })
+        );
         bytes32[] memory whitelistProof = new bytes32[](1);
         whitelistProof[0] = aliceLeaf;
         runtimeData.policyData[4] = abi.encode(whitelistProof);
@@ -105,13 +110,11 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
             configData: abi.encode(ERC20BalanceGatePolicy.Params({token: token, minBalance: 100 ether}))
         });
 
-        ReservationPolicy.ReservationInput[] memory reservations = new ReservationPolicy.ReservationInput[](1);
-        reservations[0] = ReservationPolicy.ReservationInput({
-            labelHash: labelHash, account: accounts.buyer.addr, expiry: uint64(block.timestamp + 1 days)
-        });
+        bytes32 reservationRoot =
+            reservationPolicy.leaf(labelHash, accounts.buyer.addr, uint64(block.timestamp + 1 days));
         policies[3] = NamespaceTypes.ModuleConfig({
             module: address(reservationPolicy),
-            configData: abi.encode(ReservationPolicy.Params({reservations: reservations}))
+            configData: abi.encode(ReservationPolicy.Params({reservationRoot: reservationRoot}))
         });
         policies[4] = NamespaceTypes.ModuleConfig({
             module: address(whitelistPolicy),
@@ -177,11 +180,30 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
         });
     }
 
-    function _accountLabelLeaf(address account, bytes32 labelHash) private pure returns (bytes32) {
-        return keccak256(bytes.concat(keccak256(abi.encode(account, labelHash))));
+    function _accountLabelLeaf(address account, bytes32 labelHash) private pure returns (bytes32 result) {
+        bytes32 inner;
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            mstore(ptr, account)
+            mstore(add(ptr, 0x20), labelHash)
+            inner := keccak256(ptr, 0x40)
+            mstore(ptr, inner)
+            result := keccak256(ptr, 0x20)
+        }
     }
 
-    function _hashPair(bytes32 a, bytes32 b) private pure returns (bytes32) {
-        return uint256(a) < uint256(b) ? keccak256(abi.encodePacked(a, b)) : keccak256(abi.encodePacked(b, a));
+    function _hashPair(bytes32 a, bytes32 b) private pure returns (bytes32 result) {
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            let first := b
+            let second := a
+            if lt(a, b) {
+                first := a
+                second := b
+            }
+            mstore(ptr, first)
+            mstore(add(ptr, 0x20), second)
+            result := keccak256(ptr, 0x40)
+        }
     }
 }

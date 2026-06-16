@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {Hashes} from "@openzeppelin/contracts/utils/cryptography/Hashes.sol";
+
 import {IAddrResolver} from "src/interfaces/IAddrResolver.sol";
 import {IPostHookModule} from "src/interfaces/IPostHookModule.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
@@ -46,8 +48,6 @@ contract SetAddrToBuyerHook is NamespaceModule, IPostHookModule {
     }
 
     function _childNode(bytes32 parentNode, bytes32 labelHash) private pure returns (bytes32) {
-        // Keep the straightforward ENS namehash-style composition for readability.
-        // forge-lint: disable-next-line(asm-keccak256)
-        return keccak256(abi.encodePacked(parentNode, labelHash));
+        return Hashes.efficientKeccak256(parentNode, labelHash);
     }
 }

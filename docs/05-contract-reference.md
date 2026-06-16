@@ -79,8 +79,9 @@ Responsibilities:
 | `LabelLengthPolicy` | Minimum and maximum label byte length. |
 | `ERC20BalanceGatePolicy` | Minimum ERC20 balance. |
 | `ERC721BalanceGatePolicy` | Minimum ERC721 balance. |
-| `ReservationPolicy` | Exact label reservations by account and expiry. |
+| `ReservationPolicy` | Merkle-root label reservations by account and expiry. |
 | `MerkleWhitelistPolicy` | Merkle allowlists for mints and renewals. |
+| `PausePolicy` | Activation-owner pause switch for minting and renewals. |
 
 ## Pricing
 
