@@ -18,7 +18,7 @@ import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 
 /// @title NamespaceController
 /// @notice Activation-based controller for minting ENSv2 subnames through official registries.
-/// @dev The controller stores sale activations, delegates checks/pricing/payment/hooks to modules,
+/// @dev The controller stores sale activations, delegates rule/payment/hook execution to modules,
 ///      and writes ownership to an ENSv2 `IPermissionedRegistry`.
 contract NamespaceController is INamespaceController, Ownable, Initializable, ReentrancyGuard, UUPSUpgradeable {
     /// @notice Module kind emitted for rule configuration.
@@ -55,9 +55,9 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
     }
 
     struct EvaluationState {
-        address token;
         uint256 amount;
         uint256 flags;
+        address token;
         bool tokenSet;
     }
 
@@ -568,7 +568,7 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         bytes[] calldata ruleData
     ) private returns (NamespaceTypes.Price memory price) {
         uint256 length = activation.ruleCount;
-        EvaluationState memory state;
+        EvaluationState memory state = EvaluationState({amount: 0, flags: 0, token: address(0), tokenSet: false});
         if (length == 0) {
             return NamespaceTypes.Price({token: address(0), amount: 0});
         }
@@ -621,7 +621,7 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         bytes[] calldata ruleData
     ) private returns (NamespaceTypes.Price memory price) {
         uint256 length = activation.ruleCount;
-        EvaluationState memory state;
+        EvaluationState memory state = EvaluationState({amount: 0, flags: 0, token: address(0), tokenSet: false});
         if (length == 0) {
             return NamespaceTypes.Price({token: address(0), amount: 0});
         }
@@ -646,6 +646,9 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
         price = NamespaceTypes.Price({token: state.token, amount: state.amount});
     }
 
+    // slither-disable-start incorrect-equality
+    // slither-disable-start cyclomatic-complexity
+    // solhint-disable-next-line function-max-lines
     function _applyRuleOutput(
         bytes32 activationId,
         address rule,
@@ -698,6 +701,8 @@ contract NamespaceController is INamespaceController, Ownable, Initializable, Re
             state.amount = output.amount;
         }
     }
+    // slither-disable-end cyclomatic-complexity
+    // slither-disable-end incorrect-equality
 
     function _applyToken(address token, EvaluationState memory state) private pure {
         if (!state.tokenSet) {

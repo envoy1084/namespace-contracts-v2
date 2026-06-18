@@ -2,7 +2,7 @@
 
 Namespace Contracts V2 is an activation-based ENSv2 subname minting layer.
 
-It lets a namespace owner configure a subname sale with policies, pricing, payment collection, revenue processing, and post-mint hooks, while keeping the official ENSv2 `PermissionedRegistry` as the source of truth for ownership, expiry, resolver, and permissions.
+It lets a namespace owner configure a subname sale with ordered rules, payment settlement, and post-mint hooks while keeping the official ENSv2 `PermissionedRegistry` as the source of truth for ownership, expiry, resolver, and permissions.
 
 ## Recommended Reading Order
 
@@ -19,14 +19,12 @@ It lets a namespace owner configure a subname sale with policies, pricing, payme
 
 | Group | Path | Purpose |
 | --- | --- | --- |
-| Controller | `src/NamespaceController.sol` | Activation, mint, renew, registry orchestration. |
-| Shared types | `src/libraries/NamespaceTypes.sol` | Common config, context, runtime, and price structs. |
-| Interfaces | `src/interfaces/` | Module and integration interfaces. |
-| Base module | `src/modules/NamespaceModule.sol` | Controller-only module base. |
-| Policies | `src/modules/policies/` | Sale windows, label length, token gates, reservations, whitelists. |
-| Pricing | `src/modules/pricing/` | Fixed, length-based, and USD oracle pricing. |
-| Payment | `src/modules/payment/` | ERC20 collection. |
-| Processors | `src/modules/processors/` | No-op and ERC20 split settlement. |
+| Controller | `src/NamespaceController.sol` | Activation, rule evaluation, mint, renew, payment, registry, and hook orchestration. |
+| Shared types | `src/libraries/NamespaceTypes.sol` | Activation config, runtime data, contexts, prices, and rule effects. |
+| Interfaces | `src/interfaces/` | Rule, payment, hook, resolver, oracle, and controller interfaces. |
+| Base module | `src/modules/NamespaceModule.sol` | Controller-only configurable module base with UUPS ownership. |
+| Rules | `src/modules/rules/` | Sale gates, eligibility, pricing, discounts, reservations, whitelists, pauses, and oracle pricing. |
+| Payment | `src/modules/payment/` | ERC20 collection and direct ERC20 split settlement. |
 | Hooks | `src/modules/hooks/` | Post-mint resolver updates. |
 
 ## Common Commands
@@ -49,9 +47,8 @@ Regenerate the root benchmark report with:
 ./scripts/generate-benchmarks.sh
 ```
 
-The generated report is [BENCHMARKS.md](./BENCHMARKS.md).
+The generated report is [BENCHMARKS.md](./BENCHMARKS.md). The previous policy/pricing baseline is archived in `benchmarks/baselines/` so rule-architecture gas can be compared side by side.
 
 ## Research
 
-The `research/` folder contains the earlier ENSv2 contract research and architecture notes. Those docs explain the upstream ENSv2 registry, permissions, resolution, and `.eth` flows that Namespace builds on top of.
-
+The `research/` folder contains ENSv2 contract research and architecture notes. Those docs explain the upstream ENSv2 registry, permissions, resolution, and `.eth` flows that Namespace builds on top of.

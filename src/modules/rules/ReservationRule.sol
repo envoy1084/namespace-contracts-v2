@@ -58,8 +58,8 @@ contract ReservationRule is NamespaceRule {
         returns (NamespaceTypes.RuleOutput memory output)
     {
         Claim memory claim = _loadClaim(ctx.activationId, ctx.label, ctx.labelHash, runtimeData);
-        _checkClaim(ctx.activationId, claim, ctx.buyer);
-        output = _priceOutput(claim, true);
+        bool applies = _checkClaim(ctx.activationId, claim, ctx.buyer);
+        output = _priceOutput(claim, true, applies);
     }
 
     /// @notice Evaluate rule.
@@ -69,8 +69,8 @@ contract ReservationRule is NamespaceRule {
         returns (NamespaceTypes.RuleOutput memory output)
     {
         Claim memory claim = _loadClaim(ctx.activationId, ctx.label, ctx.labelHash, runtimeData);
-        _checkClaim(ctx.activationId, claim, ctx.payer);
-        output = _priceOutput(claim, false);
+        bool applies = _checkClaim(ctx.activationId, claim, ctx.payer);
+        output = _priceOutput(claim, false, applies);
     }
 
     /// @notice Compute the double-hashed reservation leaf.
@@ -113,9 +113,13 @@ contract ReservationRule is NamespaceRule {
         }
     }
 
-    function _checkClaim(bytes32 activationId, Claim memory claim, address account) private view {
+    function _checkClaim(bytes32 activationId, Claim memory claim, address account)
+        private
+        view
+        returns (bool applies)
+    {
         if (claim.labelHash == bytes32(0)) {
-            return;
+            return false;
         }
 
         uint256 currentTime = block.timestamp;
@@ -123,7 +127,7 @@ contract ReservationRule is NamespaceRule {
             revert ReservationNotStarted(activationId, claim.labelHash, claim.startTime, currentTime);
         }
         if (claim.endTime != 0 && currentTime >= claim.endTime) {
-            return;
+            return false;
         }
         if (!claim.mintable) {
             revert ReservedLabelBlocked(activationId, claim.labelHash);
@@ -131,15 +135,16 @@ contract ReservationRule is NamespaceRule {
         if (claim.account != address(0) && claim.account != account) {
             revert ReservedForDifferentAccount(activationId, claim.labelHash, claim.account, account);
         }
+        applies = true;
     }
 
-    function _priceOutput(Claim memory claim, bool mint)
+    function _priceOutput(Claim memory claim, bool mint, bool applies)
         private
-        view
+        pure
         returns (NamespaceTypes.RuleOutput memory output)
     {
         output.decision = NamespaceTypes.Decision.PASS;
-        if (claim.labelHash == bytes32(0) || (claim.endTime != 0 && block.timestamp >= claim.endTime)) {
+        if (!applies) {
             return output;
         }
 

@@ -68,7 +68,7 @@ library NamespaceTypes {
     /// @param resolver Default resolver assigned to minted subnames.
     /// @param buyerRoleBitmap ENSv2 registry roles granted to subname buyers.
     /// @param rules Ordered rule modules that validate and price mints/renewals.
-    /// @param paymentModule Optional module that collects payment from the payer; required when pricing can return non-zero.
+    /// @param paymentModule Optional module that collects payment from the payer; required when rules can return non-zero.
     /// @param postHooks Hooks called after the ENSv2 registry mint succeeds.
     struct ActivationConfig {
         IPermissionedRegistry registry;
@@ -160,7 +160,7 @@ library NamespaceTypes {
         uint64 newExpiry;
     }
 
-    /// @notice Payment quote composed by pricing modules.
+    /// @notice Payment quote composed by rules.
     /// @param token Payment token address. Use address(0) for native ETH.
     /// @param amount Total amount required in `token`.
     struct Price {

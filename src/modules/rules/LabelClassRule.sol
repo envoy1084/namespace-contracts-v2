@@ -1,68 +1,106 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IPricingModule} from "src/interfaces/IPricingModule.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
-import {NamespaceModule} from "src/modules/NamespaceModule.sol";
+import {NamespaceRule} from "src/modules/rules/NamespaceRule.sol";
 
-/// @title LabelClassPricing
-/// @notice Base pricing module for exact label character-class premiums.
-abstract contract LabelClassPricing is NamespaceModule, IPricingModule {
+/// @title LabelClassRule
+/// @notice Checks label character classes and can apply class-specific pricing.
+contract LabelClassRule is NamespaceRule {
     enum LabelClass {
         EMOJI,
         NUMBER,
         LETTER
     }
 
-    /// @notice Character-class pricing params for one activation.
-    /// @param token Payment token. Use address(0) for native ETH.
-    /// @param mintAmount Amount added to mint price when the label matches.
-    /// @param renewAmount Amount added to renewal price when the label matches.
+    /// @notice Label class parameters for one activation.
+    /// @param token Payment token used by the price effect.
+    /// @param labelClass Class that the label is matched against.
+    /// @param requireMatch Whether non-matching labels should be blocked.
+    /// @param mintAmount Mint amount applied when the label matches.
+    /// @param renewAmount Renewal amount applied when the label matches.
+    /// @param priceOp Price operation. Use NONE for class gating only.
     struct Params {
         address token;
+        LabelClass labelClass;
+        bool requireMatch;
         uint128 mintAmount;
         uint128 renewAmount;
+        NamespaceTypes.PriceOp priceOp;
     }
 
     mapping(bytes32 activationId => Params params) public params;
 
-    error PaymentTokenMismatch(address expected, address actual);
     error InvalidUtf8Label(string label);
+    error LabelClassMismatch(bytes32 activationId, string label, LabelClass expected);
+    error InvalidLabelClassPriceOp(NamespaceTypes.PriceOp priceOp);
 
-    /// @notice Store class pricing parameters for an activation.
+    /// @notice Store label class parameters for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
-        params[activationId] = abi.decode(configData, (Params));
+        Params memory decoded = abi.decode(configData, (Params));
+        _checkPriceOp(decoded.priceOp);
+        params[activationId] = decoded;
     }
 
-    /// @inheritdoc IPricingModule
-    function quoteMint(
-        NamespaceTypes.MintContext calldata ctx,
-        NamespaceTypes.Price calldata currentPrice,
-        bytes calldata
-    ) external view returns (NamespaceTypes.Price memory price) {
+    /// @notice Evaluate rule.
+    function evaluateMint(NamespaceTypes.MintContext calldata ctx, bytes calldata)
+        external
+        view
+        returns (NamespaceTypes.RuleOutput memory output)
+    {
         Params memory stored = params[ctx.activationId];
-        price = _add(currentPrice, stored.token, _matches(ctx.label) ? stored.mintAmount : 0);
+        output = _evaluate(ctx.activationId, ctx.label, stored, true);
     }
 
-    /// @inheritdoc IPricingModule
-    function quoteRenew(
-        NamespaceTypes.RenewContext calldata ctx,
-        NamespaceTypes.Price calldata currentPrice,
-        bytes calldata
-    ) external view returns (NamespaceTypes.Price memory price) {
+    /// @notice Evaluate rule.
+    function evaluateRenew(NamespaceTypes.RenewContext calldata ctx, bytes calldata)
+        external
+        view
+        returns (NamespaceTypes.RuleOutput memory output)
+    {
         Params memory stored = params[ctx.activationId];
-        price = _add(currentPrice, stored.token, _matches(ctx.label) ? stored.renewAmount : 0);
+        output = _evaluate(ctx.activationId, ctx.label, stored, false);
     }
 
-    function labelClass() public pure virtual returns (LabelClass);
+    function _evaluate(bytes32 activationId, string calldata label, Params memory stored, bool mint)
+        private
+        pure
+        returns (NamespaceTypes.RuleOutput memory output)
+    {
+        bool matches = _matches(label, stored.labelClass);
+        if (!matches) {
+            if (stored.requireMatch) {
+                revert LabelClassMismatch(activationId, label, stored.labelClass);
+            }
+            output.decision = NamespaceTypes.Decision.PASS;
+            return output;
+        }
 
-    function _matches(string calldata label) private pure returns (bool) {
+        output.decision = NamespaceTypes.Decision.PASS;
+        NamespaceTypes.PriceOp priceOp = stored.priceOp;
+        uint256 amount = mint ? stored.mintAmount : stored.renewAmount;
+        if (priceOp == NamespaceTypes.PriceOp.NONE || amount == 0) {
+            return output;
+        }
+        output.priceOp = priceOp;
+        output.token = stored.token;
+        output.amount = amount;
+    }
+
+    function _checkPriceOp(NamespaceTypes.PriceOp priceOp) private pure {
+        if (
+            priceOp != NamespaceTypes.PriceOp.NONE && priceOp != NamespaceTypes.PriceOp.SET_BASE
+                && priceOp != NamespaceTypes.PriceOp.ADD && priceOp != NamespaceTypes.PriceOp.OVERRIDE
+        ) {
+            revert InvalidLabelClassPriceOp(priceOp);
+        }
+    }
+
+    function _matches(string calldata label, LabelClass class) private pure returns (bool) {
         bytes calldata data = bytes(label);
         if (data.length == 0) {
             return false;
         }
-
-        LabelClass class = labelClass();
         if (class == LabelClass.NUMBER) {
             return _isAsciiNumber(data);
         }
@@ -152,17 +190,5 @@ abstract contract LabelClassPricing is NamespaceModule, IPricingModule {
 
     function _isEmojiModifier(uint256 codepoint) private pure returns (bool) {
         return codepoint == 0xFE0F || codepoint == 0x200D || (codepoint >= 0x1F3FB && codepoint <= 0x1F3FF);
-    }
-
-    function _add(NamespaceTypes.Price calldata currentPrice, address token, uint256 amount)
-        private
-        pure
-        returns (NamespaceTypes.Price memory price)
-    {
-        if (currentPrice.token != address(0) && currentPrice.token != token) {
-            revert PaymentTokenMismatch(currentPrice.token, token);
-        }
-        price.token = token;
-        price.amount = currentPrice.amount + amount;
     }
 }

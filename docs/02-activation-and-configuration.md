@@ -1,151 +1,140 @@
 # Activation And Configuration
 
-Activation is the setup transaction from the namespace owner. It stores the sale and tells each module to store its activation-specific parameters.
+An activation is the sale configuration for one parent namespace such as `alice.eth`.
 
-## Preconditions
-
-Before activation:
-
-1. The target ENSv2 registry must exist.
-2. The namespace owner must have root registrar admin authority on that registry.
-3. The `NamespaceController` must have root `ROLE_REGISTRAR` and `ROLE_RENEW` on the same registry.
-4. A payment module is required when pricing modules can return a non-zero price. Free activations can use zero payment and zero processor.
-5. If module approval is required, every configured module must be approved by the controller owner.
+Alice activates once. Buyers later mint with only runtime proof/payment/hook data. They do not send sale configuration during mint.
 
 ## Activation Config
 
-`NamespaceTypes.ActivationConfig` is the full activation payload:
+`NamespaceTypes.ActivationConfig` contains:
 
-| Field | Purpose |
+| Field | Meaning |
 | --- | --- |
-| `registry` | Official ENSv2 `IPermissionedRegistry` where labels are minted. |
-| `parentNode` | Parent ENS node, such as the namehash for `alice.eth`. |
-| `resolver` | Default resolver written during registry mint. |
-| `buyerRoleBitmap` | ENSv2 roles granted to the buyer on the minted label. |
-| `policies` | Ordered policy modules that must all pass. |
-| `pricingModules` | Ordered pricing modules that compose the final price. |
-| `paymentModule` | Optional single module that collects funds. Required for paid activations. |
-| `processor` | Optional single module that distributes or accounts for collected funds. Use zero for direct settlement. |
-| `postHooks` | Ordered hooks executed after registry writes. |
+| `registry` | ENSv2 `IPermissionedRegistry` used to mint and renew labels. |
+| `parentNode` | Parent namehash, for example `namehash("alice.eth")`. |
+| `resolver` | Default resolver assigned to newly minted labels. |
+| `buyerRoleBitmap` | ENSv2 roles granted to buyers on minted labels. |
+| `rules` | Ordered `RuleConfig[]` evaluated for mint and renew. |
+| `paymentModule` | Optional payment module. Required when final price can be non-zero. |
+| `postHooks` | Optional hooks called after the registry write succeeds. |
 
-Each module config is:
+`RuleConfig` contains:
 
-```solidity
-struct ModuleConfig {
-    address module;
-    bytes configData;
-}
+| Field | Meaning |
+| --- | --- |
+| `module` | Rule contract address. |
+| `phase` | Deterministic rule phase used to order effects. |
+| `configData` | ABI-encoded activation-scoped parameters for the rule. |
+
+`ModuleConfig` is used for payment and hooks:
+
+| Field | Meaning |
+| --- | --- |
+| `module` | Payment or hook module contract. |
+| `configData` | ABI-encoded activation-scoped parameters. |
+
+## Example Activation
+
+Alice wants to sell `*.alice.eth` with:
+
+- sale window;
+- length bounds;
+- whitelist claims;
+- fixed base price;
+- length premium;
+- token-holder discount;
+- reservation custom prices;
+- ERC20 revenue split;
+- resolver update hook.
+
+The activation rule order should be:
+
+```text
+GUARD       SaleWindowRule
+ELIGIBILITY LabelLengthRule
+ELIGIBILITY WhitelistRule
+BASE_PRICE  FixedPriceRule
+PREMIUM     LengthPremiumRule
+DISCOUNT    TokenBalanceRule
+OVERRIDE    ReservationRule
 ```
 
-`configData` is ABI-decoded by the target module. For example, `LabelLengthPolicy` expects `LabelLengthPolicy.Params`.
+The same sale can later add a `WorldIdRule` or another verification rule without changing the controller.
 
 ## Activation Sequence
 
 ```mermaid
 sequenceDiagram
-    participant Owner as Namespace Owner
-    participant Controller as NamespaceController
-    participant Registry as ENSv2 Registry
-    participant Module as Module Contracts
+    participant Alice
+    participant Controller
+    participant Registry
+    participant Rule
+    participant Payment
+    participant Hook
 
-    Owner->>Controller: activate(config)
-    Controller->>Controller: require registry and paid activations have payment
-    Controller->>Registry: hasRootRoles(REGISTRAR_ADMIN, owner)
-    Registry-->>Controller: true
+    Alice->>Controller: activate(config)
     Controller->>Registry: hasRootRoles(REGISTRAR | RENEW, controller)
-    Registry-->>Controller: true
-    Controller->>Controller: activationId = hash(chain, registry, parentNode, owner, nonce)
+    Registry-->>Controller: ok
+    Controller->>Controller: validate module approvals
     Controller->>Controller: store activation metadata
-    loop policies
-        Controller->>Module: configure(activationId, configData)
+    loop each rule
+        Controller->>Rule: configure(activationId, configData)
     end
-    loop pricing modules
-        Controller->>Module: configure(activationId, configData)
+    opt payment module configured
+        Controller->>Payment: configure(activationId, configData)
     end
-    opt payment configured
-        Controller->>Module: configure payment
+    loop each post hook
+        Controller->>Hook: configure(activationId, configData)
     end
-    opt processor configured
-        Controller->>Module: configure processor
-    end
-    loop post hooks
-        Controller->>Module: configure(activationId, configData)
-    end
-    Controller-->>Owner: activationId
+    Controller-->>Alice: activationId
 ```
 
-## Stored Data
+## Module Approval
 
-The controller stores only orchestration data:
-
-- activation owner;
-- registry;
-- parent node;
-- resolver;
-- buyer role bitmap;
-- active status;
-- compact module address list references.
-
-Each module stores its own configuration keyed by `activationId`.
-
-This keeps the controller generic and makes future features additive. A future "human verification" feature, for example, can be a new policy module with the same `configure/checkMint/checkRenew` shape.
-
-Module address lists use a gas-oriented hybrid layout:
-
-- zero modules: store no module data;
-- one module: store the module address directly;
-- two or more modules: pack 20-byte addresses into a Solady `SSTORE2` pointer.
-
-This avoids storage slots for empty/free activations, keeps common one-module paths cheap, and avoids expensive multi-slot dynamic storage for larger policy/pricing/hook stacks.
-
-No-pricing activations can set payment and processor to zero. They skip settlement calls during zero-price mint and renewal, which avoids paying proxy-call overhead for free sales.
-
-For direct-settlement paid sales, set `processor.module` to zero and configure the payment module to send funds directly to the final recipient. Use a processor only when an extra accounting or distribution step is required, such as ERC20 revenue splits.
-
-## Activation Ownership
-
-Activation ownership is separate from ENS token ownership, but it is guarded by ENSv2 registry authority.
-
-The controller checks root registrar admin authority:
-
-- when creating an activation;
-- when enabling or disabling an activation;
-- when transferring activation ownership;
-- for the new owner during ownership transfer.
-
-This prevents an old activation owner from continuing to manage a sale after losing registry admin authority.
-
-## Updating Activation Parameters
-
-Activation owners can update configuration for modules already attached to an activation:
+The controller owner can require modules to be approved before activations use them.
 
 ```solidity
-updateModuleConfig(activationId, MODULE_KIND_POLICY, 0, newConfigData)
+controller.setModuleApproval(controller.MODULE_KIND_RULE(), address(rule), true);
+controller.setModuleApproval(controller.MODULE_KIND_PAYMENT(), address(payment), true);
+controller.setModuleApproval(controller.MODULE_KIND_POST_HOOK(), address(hook), true);
 ```
 
-The controller verifies:
+The kinds are intentionally small:
 
-- the activation exists;
-- `msg.sender` is the activation owner;
-- the activation owner still has registry admin authority;
-- the requested module kind and index exist.
+| Kind | Use |
+| --- | --- |
+| `MODULE_KIND_RULE` | Anything implementing `IRuleModule`. |
+| `MODULE_KIND_PAYMENT` | Anything implementing `IPaymentModule`. |
+| `MODULE_KIND_POST_HOOK` | Anything implementing `IPostHookModule`. |
 
-Then it calls `configure(activationId, newConfigData)` on the existing module. This updates module parameters without changing the module address list. Examples:
+## Storage Shape
 
-- update `SaleWindowPolicy` times;
-- rotate `ReservationPolicy` or `MerkleWhitelistPolicy` roots;
-- change fixed-price or length-price values;
-- update payment recipient or split recipients. If an activation was created with a zero processor, there is no processor module to update.
+The controller stores compact module lists:
 
-## Module Approval Mode
+| Count | Storage strategy |
+| --- | --- |
+| `0` | Stores zero address and zero count. |
+| `1` | Stores the module address directly. |
+| `2+` | Stores packed addresses in SSTORE2 bytecode. Rules store 20-byte address plus one-byte phase. |
 
-Module allowlisting is enabled by default. The controller owner approves modules by kind:
+This avoids dynamic storage arrays in the hot activation data and keeps common one-module paths cheap.
+
+## Updating Config
+
+Activation owners can update existing module config:
 
 ```solidity
-setModuleApproval(MODULE_KIND_POLICY, policyModule, true)
-setModuleApproval(MODULE_KIND_PRICING, pricingModule, true)
-setModuleApproval(MODULE_KIND_PAYMENT, paymentModule, true)
-setModuleApproval(MODULE_KIND_PROCESSOR, processorModule, true)
+controller.updateModuleConfig(activationId, controller.MODULE_KIND_RULE(), index, newConfigData);
+controller.updateModuleConfig(activationId, controller.MODULE_KIND_PAYMENT(), 0, newConfigData);
+controller.updateModuleConfig(activationId, controller.MODULE_KIND_POST_HOOK(), index, newConfigData);
 ```
 
-When approval mode is enabled, activation can only use modules approved for the exact module kind where they are used. A module approved as pricing is not approved as a policy. This is useful for a curated production deployment where user activations should not point at arbitrary external modules.
+Important constraint: updates can reconfigure an existing module at an existing index. They do not insert, remove, or reorder modules. A new module stack requires a new activation.
+
+Useful updates:
+
+- rotate `ReservationRule` or `WhitelistRule` roots;
+- change `SaleWindowRule` times;
+- pause/unpause with `PauseRule.setPaused`;
+- change fixed prices;
+- change split recipients.

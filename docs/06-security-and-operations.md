@@ -1,148 +1,151 @@
 # Security And Operations
 
-This page captures operational assumptions, known static-analysis notes, and deployment guidance for the current contracts.
-
 ## Registry Permissions
 
-Namespace depends on official ENSv2 registry permissions.
+Namespace depends on ENSv2 permissions. The controller can only mint or renew when the configured registry grants it the required root roles.
 
-For an activation to work:
+Required controller roles:
 
-- owner must have root registrar admin authority on the registry;
-- controller must have root registrar and renew authority on the registry.
-
-This prevents Namespace from minting in a registry unless the registry owner explicitly delegates those rights.
-
-## Module Trust
-
-Modules are external contracts called by the controller.
-
-Module approval is enabled by default. Production deployments should keep it enabled and approve modules by kind:
-
-```solidity
-setModuleApproval(MODULE_KIND_POLICY, policyModule, true)
-setModuleApproval(MODULE_KIND_PRICING, pricingModule, true)
-setModuleApproval(MODULE_KIND_PAYMENT, paymentModule, true)
-setModuleApproval(MODULE_KIND_PROCESSOR, processorModule, true)
-```
-
-Approvals are module-kind scoped. A contract approved as pricing cannot be used as a policy unless it is also approved for `MODULE_KIND_POLICY`.
-
-If approval mode is disabled, a namespace owner can activate arbitrary module contracts. That is flexible for experimentation but risky for curated production sales.
-
-## Reentrancy
-
-`activate`, `mint`, and `renew` use `nonReentrant`.
-
-The controller still intentionally calls external modules. This is the point of the architecture, so module allowlisting and module review are important.
-
-## Timestamp Usage
-
-Timestamp checks are intentional in:
-
-- `SaleWindowPolicy`;
-- `ReservationPolicy`;
-- `USDOraclePricing`.
-
-These checks model sale windows, reservation expiry, and oracle staleness. Do not use them for randomness.
-
-## Reservation Proofs
-
-`ReservationPolicy` stores only `reservationRoot` per activation. The full reservation list should be generated and published off-chain by sale infrastructure.
-
-Operational rules:
-
-- build leaves as `(labelHash, account, expiry)` using `ReservationPolicy.leaf`;
-- pass `ProofData(account, expiry, proof)` at the reservation policy index in `runtimeData.policyData`;
-- use `account == address(0)` only for labels that should be public but still proof-gated;
-- use `expiry == 0` only for non-expiring reservations;
-- rotate the root with `NamespaceController.updateModuleConfig` if the reservation list needs to change.
-
-When a non-zero root is configured, buyers without a valid proof cannot mint, even if the intended result is public mint. That is the tradeoff that keeps reservation storage bounded.
-
-## Pause Operations
-
-`PausePolicy` is a policy module. It must be included in the activation's policy list before it can stop mints or renewals.
-
-The activation owner calls:
-
-```solidity
-pausePolicy.setPaused(activationId, true)
-```
-
-Only the activation owner can toggle it. In this architecture, activation ownership is protected by ENSv2 registry admin checks in `NamespaceController`.
-
-For modules whose state is entirely stored through `configure`, the activation owner can also update parameters through:
-
-```solidity
-controller.updateModuleConfig(activationId, moduleKind, moduleIndex, configData)
-```
-
-This path is limited to existing modules already attached to the activation. It does not let the activation owner swap in a new module contract.
-
-## Upgrade Operations
-
-`NamespaceController` and production modules are UUPS upgradeable through Solady `UUPSUpgradeable`.
-
-Operational rules:
-
-- deploy implementation contracts with initializers locked;
-- deploy ERC1967 proxies and initialize them immediately;
-- keep proxy ownership under the intended upgrade admin;
-- review storage layout before every upgrade;
-- run full tests, Slither, and benchmarks against proxy deployments before upgrading.
-
-## Payment Assumptions
-
-`ERC20PaymentModule` is controller-only. The controller currently sets `ctx.payer = msg.sender`, so the ERC20 transfer pulls from the caller who initiated mint or renew.
-
-For split payments:
-
-1. Gas-sensitive path: configure `ERC20SplitPaymentModule` with recipients totaling `10_000` bps and set the activation processor to zero.
-2. Two-step path: configure `ERC20PaymentModule.recipient` as `ERC20SplitProcessor`, then configure `ERC20SplitProcessor` with recipients totaling `10_000` bps.
-
-For direct payments, set the activation processor to zero and configure `ERC20PaymentModule.recipient` as the final recipient. This avoids an unnecessary processor proxy call.
-
-For free activations, set both payment and processor to zero. If a mint or renewal sends native value or a pricing module returns a non-zero price, the controller requires a configured payment module.
-
-Native ETH pricing is represented by `address(0)` in `NamespaceTypes.Price`, but the current payment implementation is ERC20-only and rejects `msg.value`.
-
-Zero-price mints and renewals skip payment and processor calls when no native value is supplied. Paid direct-settlement flows skip the processor call when the activation has no processor. This reduces gas for free and simple sales.
-
-## Static Analysis Notes
-
-Expected Slither findings for this architecture:
-
-| Finding | Reason |
+| Role | Use |
 | --- | --- |
-| Calls inside loops | Policies, pricing modules, and hooks are intentionally stacked arrays. Keep array lengths bounded by UI/deployment policy. |
-| Timestamp comparisons | Sale windows, reservation expiry, and oracle staleness are time-based features. |
-| Arbitrary `transferFrom` | Payment is controller-only and payer is set by controller context. |
-| Locking ether in ERC20 payment | The interface is payable for payment-module generality, but ERC20 module rejects non-zero `msg.value`. |
-| Assembly usage | Narrow memory-safe hash helpers implement forge lint's gas recommendation for Merkle leaves and ENS child nodes. |
+| `ROLE_REGISTRAR` | Mint labels through `register`. |
+| `ROLE_RENEW` | Renew labels through `renew`. |
 
-## Operational Checklist
+Activation owners must also retain registry admin authority. The controller checks that the activator has root registrar admin authority at activation time and before sensitive activation ownership/status updates.
 
-Before opening a sale:
+## Bypass Risk
 
-1. Deploy or select the official ENSv2 registry for the parent namespace.
-2. Grant controller registrar and renew roles on that registry.
-3. Decide whether module approval should be required.
-4. Approve the modules that are allowed in production.
-5. Configure policies, pricing, payment, processor, and hooks.
-6. Run a dry-run mint on a test registry.
-7. Monitor emitted `SubnameMinted` and `SubnameRenewed` events.
+If Alice keeps a direct unrestricted path to mint subnames in the same registry, she can bypass Namespace sale rules. Production deployments should make the Namespace controller the constrained minting path for public sale inventory.
 
-## Tooling
+The usual setup is:
 
-Use:
+1. Alice controls `alice.eth`.
+2. Alice grants the controller the registry roles needed to register and renew.
+3. Alice activates `alice.eth` with rules/payment/hooks.
+4. Buyers mint through `NamespaceController`.
+5. The official ENSv2 registry stores the resulting subname ownership.
 
-```sh
-forge test
-forge lint
-solhint 'src/**/*.sol' 'test/**/*.sol'
-./scripts/slither-build.sh && slither .
-./scripts/generate-benchmarks.sh
+## Module Approval
+
+Keep `moduleApprovalRequired = true` for curated deployments.
+
+Approve modules by kind:
+
+```solidity
+controller.setModuleApproval(controller.MODULE_KIND_RULE(), address(rule), true);
+controller.setModuleApproval(controller.MODULE_KIND_PAYMENT(), address(payment), true);
+controller.setModuleApproval(controller.MODULE_KIND_POST_HOOK(), address(hook), true);
 ```
 
-`scripts/slither-build.sh` exists because Slither 0.11.x cannot parse metadata-only Foundry build-info files emitted for some dependency paths.
+Approvals are kind-scoped. A payment module approved as payment is not automatically approved as a rule or hook.
+
+## Rule Ordering
+
+Rules must be sorted by phase. Recommended order:
+
+```text
+GUARD
+ELIGIBILITY
+BASE_PRICE
+PREMIUM
+DISCOUNT
+OVERRIDE
+FINAL_CHECK
+```
+
+This avoids ambiguous price behavior. For example, a token-holder discount should normally run after the base price and premiums. A reservation custom price should normally run in `OVERRIDE` so it can replace earlier pricing.
+
+## Claims
+
+`ReservationRule` and `WhitelistRule` use double-hashed Merkle leaves and runtime claims.
+
+Operational requirements:
+
+- publish the claim schema used by the sale backend;
+- generate roots from normalized labels;
+- store roots in activation config;
+- send the matching runtime claim at the correct `ruleData[]` index;
+- rotate roots with `updateModuleConfig` when reservations or allowlists change.
+
+Reservation claims can:
+
+- reserve a label for a specific account;
+- block a label entirely;
+- expire or start later;
+- add a custom amount;
+- override normal pricing.
+
+Whitelist claims can:
+
+- allow a specific account;
+- allow a specific label;
+- allow an account-label pair;
+- block matching claims;
+- apply a discount;
+- add or override price.
+
+## Oracle Pricing
+
+`USDOracleRule` depends on a Chainlink-compatible token/USD oracle.
+
+Use conservative settings:
+
+| Setting | Recommendation |
+| --- | --- |
+| `maxStaleness` | Set a non-zero bound appropriate for the asset. |
+| `tokenDecimals` | Match the payment token exactly. |
+| `priceOp` | Use `SET_BASE` for a USD base price or `ADD` for a USD premium. |
+
+The rule rejects:
+
+- non-positive oracle answers;
+- incomplete rounds;
+- stale answers.
+
+## Payment
+
+The controller only calls payment modules when final price or `msg.value` is non-zero.
+
+Current payment modules are ERC20-based:
+
+| Module | Use |
+| --- | --- |
+| `ERC20PaymentModule` | One recipient. |
+| `ERC20SplitPaymentModule` | Direct split to multiple recipients. |
+
+Native ETH pricing is represented by `Price.token == address(0)`, but the current payment modules reject native value. Add a native payment module before enabling native-price activations.
+
+## Reentrancy And External Calls
+
+`NamespaceController.mint` and `renew` are `nonReentrant`.
+
+External calls happen in this order:
+
+```text
+rules -> payment -> registry -> hooks
+```
+
+If any later call reverts, the whole transaction reverts.
+
+## Gas Controls
+
+Gas-sensitive knobs:
+
+| Area | Guidance |
+| --- | --- |
+| Rule count | Keep common activations to a small ordered stack. |
+| Claim proofs | Proof depth grows with Merkle set size. |
+| Hooks | Resolver writes are expensive. Batch only when needed. |
+| Payment | Use `ERC20SplitPaymentModule` instead of extra settlement layers. |
+| Config storage | Single module lists are stored directly; longer lists use SSTORE2. |
+
+## Deployment Checklist
+
+1. Deploy controller implementation and proxy.
+2. Deploy rule, payment, and hook module implementations/proxies.
+3. Initialize every module with `(controller, owner)`.
+4. Approve curated modules on the controller.
+5. Grant controller registry roles for target namespace.
+6. Activate namespace with sorted rules.
+7. Run a dry-run mint on a test label.
+8. Publish activation ID, supported labels, pricing, and claim generation rules.

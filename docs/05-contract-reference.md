@@ -1,128 +1,136 @@
 # Contract Reference
 
-This page summarizes every current project contract in `src/`.
-
-## Core
+## Controller
 
 ### NamespaceController
 
-Main entry point for namespace owners and buyers.
+Path: `src/NamespaceController.sol`
 
 Responsibilities:
 
 - create activations;
-- enforce activation ownership and registry admin authority;
-- enforce optional module approval;
-- validate runtime data lengths;
-- orchestrate policy, pricing, payment, processor, registry, and hook calls;
-- update config for modules already attached to an activation;
-- expose activation metadata and module lists.
+- validate registry roles;
+- store compact rule and hook lists;
+- configure modules;
+- evaluate rules;
+- collect payment;
+- call official ENSv2 registry;
+- run post hooks;
+- expose activation metadata.
 
-Key functions:
+Important methods:
 
-| Function | Purpose |
+| Method | Purpose |
 | --- | --- |
-| `activate(config)` | Create and configure an activation. |
-| `mint(activationId, label, duration, runtimeData)` | Mint a subname through the activation. |
-| `renew(activationId, label, duration, runtimeData)` | Renew a subname through the activation. |
-| `setActivationStatus(activationId, active)` | Pause or resume an activation. |
-| `transferActivationOwnership(activationId, newOwner)` | Transfer activation control to another registry admin. |
-| `updateModuleConfig(activationId, kind, index, configData)` | Reconfigure an existing activation module. |
-| `setModuleApprovalRequired(required)` | Enable/disable module allowlisting. |
-| `setModuleApproval(module, approved)` | Update module allowlist state for every module kind. |
-| `setModuleApproval(kind, module, approved)` | Update module allowlist state for one module kind. |
-| `getActivation/getPolicies/getPricingModules/getPostHooks` | Read activation configuration. |
+| `activate` | Create and configure a sale activation. |
+| `mint` | Execute rule evaluation, payment, registry mint, and hooks. |
+| `renew` | Execute rule evaluation, payment, registry renewal, and hooks. |
+| `updateModuleConfig` | Reconfigure an existing rule, payment module, or hook. |
+| `setActivationStatus` | Enable or disable an activation. |
+| `transferActivationOwnership` | Move activation ownership to another registry admin. |
+| `getActivation` | Read public activation metadata. |
+| `getRules` | Read ordered rule module addresses. |
+| `getPostHooks` | Read ordered post-hook addresses. |
 
-### NamespaceTypes
+Module kind constants:
 
-Shared type library.
+| Constant | Meaning |
+| --- | --- |
+| `MODULE_KIND_RULE` | Rule modules. |
+| `MODULE_KIND_PAYMENT` | Payment modules. |
+| `MODULE_KIND_POST_HOOK` | Post-hook modules. |
 
-Defines:
+## Shared Types
 
-- `ModuleConfig`;
-- `ActivationConfig`;
-- `Activation`;
-- `RuntimeData`;
-- `MintContext`;
-- `RenewContext`;
-- `Price`.
+Path: `src/libraries/NamespaceTypes.sol`
 
-This library is the contract between controller and modules.
+Key structs:
 
-### NamespaceModule
+| Struct | Purpose |
+| --- | --- |
+| `ActivationConfig` | Full activation input. |
+| `RuleConfig` | Rule module, phase, and config data. |
+| `ModuleConfig` | Payment/hook module and config data. |
+| `Activation` | Public activation metadata. |
+| `RuntimeData` | Per-call rule, payment, and hook data. |
+| `MintContext` | Context passed to rules, payment, and hooks during mint. |
+| `RenewContext` | Context passed during renewal. |
+| `Price` | Final token and amount. |
+| `RuleOutput` | Rule decision, price effect, and flags. |
 
-Base contract for modules.
+Key enums:
 
-Responsibilities:
-
-- stores proxy-initialized `controller`;
-- provides `onlyController`;
-- standardizes controller-only configuration and execution;
-- adds Solady UUPS upgradeability with owner-gated upgrades.
-
-## Upgradeability
-
-`NamespaceController` and all production modules are Solady UUPS implementations. Implementations lock initializers in their constructors, and proxies must call:
-
-```solidity
-NamespaceController.initialize(owner)
-NamespaceModule.initialize(controller, owner)
-```
-
-The owner authorizes `upgradeToAndCall` for the controller or module proxy. Module configuration and execution remain controller-only after upgrade.
+| Enum | Purpose |
+| --- | --- |
+| `RulePhase` | Deterministic rule ordering. |
+| `Decision` | `PASS`, `BLOCK`, or `SKIP`. |
+| `PriceOp` | Price transformation. |
 
 ## Interfaces
 
 | Interface | Purpose |
 | --- | --- |
-| `INamespaceController` | Public controller entry point and events. |
-| `IConfigurableModule` | Shared `configure(activationId, configData)` interface. |
-| `IPolicyModule` | `checkMint` and `checkRenew`. |
-| `IPricingModule` | `quoteMint` and `quoteRenew`. |
+| `IRuleModule` | `evaluateMint` and `evaluateRenew`. |
 | `IPaymentModule` | `collectMint` and `collectRenew`. |
-| `IProcessorModule` | `processMint` and `processRenew`. |
 | `IPostHookModule` | `afterMint` and `afterRenew`. |
-| `IAddrResolver` | Minimal resolver setter used by `SetAddrToBuyerHook`. |
-| `IAggregatorV3` | Minimal oracle interface used by `USDOraclePricing`. |
+| `IConfigurableModule` | Activation-scoped `configure`. |
+| `INamespaceController` | External controller API. |
+| `IAddrResolver` | Minimal resolver `setAddr`. |
+| `IAggregatorV3` | Minimal Chainlink-compatible oracle interface. |
 
-## Policies
+## Base Module
 
-| Contract | What it enforces |
+### NamespaceModule
+
+Path: `src/modules/NamespaceModule.sol`
+
+Base for activation-scoped modules. It stores:
+
+| Field | Purpose |
 | --- | --- |
-| `SaleWindowPolicy` | Time window for mint/renew. |
-| `LabelLengthPolicy` | Minimum and maximum label byte length. |
-| `ERC20BalanceGatePolicy` | Minimum ERC20 balance. |
-| `ERC721BalanceGatePolicy` | Minimum ERC721 balance. |
-| `ReservationPolicy` | Merkle-root label reservations by account and expiry. |
-| `MerkleWhitelistPolicy` | Merkle allowlists for mints and renewals. |
-| `PausePolicy` | Activation-owner pause switch for minting and renewals. |
-| `CompositeMintPolicy` | Gas-optimized bundle of sale window, length, ERC20 gate, reservation, and whitelist checks. |
+| `controller` | Only this address can call `configure` and execution hooks. |
+| owner | UUPS upgrade authority for the module proxy. |
 
-## Pricing
+### NamespaceRule
 
-| Contract | What it prices |
-| --- | --- |
-| `FixedPricePricing` | Fixed mint and renewal amounts. |
-| `LengthBasedPricing` | Per-second rates selected by label byte length. |
-| `USDOraclePricing` | USD-denominated prices converted through an oracle. |
-| `OnlyNumberPricing` | Premium for labels made only of ASCII numbers. |
-| `OnlyLetterPricing` | Premium for labels made only of ASCII letters. |
-| `OnlyEmojiPricing` | Premium for emoji-only labels. |
-| `LabelClassPricing` | Shared base for special label-class pricing modules. |
-| `CompositePricing` | Gas-optimized bundle of label-class, fixed, exact-length, and length-rate pricing. |
+Path: `src/modules/rules/NamespaceRule.sol`
 
-## Payment And Processing
+Base for rule modules. It inherits `NamespaceModule` and `IRuleModule`, and provides `_pass()`.
+
+## Rules
 
 | Contract | Purpose |
 | --- | --- |
-| `ERC20PaymentModule` | Pulls ERC20 payment from payer to recipient. |
-| `ERC20SplitPaymentModule` | Pulls ERC20 payment from payer directly to split recipients. |
-| `NoopProcessor` | Empty processor example; zero processor is preferred for gas-efficient direct settlement. |
-| `ERC20SplitProcessor` | Splits ERC20 funds by basis points. |
+| `PauseRule` | Activation-owner pause switch. |
+| `SaleWindowRule` | Time-window checks. |
+| `LabelLengthRule` | Byte-length bounds. |
+| `TokenBalanceRule` | ERC20 gate and optional discount. |
+| `FixedPriceRule` | Fixed base price with exact-length overrides. |
+| `LengthPremiumRule` | Per-second length premiums. |
+| `LabelClassRule` | Number, letter, or emoji-only label behavior. |
+| `USDOracleRule` | USD-denominated prices through token/USD oracle. |
+| `ReservationRule` | Claim-based reservations, blocks, and custom prices. |
+| `WhitelistRule` | Claim-based allowlists, blocks, discounts, and custom prices. |
+
+## Payment
+
+| Contract | Purpose |
+| --- | --- |
+| `ERC20PaymentModule` | Direct ERC20 collection to one recipient. |
+| `ERC20SplitPaymentModule` | Direct ERC20 collection to multiple recipients by bps. |
 
 ## Hooks
 
 | Contract | Purpose |
 | --- | --- |
-| `SetAddrToBuyerHook` | Sets resolver `addr` record after mint. |
-| `BatchSetAddrToBuyerHook` | Sets one or more resolver `addr` records from one post-hook call. |
+| `SetAddrToBuyerHook` | Sets one resolver addr record after mint. |
+| `BatchSetAddrToBuyerHook` | Sets one or more resolver addr records after mint. |
+
+## Test Support
+
+| Contract | Purpose |
+| --- | --- |
+| `MockERC20` | Test ERC20. |
+| `MockERC721` | Test ERC721. |
+| `MockAggregatorV3` | Test token/USD oracle. |
+| `RecordingPostHook` | Test hook that records last mint. |

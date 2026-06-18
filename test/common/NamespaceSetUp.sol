@@ -13,10 +13,6 @@ import {SimpleRegistryMetadata} from "@ensv2/registry/SimpleRegistryMetadata.sol
 import {NamespaceController} from "src/NamespaceController.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {ERC20PaymentModule} from "src/modules/payment/ERC20PaymentModule.sol";
-import {LabelLengthPolicy} from "src/modules/policies/LabelLengthPolicy.sol";
-import {SaleWindowPolicy} from "src/modules/policies/SaleWindowPolicy.sol";
-import {FixedPricePricing} from "src/modules/pricing/FixedPricePricing.sol";
-import {NoopProcessor} from "src/modules/processors/NoopProcessor.sol";
 import {FixedPriceRule} from "src/modules/rules/FixedPriceRule.sol";
 import {LabelLengthRule} from "src/modules/rules/LabelLengthRule.sol";
 import {SaleWindowRule} from "src/modules/rules/SaleWindowRule.sol";
@@ -44,11 +40,7 @@ contract NamespaceSetUp is Test {
     SimpleRegistryMetadata internal registryMetadata;
     PermissionedRegistry internal registry;
     MockERC20 internal token;
-    SaleWindowPolicy internal saleWindowPolicy;
-    LabelLengthPolicy internal labelLengthPolicy;
-    FixedPricePricing internal fixedPricePricing;
     ERC20PaymentModule internal erc20Payment;
-    NoopProcessor internal noopProcessor;
     RecordingPostHook internal postHook;
     SaleWindowRule internal saleWindowRule;
     LabelLengthRule internal labelLengthRule;
@@ -75,11 +67,7 @@ contract NamespaceSetUp is Test {
             ROLE_REGISTRAR_ADMIN | RegistryRolesLib.ROLE_RENEW_ADMIN | RegistryRolesLib.ROLE_REGISTER_RESERVED_ADMIN
         );
         token = new MockERC20("Mock USDC", "mUSDC");
-        saleWindowPolicy = SaleWindowPolicy(_deployModule(address(new SaleWindowPolicy())));
-        labelLengthPolicy = LabelLengthPolicy(_deployModule(address(new LabelLengthPolicy())));
-        fixedPricePricing = FixedPricePricing(_deployModule(address(new FixedPricePricing())));
         erc20Payment = ERC20PaymentModule(_deployModule(address(new ERC20PaymentModule())));
-        noopProcessor = NoopProcessor(_deployModule(address(new NoopProcessor())));
         postHook = RecordingPostHook(_deployModule(address(new RecordingPostHook())));
         saleWindowRule = SaleWindowRule(_deployModule(address(new SaleWindowRule())));
         labelLengthRule = LabelLengthRule(_deployModule(address(new LabelLengthRule())));

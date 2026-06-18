@@ -53,7 +53,10 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
         _assertMintedFlow(activationId, label, labelHash, tokenId);
     }
 
-    function _assertMintedFlow(bytes32 activationId, string memory label, bytes32 labelHash, uint256 tokenId) private {
+    function _assertMintedFlow(bytes32 activationId, string memory label, bytes32 labelHash, uint256 tokenId)
+        private
+        view
+    {
         IPermissionedRegistry.State memory state = registry.getState(tokenId);
         assertEq(uint256(state.status), uint256(IPermissionedRegistry.Status.REGISTERED));
         assertEq(state.latestOwner, accounts.buyer.addr);

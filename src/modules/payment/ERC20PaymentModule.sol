@@ -10,8 +10,8 @@ import {NamespaceModule} from "src/modules/NamespaceModule.sol";
 
 /// @title ERC20PaymentModule
 /// @notice Collects ERC20 payments for mints and renewals.
-/// @dev Funds are transferred to the activation-scoped recipient. For split processing, configure
-///      the recipient as the processor contract and call a split processor after collection.
+/// @dev Funds are transferred directly to the activation-scoped recipient. Use
+///      `ERC20SplitPaymentModule` when one collection call should split revenue.
 contract ERC20PaymentModule is NamespaceModule, IPaymentModule {
     /// @notice ERC20 payment params for one activation.
     /// @param token ERC20 token accepted by this payment module.

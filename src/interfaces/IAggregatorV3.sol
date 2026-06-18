@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 /// @title IAggregatorV3
-/// @notice Minimal Chainlink AggregatorV3-compatible interface used by USD pricing modules.
+/// @notice Minimal Chainlink AggregatorV3-compatible interface used by USD oracle rules.
 interface IAggregatorV3 {
     /// @notice Number of decimals used by oracle answers.
     function decimals() external view returns (uint8);

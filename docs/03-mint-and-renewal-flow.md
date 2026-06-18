@@ -1,31 +1,36 @@
 # Mint And Renewal Flow
 
-Mint and renew are the buyer-facing execution paths. Both load an activation, validate runtime data sizes, run policies, compose price, call the ENSv2 registry, collect payment, process funds, and then run post hooks.
+Mint and renewal calls use stored activation config plus per-call runtime data.
 
 ## Runtime Data
 
-`NamespaceTypes.RuntimeData` is supplied per mint or renewal:
+`NamespaceTypes.RuntimeData` contains:
 
-| Field | Used by |
+| Field | Meaning |
 | --- | --- |
-| `policyData[]` | One entry per policy module. |
-| `pricingData[]` | One entry per pricing module. |
-| `paymentData` | Payment module. |
-| `processorData` | Processor module. |
-| `postHookData[]` | One entry per post-hook module. |
+| `ruleData[]` | One entry per configured rule, same order as activation rules. |
+| `paymentData` | Runtime data for the payment module. |
+| `postHookData[]` | One entry per configured post hook. |
 
-The controller checks that array lengths match the activation. This prevents accidental proof/config misalignment.
+Runtime data is not configuration. Configuration is stored at activation time. Runtime data proves facts that differ per buyer or label, such as Merkle claims.
 
-Runtime data is not configuration. Configuration is stored during activation, while runtime data proves facts that can change per buyer or per label. For example, `ReservationPolicy` stores one Merkle root during activation, and a buyer supplies `ReservationPolicy.ProofData` at the policy's array index when minting a reserved label.
+Example reservation claim:
 
 ```solidity
-runtimeData.policyData[reservationPolicyIndex] = abi.encode(
-    ReservationPolicy.ProofData({
-        account: reservedBuyer,
-        expiry: reservationExpiry,
-        proof: merkleProof
-    })
-);
+ReservationRule.Claim memory claim = ReservationRule.Claim({
+    labelHash: keccak256(bytes("vip")),
+    account: buyer,
+    startTime: 0,
+    endTime: uint64(block.timestamp + 30 days),
+    mintable: true,
+    token: address(usdc),
+    mintPrice: 1000e6,
+    renewPrice: 100e6,
+    priceOp: NamespaceTypes.PriceOp.OVERRIDE,
+    proof: proof
+});
+
+runtimeData.ruleData[reservationRuleIndex] = abi.encode(claim);
 ```
 
 ## Mint Sequence
@@ -33,81 +38,54 @@ runtimeData.policyData[reservationPolicyIndex] = abi.encode(
 ```mermaid
 sequenceDiagram
     participant Buyer
-    participant Controller as NamespaceController
-    participant Registry as ENSv2 PermissionedRegistry
-    participant Policy as Policies
-    participant Pricing as Pricing Modules
-    participant Payment as Payment Module
-    participant Processor as Processor
-    participant Hook as Post Hooks
+    participant Controller
+    participant Rule
+    participant Payment
+    participant Registry
+    participant Hook
 
     Buyer->>Controller: mint(activationId, label, duration, runtimeData)
-    Controller->>Controller: require duration > 0 and activation active
-    Controller->>Controller: check runtime data lengths
+    Controller->>Controller: load activation
+    Controller->>Controller: validate runtime lengths
     Controller->>Controller: build MintContext
-    loop each policy
-        Controller->>Policy: checkMint(ctx, policyData[i])
+    loop each rule
+        Controller->>Rule: evaluateMint(ctx, ruleData[i])
+        Rule-->>Controller: RuleOutput
+        Controller->>Controller: apply decision, flags, price effect
     end
-    loop each pricing module
-        Controller->>Pricing: quoteMint(ctx, currentPrice, pricingData[i])
-        Pricing-->>Controller: updated price
+    opt final price or msg.value is non-zero
+        Controller->>Payment: collectMint(ctx, price, paymentData)
     end
-    Controller->>Registry: register(label, buyer, zeroSubregistry, resolver, buyerRoles, expiry)
+    Controller->>Registry: register(label, buyer, resolver, roles, expiry)
     Registry-->>Controller: tokenId
-    Controller->>Payment: collectMint{value}(ctx, price, paymentData)
-    opt processor configured
-        Controller->>Processor: processMint(ctx, price, processorData)
-    end
     loop each post hook
         Controller->>Hook: afterMint(ctx, tokenId, postHookData[i])
     end
     Controller-->>Buyer: tokenId
 ```
 
-## Mint Context
-
-`MintContext` gives modules all common facts:
-
-- `activationId`;
-- `buyer`;
-- `payer`;
-- registry;
-- parent node;
-- label and label hash;
-- duration and expiry;
-- resolver;
-- buyer role bitmap.
-
-Today `buyer` and `payer` are both `msg.sender`. A future permit or sponsored mint module could extend runtime/payment behavior without changing policy and pricing interfaces.
-
 ## Renewal Sequence
 
 ```mermaid
 sequenceDiagram
     participant Payer
-    participant Controller as NamespaceController
-    participant Registry as ENSv2 PermissionedRegistry
-    participant Policy as Policies
-    participant Pricing as Pricing Modules
-    participant Payment as Payment Module
-    participant Processor as Processor
-    participant Hook as Post Hooks
+    participant Controller
+    participant Registry
+    participant Rule
+    participant Payment
+    participant Hook
 
     Payer->>Controller: renew(activationId, label, duration, runtimeData)
-    Controller->>Controller: require duration > 0 and activation active
-    Controller->>Registry: getState(labelHash)
-    Registry-->>Controller: REGISTERED or RESERVED
-    Controller->>Controller: newExpiry = state.expiry + duration
+    Controller->>Registry: getState(labelId)
+    Registry-->>Controller: tokenId and current expiry
     Controller->>Controller: build RenewContext
-    loop each policy
-        Controller->>Policy: checkRenew(ctx, policyData[i])
+    loop each rule
+        Controller->>Rule: evaluateRenew(ctx, ruleData[i])
+        Rule-->>Controller: RuleOutput
+        Controller->>Controller: apply decision, flags, price effect
     end
-    loop each pricing module
-        Controller->>Pricing: quoteRenew(ctx, currentPrice, pricingData[i])
-    end
-    Controller->>Payment: collectRenew{value}(ctx, price, paymentData)
-    opt processor configured
-        Controller->>Processor: processRenew(ctx, price, processorData)
+    opt final price or msg.value is non-zero
+        Controller->>Payment: collectRenew(ctx, price, paymentData)
     end
     Controller->>Registry: renew(tokenId, newExpiry)
     loop each post hook
@@ -116,18 +94,65 @@ sequenceDiagram
     Controller-->>Payer: newExpiry
 ```
 
-## Execution Order Matters
+## Price Composition
 
-The current mint order is deliberate:
+The controller starts with:
 
-1. policies before pricing/payment;
-2. pricing before registry write;
-3. registry write before payment settlement;
-4. payment and optional processor before post hooks;
-5. hooks after registry write.
+```solidity
+Price({token: address(0), amount: 0})
+```
 
-Mint does not preflight `getState` because `PermissionedRegistry.register` already enforces availability and reserved-label rules. The controller calls `register` before payment settlement, so an unavailable label reverts before any payment transfer. If payment, processor, or hook execution later reverts, the whole transaction reverts, including the registry write and any ERC20 transfers already made in the same transaction.
+Each rule can return a `PriceOp`.
 
-Renewal still reads registry state first because it needs the existing token id and expiry to compute the new expiry.
+| PriceOp | Effect |
+| --- | --- |
+| `NONE` | No price change. |
+| `SET_BASE` | Sets amount to `output.amount`. |
+| `ADD` | Adds `output.amount`. |
+| `SUBTRACT` | Subtracts with a floor at zero. |
+| `DISCOUNT_BPS` | Applies basis point discount to current amount. |
+| `MARKUP_BPS` | Applies basis point markup to current amount. |
+| `MIN` | Raises amount to a minimum. |
+| `MAX` | Caps amount at a maximum. |
+| `OVERRIDE` | Replaces amount with `output.amount`. |
 
-Post hooks run after the registry mutation because they may need the minted token id or a resolver node that should only be updated after a successful mint.
+Absolute price operations also set/check the payment token. The default engine does not allow mixed payment tokens in one evaluation.
+
+## Example: Reserved Custom Price
+
+For `reserved.alice.eth`:
+
+```text
+FixedPriceRule      SET_BASE 10 USDC
+LengthPremiumRule   ADD      2 USDC
+ReservationRule     OVERRIDE 1000 USDC
+Final price                  1000 USDC
+```
+
+For the wrong buyer:
+
+```text
+ReservationRule reverts ReservedForDifferentAccount
+```
+
+For a blocked reservation:
+
+```text
+ReservationRule reverts ReservedLabelBlocked
+```
+
+## Failure Behavior
+
+Any revert reverts the full transaction, including registry writes and ERC20 transfers made earlier in the same transaction.
+
+Common failures:
+
+| Failure | Source |
+| --- | --- |
+| Runtime length mismatch | Controller |
+| Label outside bounds | `LabelLengthRule` |
+| Sale closed | `SaleWindowRule` |
+| Missing claim | `ReservationRule` or `WhitelistRule` |
+| Mixed payment tokens | Controller |
+| Wrong payment token | Payment module |
+| Label unavailable | ENSv2 registry |

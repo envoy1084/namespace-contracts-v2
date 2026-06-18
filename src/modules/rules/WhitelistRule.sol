@@ -121,10 +121,6 @@ contract WhitelistRule is NamespaceRule {
     }
 
     function _checkClaim(bytes32 activationId, Claim memory claim, address account, bytes32 labelHash) private view {
-        if (claim.account == address(0) && claim.labelHash == bytes32(0) && claim.mintable) {
-            return;
-        }
-
         uint256 currentTime = block.timestamp;
         if (claim.startTime != 0 && currentTime < claim.startTime) {
             revert WhitelistNotStarted(activationId, claim.startTime, currentTime);

@@ -313,7 +313,7 @@ contract NamespaceControllerTest is NamespaceSetUp {
         vm.stopPrank();
     }
 
-    function test_mint_respectsReservationPolicy() public {
+    function test_mint_respectsReservationRule() public {
         ReservationRule reservationRule = ReservationRule(_deployModule(address(new ReservationRule())));
         Vm.Wallet memory reservedBuyer = vm.createWallet("reservedBuyer");
         token.mint(reservedBuyer.addr, 1_000 ether);

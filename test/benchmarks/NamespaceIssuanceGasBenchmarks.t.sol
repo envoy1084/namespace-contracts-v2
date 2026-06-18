@@ -8,17 +8,21 @@ import {PermissionedResolver} from "@ensv2/resolver/PermissionedResolver.sol";
 import {VerifiableFactory} from "lib/contracts-v2/contracts/lib/verifiable-factory/src/VerifiableFactory.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 
+import {IAggregatorV3} from "src/interfaces/IAggregatorV3.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {BatchSetAddrToBuyerHook} from "src/modules/hooks/BatchSetAddrToBuyerHook.sol";
 import {ERC20SplitPaymentModule} from "src/modules/payment/ERC20SplitPaymentModule.sol";
 import {FixedPriceRule} from "src/modules/rules/FixedPriceRule.sol";
+import {LabelClassRule} from "src/modules/rules/LabelClassRule.sol";
 import {LabelLengthRule} from "src/modules/rules/LabelLengthRule.sol";
 import {LengthPremiumRule} from "src/modules/rules/LengthPremiumRule.sol";
 import {ReservationRule} from "src/modules/rules/ReservationRule.sol";
 import {SaleWindowRule} from "src/modules/rules/SaleWindowRule.sol";
 import {TokenBalanceRule} from "src/modules/rules/TokenBalanceRule.sol";
+import {USDOracleRule} from "src/modules/rules/USDOracleRule.sol";
 import {WhitelistRule} from "src/modules/rules/WhitelistRule.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
+import {MockAggregatorV3} from "test/mocks/MockAggregatorV3.sol";
 
 /// @notice Gas benchmarks for the rule-based Namespace minting architecture.
 /// @dev Run with: forge snapshot --match-path 'test/benchmarks/*.t.sol' --snap test/benchmarks/.gas-snapshot
@@ -33,9 +37,12 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
     ReservationRule internal reservationRule;
     WhitelistRule internal whitelistRule;
     LengthPremiumRule internal lengthPremiumRule;
+    LabelClassRule internal labelClassRule;
+    USDOracleRule internal usdOracleRule;
     ERC20SplitPaymentModule internal splitPayment;
     BatchSetAddrToBuyerHook internal batchResolverHook;
     PermissionedResolver internal resolver;
+    MockAggregatorV3 internal oracle;
 
     MintScenario internal mintFree;
     MintScenario internal mintDefault;
@@ -51,6 +58,8 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
     bytes32 internal profileReservation1000Id;
     bytes32 internal profileWhitelist10Id;
     bytes32 internal profileWhitelist1000Id;
+    bytes32 internal profileLabelClassId;
+    bytes32 internal profileUsdOracleId;
     NamespaceTypes.MintContext internal profileDefaultMintCtx;
     NamespaceTypes.MintContext internal profileFullStackMintCtx;
     NamespaceTypes.Price internal profileTokenPrice;
@@ -62,9 +71,12 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         reservationRule = ReservationRule(_deployModule(address(new ReservationRule())));
         whitelistRule = WhitelistRule(_deployModule(address(new WhitelistRule())));
         lengthPremiumRule = LengthPremiumRule(_deployModule(address(new LengthPremiumRule())));
+        labelClassRule = LabelClassRule(_deployModule(address(new LabelClassRule())));
+        usdOracleRule = USDOracleRule(_deployModule(address(new USDOracleRule())));
         splitPayment = ERC20SplitPaymentModule(_deployModule(address(new ERC20SplitPaymentModule())));
         batchResolverHook = BatchSetAddrToBuyerHook(_deployModule(address(new BatchSetAddrToBuyerHook())));
         resolver = _deployResolver(address(batchResolverHook), PermissionedResolverLib.ROLE_SET_ADDR);
+        oracle = new MockAggregatorV3(8, 2_000e8);
 
         _approveBenchmarkModules();
 
@@ -164,6 +176,14 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
 
     function testBenchmark_profile_rule_08_whitelist1000_evaluateMint() public view {
         whitelistRule.evaluateMint(_mintCtx(profileWhitelist1000Id, "profile"), whitelistProof1000);
+    }
+
+    function testBenchmark_profile_rule_09_labelClassNumber_evaluateMint() public view {
+        labelClassRule.evaluateMint(_mintCtx(profileLabelClassId, "12345"), "");
+    }
+
+    function testBenchmark_profile_rule_10_usdOracle_evaluateMint() public view {
+        usdOracleRule.evaluateMint(_mintCtx(profileUsdOracleId, "usd"), "");
     }
 
     function testBenchmark_profile_payment_00_collectMintERC20() public {
@@ -456,6 +476,8 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         controller.setModuleApproval(ruleKind, address(reservationRule), true);
         controller.setModuleApproval(ruleKind, address(whitelistRule), true);
         controller.setModuleApproval(ruleKind, address(lengthPremiumRule), true);
+        controller.setModuleApproval(ruleKind, address(labelClassRule), true);
+        controller.setModuleApproval(ruleKind, address(usdOracleRule), true);
         controller.setModuleApproval(paymentKind, address(splitPayment), true);
         controller.setModuleApproval(postHookKind, address(batchResolverHook), true);
         vm.stopPrank();
@@ -466,6 +488,8 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         profileReservation1000Id = keccak256(abi.encode("profile-reservation", uint256(1000)));
         profileWhitelist10Id = keccak256(abi.encode("profile-whitelist", uint256(10)));
         profileWhitelist1000Id = keccak256(abi.encode("profile-whitelist", uint256(1000)));
+        profileLabelClassId = keccak256("profile-label-class");
+        profileUsdOracleId = keccak256("profile-usd-oracle");
 
         vm.startPrank(address(controller));
         reservationRule.configure(
@@ -494,6 +518,33 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
                 WhitelistRule.Params({
                     mintRoot: _rootFor(whitelistRule.leaf(_whitelistClaim("profile", 1000)), 1000),
                     renewRoot: bytes32(0)
+                })
+            )
+        );
+        labelClassRule.configure(
+            profileLabelClassId,
+            abi.encode(
+                LabelClassRule.Params({
+                    token: address(token),
+                    labelClass: LabelClassRule.LabelClass.NUMBER,
+                    requireMatch: true,
+                    mintAmount: 10 ether,
+                    renewAmount: 5 ether,
+                    priceOp: NamespaceTypes.PriceOp.ADD
+                })
+            )
+        );
+        usdOracleRule.configure(
+            profileUsdOracleId,
+            abi.encode(
+                USDOracleRule.Params({
+                    token: address(token),
+                    oracle: IAggregatorV3(address(oracle)),
+                    tokenDecimals: 18,
+                    maxStaleness: 1 days,
+                    mintUsdPrice: 100e18,
+                    renewUsdPrice: 25e18,
+                    priceOp: NamespaceTypes.PriceOp.ADD
                 })
             )
         );

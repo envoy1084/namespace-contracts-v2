@@ -1,516 +1,301 @@
 # Module Catalog
 
-Modules are activation-scoped contracts. The controller calls `configure(activationId, configData)` during activation, then calls the module during mint or renewal.
+Namespace modules are activation-scoped and configured by the controller.
 
-All modules inherit or implement the same controller-only configuration pattern.
+Current module kinds:
 
-## Policy Modules
+| Kind | Interface | Purpose |
+| --- | --- | --- |
+| Rule | `IRuleModule` | Eligibility, gating, pricing, discounts, overrides. |
+| Payment | `IPaymentModule` | Collect final payment from the payer. |
+| Post hook | `IPostHookModule` | Run after registry mint or renewal. |
 
-Policies are gates. Every configured policy must pass.
+## Rules
 
-```mermaid
-flowchart LR
-    Controller["NamespaceController"] --> P1["Policy 1"]
-    P1 --> P2["Policy 2"]
-    P2 --> P3["Policy N"]
-    P3 --> Result["Continue only if none revert"]
-```
-
-### SaleWindowPolicy
-
-Purpose: enable minting and renewal only inside a time window.
-
-Config:
+Rules share the same output shape:
 
 ```solidity
-SaleWindowPolicy.Params({
-    startTime: uint64,
-    endTime: uint64
+struct RuleOutput {
+    Decision decision;
+    PriceOp priceOp;
+    uint16 bps;
+    address token;
+    uint256 amount;
+    uint256 addFlags;
+    uint256 requireFlags;
+}
+```
+
+### PauseRule
+
+Purpose: activation-owner pause switch.
+
+Configuration: none.
+
+Owner action:
+
+```solidity
+pauseRule.setPaused(activationId, true);
+pauseRule.setPaused(activationId, false);
+```
+
+Use it in `GUARD` phase so paused activations fail before expensive proof or pricing rules.
+
+### SaleWindowRule
+
+Purpose: allow mint/renew only inside a time window.
+
+```solidity
+SaleWindowRule.Params({
+    startTime: uint64(...),
+    endTime: uint64(...)
 })
 ```
 
-Flow:
+Use `0` to disable either bound.
 
-1. Load params for `activationId`.
-2. If `startTime != 0`, current time must be at or after start.
-3. If `endTime != 0`, current time must be at or before end.
-
-### LabelLengthPolicy
+### LabelLengthRule
 
 Purpose: enforce byte-length bounds.
 
-Config:
-
 ```solidity
-LabelLengthPolicy.Params({
-    minLength: uint16,
-    maxLength: uint16
+LabelLengthRule.Params({
+    minLength: 3,
+    maxLength: 12
 })
 ```
 
-Flow:
+This intentionally checks byte length. UI/off-chain services should handle ENS normalization and grapheme-aware validation before users sign or submit transactions.
 
-1. Compute `bytes(label).length`.
-2. Revert if below `minLength`.
-3. Revert if above `maxLength`, unless `maxLength == 0`.
+### TokenBalanceRule
 
-Unicode note: this is byte length, not grapheme count. Emoji-aware or normalized-label rules should be separate policies.
-
-### ERC20BalanceGatePolicy
-
-Purpose: require buyer or renewal payer to hold enough ERC20.
-
-Config:
+Purpose: ERC20 token gate and optional discount.
 
 ```solidity
-ERC20BalanceGatePolicy.Params({
-    token: ERC20,
-    minBalance: uint256
+TokenBalanceRule.Params({
+    token: ERC20(address(token)),
+    minBalance: 100 ether,
+    discountBps: 500
 })
 ```
 
-Flow:
+Use as:
 
-1. Mint checks `ctx.buyer`.
-2. Renewal checks `ctx.payer`.
-3. Module calls `token.balanceOf(account)`.
-4. Revert if balance is below `minBalance`.
-
-### ERC721BalanceGatePolicy
-
-Purpose: require buyer or renewal payer to hold enough NFTs from an ERC721 collection.
-
-Config:
-
-```solidity
-ERC721BalanceGatePolicy.Params({
-    token: ERC721,
-    minBalance: uint256
-})
-```
-
-Flow is the same as ERC20 gating, but uses `ERC721.balanceOf(account)`.
-
-### ReservationPolicy
-
-Purpose: reserve exact labels for specific buyers without storing every reservation on-chain.
-
-Config:
-
-```solidity
-ReservationPolicy.Params({
-    reservationRoot: bytes32
-})
-```
-
-Runtime data:
-
-```solidity
-abi.encode(ReservationPolicy.ProofData({
-    account: address,
-    expiry: uint64,
-    proof: bytes32[]
-}))
-```
-
-Each Merkle leaf represents:
-
-- `labelHash`;
-- reserved `account`;
-- `expiry`.
-
-Leaves are compatible with Solady Merkle proof verification and can be computed on-chain with:
-
-```solidity
-reservationPolicy.leaf(labelHash, account, expiry)
-```
-
-`account == address(0)` creates a public reservation leaf. That means the label must still provide a valid proof, but any buyer can mint it. `expiry == 0` means the reservation never expires.
-
-Flow:
-
-1. If `reservationRoot == bytes32(0)`, allow.
-2. Decode runtime `ProofData`.
-3. Recompute the leaf from `ctx.labelHash`, `account`, and `expiry`.
-4. Verify the proof against the stored activation root.
-5. If the proof is expired, allow public mint.
-6. If `account != address(0)` and the buyer is not `account`, revert.
-
-Important: when a non-zero root is configured, every mint must provide a proof. This keeps storage small and moves large reservation lists off-chain while still enforcing them on-chain.
-
-### PausePolicy
-
-Purpose: let the activation owner pause both minting and renewal checks for a namespace activation.
-
-Config: none.
-
-Runtime data: none.
-
-Control function:
-
-```solidity
-pausePolicy.setPaused(activationId, true);
-pausePolicy.setPaused(activationId, false);
-```
-
-Flow:
-
-1. `setPaused` loads the activation from `NamespaceController`.
-2. Caller must equal the activation owner.
-3. `checkMint` and `checkRenew` revert while paused.
-
-The activation owner is the controller's verified namespace admin for that activation. This is the operational owner of the configured parent namespace sale.
-
-### MerkleWhitelistPolicy
-
-Purpose: allowlist mints or renewals using Merkle roots.
-
-Config:
-
-```solidity
-MerkleWhitelistPolicy.Params({
-    mintRoot: bytes32,
-    renewRoot: bytes32,
-    leafMode: LeafMode
-})
-```
-
-Runtime data:
-
-```solidity
-abi.encode(bytes32[] proof)
-```
-
-Leaf modes:
-
-| Mode | Leaf includes |
+| Mode | Params |
 | --- | --- |
-| `ACCOUNT` | account only |
-| `ACCOUNT_LABEL` | account and label hash |
+| Gate only | `minBalance > 0`, `discountBps = 0` |
+| Discount only | `minBalance = 0`, `discountBps > 0` |
+| Gate plus discount | both set |
 
-If a root is `bytes32(0)`, that side of the whitelist is disabled.
+If the rule applies a discount, place it in `DISCOUNT` phase so it runs after base price and premiums.
 
-### CompositeMintPolicy
+### FixedPriceRule
 
-Purpose: bundle common sale-window, label-length, ERC20 balance, reservation, and whitelist checks into one policy module call.
-
-This is a gas-optimized path for activations that would otherwise configure several standard policy modules. The individual modules remain useful when a namespace needs independent policy composition or different policy ownership boundaries.
-
-Config:
+Purpose: set a fixed base price with optional exact byte-length overrides.
 
 ```solidity
-CompositeMintPolicy.Params({
-    startTime: uint64,
-    endTime: uint64,
-    minLength: uint16,
-    maxLength: uint16,
-    gateToken: ERC20,
-    minBalance: uint256,
-    reservationRoot: bytes32,
-    whitelistMintRoot: bytes32,
-    whitelistRenewRoot: bytes32,
-    whitelistLeafMode: MerkleWhitelistPolicy.LeafMode
+FixedPriceRule.Params({
+    token: address(usdc),
+    defaultMintAmount: 100e6,
+    defaultRenewAmount: 50e6,
+    lengthPrices: exactLengthPrices
 })
 ```
 
-Mint runtime data:
+Output:
 
-```solidity
-abi.encode(
-    CompositeMintPolicy.ReservationProofData({
-        account: address,
-        expiry: uint64,
-        proof: bytes32[]
-    }),
-    bytes32[] whitelistProof
-)
+```text
+PriceOp.SET_BASE
 ```
 
-Renew runtime data:
+Use in `BASE_PRICE` phase.
+
+### LengthPremiumRule
+
+Purpose: add per-second premiums by label byte length.
 
 ```solidity
-abi.encode(bytes32[] whitelistProof)
-```
-
-Flow:
-
-1. Check sale window.
-2. Check label byte length.
-3. Check ERC20 balance if `gateToken` is non-zero.
-4. Check reservation proof if `reservationRoot` is non-zero.
-5. Check whitelist proof against the mint or renewal root if configured.
-
-## Pricing Modules
-
-Pricing modules run in order. Each module receives the current price and returns an updated price.
-
-```mermaid
-flowchart LR
-    P0["Price: token=0 amount=0"] --> Fixed["FixedPricePricing"]
-    Fixed --> Length["LengthBasedPricing"]
-    Length --> USD["USDOraclePricing"]
-    USD --> Final["Final Price"]
-```
-
-All pricing modules enforce token compatibility. A later pricing module cannot silently switch payment tokens after a previous module set one.
-
-### FixedPricePricing
-
-Adds fixed mint and renewal amounts with optional sparse exact byte-length overrides.
-
-Config:
-
-```solidity
-FixedPricePricing.Params({
-    token: address,
-    defaultMintAmount: uint128,
-    defaultRenewAmount: uint128,
-    lengthPrices: FixedPricePricing.LengthPrice[]
-})
-```
-
-Each `LengthPrice` is:
-
-```solidity
-FixedPricePricing.LengthPrice({
-    length: uint16,
-    mintAmount: uint128,
-    renewAmount: uint128
-})
-```
-
-Flow:
-
-1. Compute `bytes(label).length`.
-2. Use the first exact `length` match.
-3. If nothing matches, use the default mint or renewal amount.
-
-This avoids padding array entries for unused lengths. For example, a sale can price length 4 and length 8 labels without storing empty buckets for lengths 1-3 or 5-7.
-
-The sparse override rows are packed into an `SSTORE2` blob during activation. This avoids one storage slot per override while preserving the `lengthPrices(activationId)` getter.
-
-### LengthBasedPricing
-
-Adds `ratePerSecond * duration` based on label byte length.
-
-Config:
-
-```solidity
-LengthBasedPricing.Params({
-    token: address,
-    mintPricePerSecondByLength: uint128[],
-    renewPricePerSecondByLength: uint128[]
+LengthPremiumRule.Params({
+    token: address(usdc),
+    mintPricePerSecondByLength: mintRates,
+    renewPricePerSecondByLength: renewRates
 })
 ```
 
 Index `0` prices one-byte labels. Labels longer than the table use the final bucket.
 
-Mint and renewal rate tables are packed into `SSTORE2` blobs during activation. Quotes copy only the selected `uint128` rate from bytecode instead of loading the whole table.
+Output:
 
-### USDOraclePricing
+```text
+PriceOp.ADD
+```
 
-Converts USD-denominated prices to token amounts using a Chainlink-compatible oracle.
+Use in `PREMIUM` phase.
 
-Config:
+### LabelClassRule
+
+Purpose: match number, letter, or emoji-only labels and optionally price or block non-matches.
 
 ```solidity
-USDOraclePricing.Params({
-    token: address,
-    oracle: IAggregatorV3,
-    tokenDecimals: uint8,
-    maxStaleness: uint64,
-    mintUsdPrice: uint128,
-    renewUsdPrice: uint128
+LabelClassRule.Params({
+    token: address(usdc),
+    labelClass: LabelClassRule.LabelClass.NUMBER,
+    requireMatch: true,
+    mintAmount: 500e6,
+    renewAmount: 100e6,
+    priceOp: NamespaceTypes.PriceOp.ADD
 })
 ```
 
-Flow:
+Examples:
 
-1. Read latest oracle answer.
-2. Reject non-positive answer.
-3. Reject stale answer when `maxStaleness != 0`.
-4. Convert USD amount to token amount and round up.
+| Goal | Config |
+| --- | --- |
+| Only number labels | `labelClass = NUMBER`, `requireMatch = true`, `priceOp = NONE` |
+| Emoji premium | `labelClass = EMOJI`, `requireMatch = false`, `priceOp = ADD` |
+| Letter-only sale | `labelClass = LETTER`, `requireMatch = true` |
 
-### OnlyNumberPricing
+### USDOracleRule
 
-Adds a premium when the entire label is ASCII number-only, such as `1234`.
-
-Config:
+Purpose: convert USD-denominated mint/renew prices into token amounts through a Chainlink-compatible token/USD oracle.
 
 ```solidity
-LabelClassPricing.Params({
-    token: address,
-    mintAmount: uint128,
-    renewAmount: uint128
+USDOracleRule.Params({
+    token: address(token),
+    oracle: IAggregatorV3(address(oracle)),
+    tokenDecimals: 18,
+    maxStaleness: 1 days,
+    mintUsdPrice: 100e18,
+    renewUsdPrice: 25e18,
+    priceOp: NamespaceTypes.PriceOp.SET_BASE
 })
 ```
 
-Non-matching labels pass through without changing the current price.
+Use `SET_BASE` for a USD base price or `ADD` for a USD premium. The rule rejects stale, invalid, or incomplete oracle rounds.
 
-### OnlyLetterPricing
+### ReservationRule
 
-Adds a premium when the entire label is ASCII letter-only, such as `alice` or `Team`.
-
-It uses the same `LabelClassPricing.Params` config as `OnlyNumberPricing`.
-
-### OnlyEmojiPricing
-
-Adds a premium when the entire label is emoji-only.
-
-It accepts common emoji codepoint ranges, variation selector `U+FE0F`, zero-width joiner `U+200D`, and skin-tone modifiers when attached to emoji content. It uses the same `LabelClassPricing.Params` config as `OnlyNumberPricing`.
-
-### CompositePricing
-
-Combines the common price stack into one pricing module:
-
-- optional label-class premium for number-only, letter-only, or emoji-only labels;
-- fixed mint and renewal amounts;
-- exact-length fixed overrides;
-- per-second length-based renewal rates.
-
-Config:
+Purpose: claim-based reserved label behavior.
 
 ```solidity
-CompositePricing.Params({
-    token: address,
-    labelClass: CompositePricing.LabelClass,
-    classMintAmount: uint128,
-    classRenewAmount: uint128,
-    fixedMintAmount: uint128,
-    fixedRenewAmount: uint128,
-    lengthPrices: CompositePricing.LengthPrice[],
-    mintRates: LengthBasedPricing.LengthRule[],
-    renewRates: LengthBasedPricing.LengthRule[]
+ReservationRule.Params({
+    root: reservationRoot
 })
 ```
 
-Flow:
+Runtime claim:
 
-1. Reject mixed payment tokens.
-2. Add the class premium if the label matches the configured class.
-3. Add the fixed mint or renewal amount.
-4. Add the exact-length fixed override when one exists.
-5. Add the matching per-second length rate multiplied by duration.
+```solidity
+ReservationRule.Claim({
+    labelHash: labelHash,
+    account: reservedBuyer,
+    startTime: start,
+    endTime: end,
+    mintable: true,
+    token: address(usdc),
+    mintPrice: 1000e6,
+    renewPrice: 100e6,
+    priceOp: NamespaceTypes.PriceOp.OVERRIDE,
+    proof: proof
+})
+```
 
-Use this when an activation needs several standard pricing dimensions and gas is more important than swapping each pricing component independently.
+Supported behavior:
 
-## Payment Module
+| Claim field | Behavior |
+| --- | --- |
+| `account` | Buyer-bound reservation when non-zero. |
+| `mintable` | Blocks the label when false. |
+| `startTime/endTime` | Time-scoped reservation. |
+| `priceOp` | `NONE`, `ADD`, or `OVERRIDE`. |
+| `mintPrice/renewPrice` | Custom price effect. |
+
+Use in `OVERRIDE` phase when reservation-specific prices should replace normal pricing.
+
+### WhitelistRule
+
+Purpose: claim-based whitelist behavior for mints and renewals.
+
+```solidity
+WhitelistRule.Params({
+    mintRoot: mintRoot,
+    renewRoot: renewRoot
+})
+```
+
+Runtime claim:
+
+```solidity
+WhitelistRule.Claim({
+    labelHash: optionalLabelHash,
+    account: optionalAccount,
+    startTime: start,
+    endTime: end,
+    mintable: true,
+    token: address(usdc),
+    mintPrice: 0,
+    renewPrice: 0,
+    discountBps: 1000,
+    priceOp: NamespaceTypes.PriceOp.NONE,
+    proof: proof
+})
+```
+
+Whitelist claims can be:
+
+| Shape | Behavior |
+| --- | --- |
+| `account != 0`, `labelHash == 0` | Account-wide allowlist. |
+| `account == 0`, `labelHash != 0` | Label-wide allowlist. |
+| both set | Specific account and label. |
+| `discountBps > 0` | Applies a BPS discount. |
+| `priceOp = ADD/OVERRIDE` | Applies custom price effect. |
+| `mintable = false` | Blocks matching claim. |
+
+## Payment Modules
 
 ### ERC20PaymentModule
 
-Collects ERC20 payment from the payer to a configured recipient.
-
-Config:
+Purpose: collect ERC20 payment directly to one recipient.
 
 ```solidity
 ERC20PaymentModule.Params({
-    token: ERC20,
-    recipient: address
+    token: ERC20(address(usdc)),
+    recipient: treasury
 })
 ```
 
-Flow:
-
-1. Reject native ETH sent to ERC20 payment.
-2. Ensure final price token equals configured token.
-3. If amount is non-zero, call `safeTransferFrom(payer, recipient, amount)`.
-
-For split sales, set `recipient` to an `ERC20SplitProcessor`.
+The payment token must match the final `Price.token`.
 
 ### ERC20SplitPaymentModule
 
-Collects ERC20 payment from the payer and sends it directly to split recipients in the same payment module call.
-
-Config:
+Purpose: collect ERC20 payment directly from payer to split recipients.
 
 ```solidity
-ERC20SplitPaymentModule.Params({
-    token: address,
-    splits: ERC20SplitPaymentModule.Split[]
-})
+ERC20SplitPaymentModule.Split[] memory splits = new ERC20SplitPaymentModule.Split[](2);
+splits[0] = ERC20SplitPaymentModule.Split({recipient: alice, bps: 7500});
+splits[1] = ERC20SplitPaymentModule.Split({recipient: treasury, bps: 2500});
 ```
 
-Rules:
+Splits must total `10_000` bps. The final recipient receives any rounding remainder.
 
-- every recipient must be non-zero;
-- total bps must equal `10_000`;
-- native token payment is not supported.
-
-Flow:
-
-1. Reject native ETH sent to ERC20 payment.
-2. Ensure final price token equals configured token.
-3. Transfer each recipient share from payer with `safeTransferFrom`.
-4. Send the final recipient the remainder to avoid dust.
-
-Use this instead of `ERC20PaymentModule + ERC20SplitProcessor` when the activation wants ERC20 revenue splits and does not need a separate processor step.
-
-## Processor Modules
-
-Processors run after payment collection. They are optional; direct-settlement activations can use a zero processor and have the payment module send funds directly to the final recipient.
-
-### NoopProcessor
-
-Does nothing. It is kept as a module example and for deployments that want an explicit processor address, but the gas-efficient direct-settlement path is to set the activation processor to zero.
-
-### ERC20SplitProcessor
-
-Splits ERC20 funds held by the processor contract according to basis points.
-
-Config:
-
-```solidity
-ERC20SplitProcessor.Split[] splits
-```
-
-Rules:
-
-- every recipient must be non-zero;
-- total bps must equal `10_000`;
-- native token payment is not supported.
-
-Flow:
-
-1. Payment module transfers ERC20 funds to processor.
-2. Processor transfers shares to recipients.
-3. Last recipient receives the remainder to avoid dust.
-
-## Post-Hook Modules
+## Post Hooks
 
 ### SetAddrToBuyerHook
 
-Sets resolver `addr(node)` after mint.
+Purpose: set one resolver `addr(node)` record after mint.
 
 Runtime data:
 
-- empty bytes: set `addr` to buyer;
-- `abi.encode(address)`: set `addr` to override address.
-
-Flow:
-
-1. Require resolver is configured.
-2. Decode optional override.
-3. Compute child node from parent node and label hash.
-4. Call `resolver.setAddr(node, address)`.
-
-Renewal is intentionally a no-op.
+| Runtime data | Behavior |
+| --- | --- |
+| empty | Sets addr to buyer. |
+| `abi.encode(address)` | Sets addr to override address. |
 
 ### BatchSetAddrToBuyerHook
 
-Sets one or more resolver `addr(node)` values in a single post-hook module call.
+Purpose: set one or more resolver `addr(node)` records in one hook call.
 
-Runtime data:
+Runtime data is a packed sequence of 20-byte addresses. A zero address means buyer.
 
-- empty bytes: set `addr` to buyer once;
-- tightly packed 20-byte addresses: one resolver write per address;
-- zero packed address: use buyer for that write.
-
-Flow:
-
-1. Require resolver is configured.
-2. Compute child node from parent node and label hash once.
-3. If runtime data is empty, call `resolver.setAddr(node, buyer)`.
-4. Otherwise require runtime data length is a multiple of 20.
-5. Loop through packed addresses and call `resolver.setAddr(node, address)` for each value.
-
-Use this when an activation needs multiple resolver writes from the same hook. It keeps the controller hook list shorter and avoids repeated controller-to-hook calls.
+This is useful for benchmarking and for flows where multiple resolver writes are expected.
