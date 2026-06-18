@@ -6,8 +6,8 @@ import {Vm} from "forge-std/Vm.sol";
 
 import {NamespaceController} from "src/NamespaceController.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
-import {ReservationPolicy} from "src/modules/policies/ReservationPolicy.sol";
-import {SaleWindowPolicy} from "src/modules/policies/SaleWindowPolicy.sol";
+import {ReservationRule} from "src/modules/rules/ReservationRule.sol";
+import {SaleWindowRule} from "src/modules/rules/SaleWindowRule.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
 
 contract NamespaceControllerTest is NamespaceSetUp {
@@ -31,22 +31,18 @@ contract NamespaceControllerTest is NamespaceSetUp {
         assertEq(activation.buyerRoleBitmap, BUYER_ROLES);
         assertTrue(activation.active);
         assertEq(activation.paymentModule, address(erc20Payment));
-        assertEq(activation.processor, address(0));
 
-        address[] memory policies = controller.getPolicies(activationId);
-        assertEq(policies.length, 2);
-        assertEq(policies[0], address(saleWindowPolicy));
-        assertEq(policies[1], address(labelLengthPolicy));
+        address[] memory rules = controller.getRules(activationId);
+        assertEq(rules.length, 3);
+        assertEq(rules[0], address(saleWindowRule));
+        assertEq(rules[1], address(labelLengthRule));
+        assertEq(rules[2], address(fixedPriceRule));
 
-        address[] memory pricing = controller.getPricingModules(activationId);
-        assertEq(pricing.length, 1);
-        assertEq(pricing[0], address(fixedPricePricing));
-
-        (uint64 startTime, uint64 endTime) = saleWindowPolicy.params(activationId);
+        (uint64 startTime, uint64 endTime) = saleWindowRule.params(activationId);
         assertEq(startTime, 0);
         assertEq(endTime, 0);
 
-        (address priceToken, uint128 mintAmount, uint128 renewAmount) = fixedPricePricing.params(activationId);
+        (address priceToken, uint128 mintAmount, uint128 renewAmount) = fixedPriceRule.params(activationId);
         assertEq(priceToken, address(token));
         assertEq(mintAmount, 100 ether);
         assertEq(renewAmount, 50 ether);
@@ -73,52 +69,52 @@ contract NamespaceControllerTest is NamespaceSetUp {
     }
 
     function test_upgradeModule_allowsOwner() public {
-        SaleWindowPolicy newImplementation = new SaleWindowPolicy();
+        SaleWindowRule newImplementation = new SaleWindowRule();
 
         vm.prank(accounts.owner.addr);
-        saleWindowPolicy.upgradeToAndCall(address(newImplementation), "");
+        saleWindowRule.upgradeToAndCall(address(newImplementation), "");
 
         assertEq(
-            address(uint160(uint256(vm.load(address(saleWindowPolicy), _ERC1967_IMPLEMENTATION_SLOT)))),
+            address(uint160(uint256(vm.load(address(saleWindowRule), _ERC1967_IMPLEMENTATION_SLOT)))),
             address(newImplementation)
         );
     }
 
     function test_updateModuleConfig_allowsActivationOwner() public {
         bytes32 activationId = _activateDefault();
-        bytes32 policyKind = controller.MODULE_KIND_POLICY();
+        bytes32 ruleKind = controller.MODULE_KIND_RULE();
 
         vm.prank(accounts.alice.addr);
         controller.updateModuleConfig(
             activationId,
-            policyKind,
+            ruleKind,
             0,
             abi.encode(
-                SaleWindowPolicy.Params({startTime: uint64(block.timestamp + 1), endTime: uint64(block.timestamp + 2)})
+                SaleWindowRule.Params({startTime: uint64(block.timestamp + 1), endTime: uint64(block.timestamp + 2)})
             )
         );
 
-        (uint64 startTime, uint64 endTime) = saleWindowPolicy.params(activationId);
+        (uint64 startTime, uint64 endTime) = saleWindowRule.params(activationId);
         assertEq(startTime, uint64(block.timestamp + 1));
         assertEq(endTime, uint64(block.timestamp + 2));
     }
 
     function test_updateModuleConfig_revertsForNonActivationOwner() public {
         bytes32 activationId = _activateDefault();
-        bytes32 policyKind = controller.MODULE_KIND_POLICY();
+        bytes32 ruleKind = controller.MODULE_KIND_RULE();
 
         vm.expectRevert(
             abi.encodeWithSelector(NamespaceController.NotActivationOwner.selector, activationId, accounts.buyer.addr)
         );
         vm.prank(accounts.buyer.addr);
         controller.updateModuleConfig(
-            activationId, policyKind, 0, abi.encode(SaleWindowPolicy.Params({startTime: 1, endTime: 2}))
+            activationId, ruleKind, 0, abi.encode(SaleWindowRule.Params({startTime: 1, endTime: 2}))
         );
     }
 
     function test_updateModuleConfig_revertsWhenOwnerLostRegistryAdmin() public {
         bytes32 activationId = _activateDefault();
-        bytes32 policyKind = controller.MODULE_KIND_POLICY();
+        bytes32 ruleKind = controller.MODULE_KIND_RULE();
         registry.revokeRootRoles(ROLE_REGISTRAR_ADMIN, accounts.alice.addr);
 
         vm.expectRevert(
@@ -128,7 +124,7 @@ contract NamespaceControllerTest is NamespaceSetUp {
         );
         vm.prank(accounts.alice.addr);
         controller.updateModuleConfig(
-            activationId, policyKind, 0, abi.encode(SaleWindowPolicy.Params({startTime: 1, endTime: 2}))
+            activationId, ruleKind, 0, abi.encode(SaleWindowRule.Params({startTime: 1, endTime: 2}))
         );
     }
 
@@ -191,17 +187,16 @@ contract NamespaceControllerTest is NamespaceSetUp {
 
     function test_activate_revertsWhenModuleApprovalRequiredAndModuleIsUnapproved() public {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
-        SaleWindowPolicy unapprovedPolicy = SaleWindowPolicy(_deployModule(address(new SaleWindowPolicy())));
-        config.policies[0] = NamespaceTypes.ModuleConfig({
-            module: address(unapprovedPolicy),
-            configData: abi.encode(SaleWindowPolicy.Params({startTime: 0, endTime: 0}))
+        SaleWindowRule unapprovedRule = SaleWindowRule(_deployModule(address(new SaleWindowRule())));
+        config.rules[0] = NamespaceTypes.RuleConfig({
+            module: address(unapprovedRule),
+            phase: NamespaceTypes.RulePhase.GUARD,
+            configData: abi.encode(SaleWindowRule.Params({startTime: 0, endTime: 0}))
         });
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                NamespaceController.UnapprovedModule.selector,
-                address(unapprovedPolicy),
-                controller.MODULE_KIND_POLICY()
+                NamespaceController.UnapprovedModule.selector, address(unapprovedRule), controller.MODULE_KIND_RULE()
             )
         );
         vm.prank(accounts.alice.addr);
@@ -209,24 +204,25 @@ contract NamespaceControllerTest is NamespaceSetUp {
     }
 
     function test_activate_revertsWhenModuleIsApprovedForDifferentKind() public {
-        bytes32 pricingKind = controller.MODULE_KIND_PRICING();
-        bytes32 policyKind = controller.MODULE_KIND_POLICY();
-        SaleWindowPolicy unapprovedPolicy = SaleWindowPolicy(_deployModule(address(new SaleWindowPolicy())));
+        bytes32 paymentKind = controller.MODULE_KIND_PAYMENT();
+        bytes32 ruleKind = controller.MODULE_KIND_RULE();
+        SaleWindowRule unapprovedRule = SaleWindowRule(_deployModule(address(new SaleWindowRule())));
 
         vm.prank(accounts.owner.addr);
         controller.setModuleApprovalRequired(true);
 
         vm.prank(accounts.owner.addr);
-        controller.setModuleApproval(pricingKind, address(unapprovedPolicy), true);
+        controller.setModuleApproval(paymentKind, address(unapprovedRule), true);
 
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
-        config.policies[0] = NamespaceTypes.ModuleConfig({
-            module: address(unapprovedPolicy),
-            configData: abi.encode(SaleWindowPolicy.Params({startTime: 0, endTime: 0}))
+        config.rules[0] = NamespaceTypes.RuleConfig({
+            module: address(unapprovedRule),
+            phase: NamespaceTypes.RulePhase.GUARD,
+            configData: abi.encode(SaleWindowRule.Params({startTime: 0, endTime: 0}))
         });
 
         vm.expectRevert(
-            abi.encodeWithSelector(NamespaceController.UnapprovedModule.selector, address(unapprovedPolicy), policyKind)
+            abi.encodeWithSelector(NamespaceController.UnapprovedModule.selector, address(unapprovedRule), ruleKind)
         );
         vm.prank(accounts.alice.addr);
         controller.activate(config);
@@ -268,16 +264,16 @@ contract NamespaceControllerTest is NamespaceSetUp {
         assertEq(postHook.lastRuntimeData(), hex"1234");
     }
 
-    function test_mint_revertsWhenRuntimePolicyDataLengthDoesNotMatch() public {
+    function test_mint_revertsWhenRuntimeRuleDataLengthDoesNotMatch() public {
         bytes32 activationId = _activateDefault();
         NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
-        runtimeData.policyData = new bytes[](1);
+        runtimeData.ruleData = new bytes[](1);
 
         vm.startPrank(accounts.buyer.addr);
         token.approve(address(erc20Payment), 100 ether);
         vm.expectRevert(
             abi.encodeWithSelector(
-                NamespaceController.RuntimeDataLengthMismatch.selector, controller.MODULE_KIND_POLICY(), 2, 1
+                NamespaceController.RuntimeDataLengthMismatch.selector, controller.MODULE_KIND_RULE(), 3, 1
             )
         );
         controller.mint(activationId, "pay", 365 days, runtimeData);
@@ -318,46 +314,56 @@ contract NamespaceControllerTest is NamespaceSetUp {
     }
 
     function test_mint_respectsReservationPolicy() public {
-        ReservationPolicy reservationPolicy = ReservationPolicy(_deployModule(address(new ReservationPolicy())));
+        ReservationRule reservationRule = ReservationRule(_deployModule(address(new ReservationRule())));
         Vm.Wallet memory reservedBuyer = vm.createWallet("reservedBuyer");
         token.mint(reservedBuyer.addr, 1_000 ether);
-        bytes32 policyKind = controller.MODULE_KIND_POLICY();
+        bytes32 ruleKind = controller.MODULE_KIND_RULE();
 
         vm.prank(accounts.owner.addr);
-        controller.setModuleApproval(policyKind, address(reservationPolicy), true);
+        controller.setModuleApproval(ruleKind, address(reservationRule), true);
 
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
-        NamespaceTypes.ModuleConfig[] memory policies = new NamespaceTypes.ModuleConfig[](3);
-        policies[0] = config.policies[0];
-        policies[1] = config.policies[1];
-
         uint64 expiry = uint64(block.timestamp + 1 days);
         bytes32 labelHash = keccak256(bytes("vip"));
-        bytes32 reservationRoot = reservationPolicy.leaf(labelHash, reservedBuyer.addr, expiry);
-        policies[2] = NamespaceTypes.ModuleConfig({
-            module: address(reservationPolicy),
-            configData: abi.encode(ReservationPolicy.Params({reservationRoot: reservationRoot}))
+        ReservationRule.Claim memory claim = ReservationRule.Claim({
+            labelHash: labelHash,
+            account: reservedBuyer.addr,
+            startTime: 0,
+            endTime: expiry,
+            mintable: true,
+            token: address(0),
+            mintPrice: 0,
+            renewPrice: 0,
+            priceOp: NamespaceTypes.PriceOp.NONE,
+            proof: new bytes32[](0)
         });
-        config.policies = policies;
+        bytes32 reservationRoot = reservationRule.leaf(claim);
+        NamespaceTypes.RuleConfig[] memory rules = new NamespaceTypes.RuleConfig[](4);
+        rules[0] = config.rules[0];
+        rules[1] = config.rules[1];
+        rules[2] = NamespaceTypes.RuleConfig({
+            module: address(reservationRule),
+            phase: NamespaceTypes.RulePhase.ELIGIBILITY,
+            configData: abi.encode(ReservationRule.Params({root: reservationRoot}))
+        });
+        rules[3] = config.rules[2];
+        config.rules = rules;
 
         vm.prank(accounts.alice.addr);
         bytes32 activationId = controller.activate(config);
 
         NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
-        runtimeData.policyData = new bytes[](3);
-        runtimeData.policyData[2] = abi.encode(
-            ReservationPolicy.ProofData({account: reservedBuyer.addr, expiry: expiry, proof: new bytes32[](0)})
-        );
+        runtimeData.ruleData = new bytes[](4);
+        runtimeData.ruleData[2] = abi.encode(claim);
 
         vm.startPrank(accounts.buyer.addr);
         token.approve(address(erc20Payment), 100 ether);
         vm.expectRevert(
             abi.encodeWithSelector(
-                ReservationPolicy.ReservedLabel.selector,
+                ReservationRule.ReservedForDifferentAccount.selector,
                 activationId,
-                "vip",
+                labelHash,
                 reservedBuyer.addr,
-                expiry,
                 accounts.buyer.addr
             )
         );

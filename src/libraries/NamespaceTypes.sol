@@ -7,6 +7,43 @@ import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedReg
 /// @notice Shared structs used by the Namespace controller and modules.
 /// @dev Keeping the types in one library prevents interface drift across modules.
 library NamespaceTypes {
+    /// @notice Operation being evaluated by a rule.
+    enum Operation {
+        MINT,
+        RENEW
+    }
+
+    /// @notice Deterministic phase used to order rule effects.
+    enum RulePhase {
+        GUARD,
+        ELIGIBILITY,
+        BASE_PRICE,
+        PREMIUM,
+        DISCOUNT,
+        OVERRIDE,
+        FINAL_CHECK
+    }
+
+    /// @notice Rule-level execution decision.
+    enum Decision {
+        PASS,
+        BLOCK,
+        SKIP
+    }
+
+    /// @notice Price transformation emitted by a rule.
+    enum PriceOp {
+        NONE,
+        SET_BASE,
+        ADD,
+        SUBTRACT,
+        DISCOUNT_BPS,
+        MARKUP_BPS,
+        MIN,
+        MAX,
+        OVERRIDE
+    }
+
     /// @notice Module address and activation-time configuration payload.
     /// @param module Contract implementing one of the Namespace module interfaces.
     /// @param configData ABI-encoded module configuration for a specific activation.
@@ -15,25 +52,31 @@ library NamespaceTypes {
         bytes configData;
     }
 
+    /// @notice Rule address, phase, and activation-time configuration payload.
+    /// @param module Contract implementing `IRuleModule`.
+    /// @param phase Deterministic phase in which the rule should execute.
+    /// @param configData ABI-encoded rule configuration for a specific activation.
+    struct RuleConfig {
+        address module;
+        RulePhase phase;
+        bytes configData;
+    }
+
     /// @notice Input used to create a namespace activation.
     /// @param registry ENSv2 registry where subnames are minted.
     /// @param parentNode Namehash of the parent name, e.g. alice.eth.
     /// @param resolver Default resolver assigned to minted subnames.
     /// @param buyerRoleBitmap ENSv2 registry roles granted to subname buyers.
-    /// @param policies Stacked policy modules; every policy must pass.
-    /// @param pricingModules Sequential pricing modules used to compose the final price.
+    /// @param rules Ordered rule modules that validate and price mints/renewals.
     /// @param paymentModule Optional module that collects payment from the payer; required when pricing can return non-zero.
-    /// @param processor Optional module that accounts for or distributes collected payment.
     /// @param postHooks Hooks called after the ENSv2 registry mint succeeds.
     struct ActivationConfig {
         IPermissionedRegistry registry;
         bytes32 parentNode;
         address resolver;
         uint256 buyerRoleBitmap;
-        ModuleConfig[] policies;
-        ModuleConfig[] pricingModules;
+        RuleConfig[] rules;
         ModuleConfig paymentModule;
-        ModuleConfig processor;
         ModuleConfig[] postHooks;
     }
 
@@ -45,7 +88,6 @@ library NamespaceTypes {
     /// @param buyerRoleBitmap ENSv2 registry roles granted to minted-name owners.
     /// @param active Whether mints are currently enabled for this activation.
     /// @param paymentModule Active payment module.
-    /// @param processor Active processor module, or zero for direct settlement.
     struct Activation {
         address owner;
         IPermissionedRegistry registry;
@@ -54,22 +96,17 @@ library NamespaceTypes {
         uint256 buyerRoleBitmap;
         bool active;
         address paymentModule;
-        address processor;
     }
 
     /// @notice Runtime data supplied by a minter.
-    /// @dev Data is split by module group so buyers only provide proof/input data,
+    /// @dev Data is split by rule/hook so buyers only provide proof/input data,
     ///      not activation configuration.
-    /// @param policyData Runtime data for each policy module.
-    /// @param pricingData Runtime data for each pricing module.
+    /// @param ruleData Runtime data for each configured rule.
     /// @param paymentData Runtime data for the payment module.
-    /// @param processorData Runtime data for the processor module.
     /// @param postHookData Runtime data for each post-mint hook.
     struct RuntimeData {
-        bytes[] policyData;
-        bytes[] pricingData;
+        bytes[] ruleData;
         bytes paymentData;
-        bytes processorData;
         bytes[] postHookData;
     }
 
@@ -129,5 +166,23 @@ library NamespaceTypes {
     struct Price {
         address token;
         uint256 amount;
+    }
+
+    /// @notice Compact rule output consumed by the controller rule engine.
+    /// @param decision Rule decision. Rules may also revert with richer errors.
+    /// @param priceOp Price operation applied by the controller.
+    /// @param bps Basis points used by percentage operations.
+    /// @param token Payment token for absolute price operations.
+    /// @param amount Amount used by absolute price operations.
+    /// @param addFlags Flags to add to the accumulated evaluation state.
+    /// @param requireFlags Flags required to already exist in the evaluation state.
+    struct RuleOutput {
+        Decision decision;
+        PriceOp priceOp;
+        uint16 bps;
+        address token;
+        uint256 amount;
+        uint256 addFlags;
+        uint256 requireFlags;
     }
 }

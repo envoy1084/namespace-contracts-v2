@@ -19,11 +19,8 @@ contract CompositePricingTest is NamespaceSetUp {
     function test_quoteMint_addsClassFixedAndLengthAmounts() public {
         _configure();
 
-        NamespaceTypes.Price memory price = pricing.quoteMint(
-            _mintCtx("abcdef"),
-            NamespaceTypes.Price({token: address(0), amount: 0}),
-            ""
-        );
+        NamespaceTypes.Price memory price =
+            pricing.quoteMint(_mintCtx("abcdef"), NamespaceTypes.Price({token: address(0), amount: 0}), "");
 
         assertEq(price.token, address(token));
         assertEq(price.amount, 10 ether + 100 ether + 5 gwei * 365 days);
@@ -32,11 +29,8 @@ contract CompositePricingTest is NamespaceSetUp {
     function test_quoteMint_usesExactLengthFixedOverride() public {
         _configure();
 
-        NamespaceTypes.Price memory price = pricing.quoteMint(
-            _mintCtx("abc"),
-            NamespaceTypes.Price({token: address(0), amount: 0}),
-            ""
-        );
+        NamespaceTypes.Price memory price =
+            pricing.quoteMint(_mintCtx("abc"), NamespaceTypes.Price({token: address(0), amount: 0}), "");
 
         assertEq(price.amount, 10 ether + 3 ether + 3 gwei * 365 days);
     }
@@ -49,9 +43,7 @@ contract CompositePricingTest is NamespaceSetUp {
             // forge-lint: disable-next-line(unsafe-typecast)
             uint16 length = uint16(i + 1);
             lengthPrices[i] = CompositePricing.LengthPrice({
-                length: length,
-                mintAmount: uint128((i + 1) * 1 ether),
-                renewAmount: uint128((i + 1) * 0.5 ether)
+                length: length, mintAmount: uint128((i + 1) * 1 ether), renewAmount: uint128((i + 1) * 0.5 ether)
             });
             mintRates[i] = uint128((i + 1) * 1 gwei);
             renewRates[i] = uint128((i + 1) * 0.5 gwei);

@@ -5,31 +5,22 @@ import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 import {PermissionedResolverLib} from "@ensv2/resolver/libraries/PermissionedResolverLib.sol";
 import {PermissionedResolver} from "@ensv2/resolver/PermissionedResolver.sol";
-import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 import {VerifiableFactory} from "lib/contracts-v2/contracts/lib/verifiable-factory/src/VerifiableFactory.sol";
+import {ERC20} from "solady/tokens/ERC20.sol";
 
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {BatchSetAddrToBuyerHook} from "src/modules/hooks/BatchSetAddrToBuyerHook.sol";
-import {ERC20PaymentModule} from "src/modules/payment/ERC20PaymentModule.sol";
 import {ERC20SplitPaymentModule} from "src/modules/payment/ERC20SplitPaymentModule.sol";
-import {ERC20BalanceGatePolicy} from "src/modules/policies/ERC20BalanceGatePolicy.sol";
-import {LabelLengthPolicy} from "src/modules/policies/LabelLengthPolicy.sol";
-import {MerkleWhitelistPolicy} from "src/modules/policies/MerkleWhitelistPolicy.sol";
-import {PausePolicy} from "src/modules/policies/PausePolicy.sol";
-import {ReservationPolicy} from "src/modules/policies/ReservationPolicy.sol";
-import {SaleWindowPolicy} from "src/modules/policies/SaleWindowPolicy.sol";
-import {CompositeMintPolicy} from "src/modules/policies/CompositeMintPolicy.sol";
-import {FixedPricePricing} from "src/modules/pricing/FixedPricePricing.sol";
-import {LabelClassPricing} from "src/modules/pricing/LabelClassPricing.sol";
-import {LengthBasedPricing} from "src/modules/pricing/LengthBasedPricing.sol";
-import {OnlyEmojiPricing} from "src/modules/pricing/OnlyEmojiPricing.sol";
-import {OnlyLetterPricing} from "src/modules/pricing/OnlyLetterPricing.sol";
-import {OnlyNumberPricing} from "src/modules/pricing/OnlyNumberPricing.sol";
-import {CompositePricing} from "src/modules/pricing/CompositePricing.sol";
-import {ERC20SplitProcessor} from "src/modules/processors/ERC20SplitProcessor.sol";
+import {FixedPriceRule} from "src/modules/rules/FixedPriceRule.sol";
+import {LabelLengthRule} from "src/modules/rules/LabelLengthRule.sol";
+import {LengthPremiumRule} from "src/modules/rules/LengthPremiumRule.sol";
+import {ReservationRule} from "src/modules/rules/ReservationRule.sol";
+import {SaleWindowRule} from "src/modules/rules/SaleWindowRule.sol";
+import {TokenBalanceRule} from "src/modules/rules/TokenBalanceRule.sol";
+import {WhitelistRule} from "src/modules/rules/WhitelistRule.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
 
-/// @notice Gas benchmarks for activation, minting, and individual module function costs.
+/// @notice Gas benchmarks for the rule-based Namespace minting architecture.
 /// @dev Run with: forge snapshot --match-path 'test/benchmarks/*.t.sol' --snap test/benchmarks/.gas-snapshot
 contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
     struct MintScenario {
@@ -38,339 +29,161 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         NamespaceTypes.RuntimeData runtimeData;
     }
 
-    ERC20BalanceGatePolicy internal erc20GatePolicy;
-    ReservationPolicy internal reservationPolicy;
-    MerkleWhitelistPolicy internal whitelistPolicy;
-    PausePolicy internal pausePolicy;
-    CompositeMintPolicy internal compositePolicy;
-    LengthBasedPricing internal lengthPricing;
-    OnlyEmojiPricing internal emojiPricing;
-    OnlyNumberPricing internal numberPricing;
-    OnlyLetterPricing internal letterPricing;
-    CompositePricing internal compositePricing;
+    TokenBalanceRule internal tokenBalanceRule;
+    ReservationRule internal reservationRule;
+    WhitelistRule internal whitelistRule;
+    LengthPremiumRule internal lengthPremiumRule;
     ERC20SplitPaymentModule internal splitPayment;
-    ERC20SplitProcessor internal splitProcessor;
     BatchSetAddrToBuyerHook internal batchResolverHook;
     PermissionedResolver internal resolver;
 
     MintScenario internal mintFree;
-    MintScenario internal mintTwoPolicies;
-    MintScenario internal mintThreePolicies;
-    MintScenario internal mintReservation10;
-    MintScenario internal mintReservation100;
-    MintScenario internal mintReservation200;
-    MintScenario internal mintWhitelist10;
-    MintScenario internal mintWhitelist100;
-    MintScenario internal mintWhitelist1000;
-    MintScenario internal mintFixedPrice;
-    MintScenario internal mintFixedFiveLengthRules;
-    MintScenario internal mintLengthFiveRules;
-    MintScenario internal mintEmojiOnly;
-    MintScenario internal mintNumberOnly;
-    MintScenario internal mintSplitProcessor;
-    MintScenario internal mintResolverOneRecord;
-    MintScenario internal mintResolverThreeRecords;
-    MintScenario internal mintResolverFiveRecords;
+    MintScenario internal mintDefault;
     MintScenario internal mintFullStack;
+    MintScenario internal renewDefault;
 
-    bytes32 internal profileActivationId;
-    bytes32 internal profileFixedDefaultId;
-    bytes32 internal profileFixedFiveRulesId;
-    bytes32 internal profileLengthFiveRulesId;
-    bytes32 internal profileEmojiId;
-    bytes32 internal profileNumberId;
-    bytes32 internal profileLetterId;
-    bytes32 internal profileReservation10Id;
-    bytes32 internal profileReservation100Id;
-    bytes32 internal profileReservation200Id;
-    bytes32 internal profileWhitelist10Id;
-    bytes32 internal profileWhitelist100Id;
-    bytes32 internal profileWhitelist1000Id;
-    NamespaceTypes.MintContext internal profileMintCtx;
-    NamespaceTypes.Price internal profileZeroPrice;
-    NamespaceTypes.Price internal profileTokenPrice;
     bytes internal reservationProof10;
-    bytes internal reservationProof100;
-    bytes internal reservationProof200;
+    bytes internal reservationProof1000;
     bytes internal whitelistProof10;
-    bytes internal whitelistProof100;
     bytes internal whitelistProof1000;
+    bytes internal fiveResolverWrites;
+    bytes32 internal profileReservation10Id;
+    bytes32 internal profileReservation1000Id;
+    bytes32 internal profileWhitelist10Id;
+    bytes32 internal profileWhitelist1000Id;
+    NamespaceTypes.MintContext internal profileDefaultMintCtx;
+    NamespaceTypes.MintContext internal profileFullStackMintCtx;
+    NamespaceTypes.Price internal profileTokenPrice;
 
     function setUp() public override {
         super.setUp();
 
-        erc20GatePolicy = ERC20BalanceGatePolicy(_deployModule(address(new ERC20BalanceGatePolicy())));
-        reservationPolicy = ReservationPolicy(_deployModule(address(new ReservationPolicy())));
-        whitelistPolicy = MerkleWhitelistPolicy(_deployModule(address(new MerkleWhitelistPolicy())));
-        pausePolicy = PausePolicy(_deployModule(address(new PausePolicy())));
-        compositePolicy = CompositeMintPolicy(_deployModule(address(new CompositeMintPolicy())));
-        lengthPricing = LengthBasedPricing(_deployModule(address(new LengthBasedPricing())));
-        emojiPricing = OnlyEmojiPricing(_deployModule(address(new OnlyEmojiPricing())));
-        numberPricing = OnlyNumberPricing(_deployModule(address(new OnlyNumberPricing())));
-        letterPricing = OnlyLetterPricing(_deployModule(address(new OnlyLetterPricing())));
-        compositePricing = CompositePricing(_deployModule(address(new CompositePricing())));
+        tokenBalanceRule = TokenBalanceRule(_deployModule(address(new TokenBalanceRule())));
+        reservationRule = ReservationRule(_deployModule(address(new ReservationRule())));
+        whitelistRule = WhitelistRule(_deployModule(address(new WhitelistRule())));
+        lengthPremiumRule = LengthPremiumRule(_deployModule(address(new LengthPremiumRule())));
         splitPayment = ERC20SplitPaymentModule(_deployModule(address(new ERC20SplitPaymentModule())));
-        splitProcessor = ERC20SplitProcessor(_deployModule(address(new ERC20SplitProcessor())));
         batchResolverHook = BatchSetAddrToBuyerHook(_deployModule(address(new BatchSetAddrToBuyerHook())));
         resolver = _deployResolver(address(batchResolverHook), PermissionedResolverLib.ROLE_SET_ADDR);
 
         _approveBenchmarkModules();
 
-        token.mint(address(splitProcessor), 1_000_000 ether);
-        vm.prank(accounts.buyer.addr);
+        vm.startPrank(accounts.buyer.addr);
         token.approve(address(erc20Payment), type(uint256).max);
-        vm.prank(accounts.buyer.addr);
         token.approve(address(splitPayment), type(uint256).max);
+        vm.stopPrank();
 
-        mintFree = _prepareMintScenario("free", 0, 0, 0, 0, 0, false, false, false, false);
-        mintTwoPolicies = _prepareMintScenario("twopolicy", 2, 0, 0, 0, 0, false, false, false, false);
-        mintThreePolicies = _prepareMintScenario("threepolicy", 3, 0, 0, 0, 0, false, false, false, false);
-        mintReservation10 = _prepareMintScenario("reserved10", 4, 10, 0, 0, 0, false, false, true, false);
-        mintReservation100 = _prepareMintScenario("reserved100", 4, 100, 0, 0, 0, false, false, true, false);
-        mintReservation200 = _prepareMintScenario("reserved200", 4, 200, 0, 0, 0, false, false, true, false);
-        mintWhitelist10 = _prepareMintScenario("white10", 5, 0, 10, 0, 0, false, false, false, true);
-        mintWhitelist100 = _prepareMintScenario("white100", 5, 0, 100, 0, 0, false, false, false, true);
-        mintWhitelist1000 = _prepareMintScenario("white1000", 5, 0, 1000, 0, 0, false, false, false, true);
-        mintFixedPrice = _prepareMintScenario("fixedpay", 0, 0, 0, 1, 0, false, false, false, false);
-        mintFixedFiveLengthRules = _prepareMintScenario("fixedrules", 0, 0, 0, 2, 0, false, false, false, false);
-        mintLengthFiveRules = _prepareMintScenario("lengthrules", 2, 0, 0, 3, 0, false, false, false, false);
-        mintEmojiOnly = _prepareMintScenario(unicode"🔥", 0, 0, 0, 4, 0, false, false, false, false);
-        mintNumberOnly = _prepareMintScenario("12345", 0, 0, 0, 5, 0, false, false, false, false);
-        mintSplitProcessor = _prepareMintScenario("splitpay", 3, 0, 0, 1, 0, true, false, false, false);
-        mintResolverOneRecord = _prepareMintScenario("resolve1", 0, 0, 0, 0, 1, false, true, false, false);
-        mintResolverThreeRecords = _prepareMintScenario("resolve3", 0, 0, 0, 0, 3, false, true, false, false);
-        mintResolverFiveRecords = _prepareMintScenario("resolve5", 0, 0, 0, 0, 5, false, true, false, false);
-        mintFullStack = _prepareCompositeFullStackScenario("fullstack");
+        mintFree = _prepareMintScenario("free", _freeActivationConfig(), _runtimeData(0, 0));
+        mintDefault = _prepareMintScenario("default", _defaultActivationConfig(), _defaultRuntimeData());
+        mintFullStack = _prepareFullStackScenario("fullstack", 1000, 1000);
+        renewDefault = _prepareRenewScenario("renewal", _defaultActivationConfig(), _defaultRuntimeData());
 
-        _configureProfileModules();
+        reservationProof10 = abi.encode(_reservationClaim("profile", 10));
+        reservationProof1000 = abi.encode(_reservationClaim("profile", 1000));
+        whitelistProof10 = abi.encode(_whitelistClaim("profile", 10));
+        whitelistProof1000 = abi.encode(_whitelistClaim("profile", 1000));
+        _configureProfileClaims();
+        fiveResolverWrites = _packedResolverOverrides(5);
+        profileDefaultMintCtx = _mintCtx(mintDefault.activationId, "default");
+        profileFullStackMintCtx = _mintCtx(mintFullStack.activationId, "fullstack");
+        profileTokenPrice = NamespaceTypes.Price({token: address(token), amount: 100 ether});
     }
 
     /*//////////////////////////////////////////////////////////////
                            ACTIVATION BENCHMARKS
     //////////////////////////////////////////////////////////////*/
 
-    function testBenchmark_activation_00_freeNoPolicies() public {
-        _activate("actfree", 0, 0, 0, 0, 0, false, false, false, false);
+    function testBenchmark_activation_00_freeNoRules() public {
+        _activate(_freeActivationConfig());
     }
 
-    function testBenchmark_activation_01_twoPoliciesSaleAndLength() public {
-        _activate("acttwo", 2, 0, 0, 0, 0, false, false, false, false);
+    function testBenchmark_activation_01_defaultThreeRulesPaymentHook() public {
+        _activate(_defaultActivationConfig());
     }
 
-    function testBenchmark_activation_02_threePoliciesWithERC20Gate() public {
-        _activate("actthree", 3, 0, 0, 0, 0, false, false, false, false);
-    }
-
-    function testBenchmark_activation_03_fourPoliciesReservation10() public {
-        _activate("actres10", 4, 10, 0, 0, 0, false, false, true, false);
-    }
-
-    function testBenchmark_activation_04_fourPoliciesReservation100() public {
-        _activate("actres100", 4, 100, 0, 0, 0, false, false, true, false);
-    }
-
-    function testBenchmark_activation_05_fourPoliciesReservation200() public {
-        _activate("actres200", 4, 200, 0, 0, 0, false, false, true, false);
-    }
-
-    function testBenchmark_activation_06_fivePoliciesWhitelist10() public {
-        _activate("actwhite10", 5, 0, 10, 0, 0, false, false, false, true);
-    }
-
-    function testBenchmark_activation_07_fivePoliciesWhitelist100() public {
-        _activate("actwhite100", 5, 0, 100, 0, 0, false, false, false, true);
-    }
-
-    function testBenchmark_activation_08_fivePoliciesWhitelist1000() public {
-        _activate("actwhite1000", 5, 0, 1000, 0, 0, false, false, false, true);
-    }
-
-    function testBenchmark_activation_09_fixedPriceFiveLengthRules() public {
-        _activate("actfixedrules", 0, 0, 0, 2, 0, false, false, false, false);
-    }
-
-    function testBenchmark_activation_10_lengthBasedFiveRules() public {
-        _activate("actlength", 0, 0, 0, 3, 0, false, false, false, false);
-    }
-
-    function testBenchmark_activation_11_emojiOnlyPricing() public {
-        _activate("actemoji", 0, 0, 0, 4, 0, false, false, false, false);
-    }
-
-    function testBenchmark_activation_12_numberOnlyPricing() public {
-        _activate("actnumber", 0, 0, 0, 5, 0, false, false, false, false);
-    }
-
-    function testBenchmark_activation_13_compositePolicyCompositePricingDirectSplitFiveResolverWrites() public {
-        _activateCompositeFullStack("actall");
+    function testBenchmark_activation_02_fullStackSevenRulesSplitPaymentFiveResolverWrites() public {
+        _activate(_fullStackConfig("activatefull", 1000, 1000));
     }
 
     /*//////////////////////////////////////////////////////////////
                              MINT BENCHMARKS
     //////////////////////////////////////////////////////////////*/
 
-    function testBenchmark_mint_00_freeNoPolicies() public {
+    function testBenchmark_mint_00_freeNoRules() public {
         _mint(mintFree);
     }
 
-    function testBenchmark_mint_01_twoPoliciesSaleAndLength() public {
-        _mint(mintTwoPolicies);
+    function testBenchmark_mint_01_defaultThreeRulesERC20PaymentHook() public {
+        _mint(mintDefault);
     }
 
-    function testBenchmark_mint_02_threePoliciesWithERC20Gate() public {
-        _mint(mintThreePolicies);
-    }
-
-    function testBenchmark_mint_03_reservation10Proof() public {
-        _mint(mintReservation10);
-    }
-
-    function testBenchmark_mint_04_reservation100Proof() public {
-        _mint(mintReservation100);
-    }
-
-    function testBenchmark_mint_05_reservation200Proof() public {
-        _mint(mintReservation200);
-    }
-
-    function testBenchmark_mint_06_whitelist10Proof() public {
-        _mint(mintWhitelist10);
-    }
-
-    function testBenchmark_mint_07_whitelist100Proof() public {
-        _mint(mintWhitelist100);
-    }
-
-    function testBenchmark_mint_08_whitelist1000Proof() public {
-        _mint(mintWhitelist1000);
-    }
-
-    function testBenchmark_mint_09_fixedPriceERC20() public {
-        _mint(mintFixedPrice);
-    }
-
-    function testBenchmark_mint_10_fixedPriceFiveLengthRules() public {
-        _mint(mintFixedFiveLengthRules);
-    }
-
-    function testBenchmark_mint_11_lengthBasedFiveRules() public {
-        _mint(mintLengthFiveRules);
-    }
-
-    function testBenchmark_mint_12_emojiOnlyPricing() public {
-        _mint(mintEmojiOnly);
-    }
-
-    function testBenchmark_mint_13_numberOnlyPricing() public {
-        _mint(mintNumberOnly);
-    }
-
-    function testBenchmark_mint_14_erc20SplitProcessor() public {
-        _mint(mintSplitProcessor);
-    }
-
-    function testBenchmark_mint_15_resolverOneRecord() public {
-        _mint(mintResolverOneRecord);
-    }
-
-    function testBenchmark_mint_16_resolverThreeRecords() public {
-        _mint(mintResolverThreeRecords);
-    }
-
-    function testBenchmark_mint_17_resolverFiveRecords() public {
-        _mint(mintResolverFiveRecords);
-    }
-
-    function testBenchmark_mint_18_fullStackCompositePolicyCompositePricingDirectSplitFiveResolverWrites() public {
+    function testBenchmark_mint_02_fullStackRulesSplitPaymentFiveResolverWrites() public {
         _mint(mintFullStack);
+    }
+
+    function testBenchmark_renew_00_defaultThreeRulesERC20Payment() public {
+        vm.prank(accounts.buyer.addr);
+        controller.renew(renewDefault.activationId, renewDefault.label, 30 days, _defaultRuntimeData());
     }
 
     /*//////////////////////////////////////////////////////////////
                           MODULE PROFILING
     //////////////////////////////////////////////////////////////*/
 
-    function testBenchmark_profile_policy_00_saleWindow_checkMint() public view {
-        saleWindowPolicy.checkMint(profileMintCtx, "");
+    function testBenchmark_profile_rule_00_saleWindow_evaluateMint() public view {
+        saleWindowRule.evaluateMint(profileFullStackMintCtx, "");
     }
 
-    function testBenchmark_profile_policy_01_labelLength_checkMint() public view {
-        labelLengthPolicy.checkMint(profileMintCtx, "");
+    function testBenchmark_profile_rule_01_labelLength_evaluateMint() public view {
+        labelLengthRule.evaluateMint(profileFullStackMintCtx, "");
     }
 
-    function testBenchmark_profile_policy_02_erc20Gate_checkMint() public view {
-        erc20GatePolicy.checkMint(profileMintCtx, "");
+    function testBenchmark_profile_rule_02_fixedPrice_evaluateMint() public view {
+        fixedPriceRule.evaluateMint(profileFullStackMintCtx, "");
     }
 
-    function testBenchmark_profile_policy_03_reservation10_checkMint() public view {
-        reservationPolicy.checkMint(_mintCtx(profileReservation10Id, "profile"), reservationProof10);
+    function testBenchmark_profile_rule_03_lengthPremium_evaluateMint() public view {
+        lengthPremiumRule.evaluateMint(profileFullStackMintCtx, "");
     }
 
-    function testBenchmark_profile_policy_04_reservation100_checkMint() public view {
-        reservationPolicy.checkMint(_mintCtx(profileReservation100Id, "profile"), reservationProof100);
+    function testBenchmark_profile_rule_04_tokenBalanceDiscount_evaluateMint() public view {
+        tokenBalanceRule.evaluateMint(profileFullStackMintCtx, "");
     }
 
-    function testBenchmark_profile_policy_05_reservation200_checkMint() public view {
-        reservationPolicy.checkMint(_mintCtx(profileReservation200Id, "profile"), reservationProof200);
+    function testBenchmark_profile_rule_05_reservation10_evaluateMint() public view {
+        reservationRule.evaluateMint(_mintCtx(profileReservation10Id, "profile"), reservationProof10);
     }
 
-    function testBenchmark_profile_policy_06_whitelist10_checkMint() public view {
-        whitelistPolicy.checkMint(_mintCtx(profileWhitelist10Id, "profile"), whitelistProof10);
+    function testBenchmark_profile_rule_06_reservation1000_evaluateMint() public view {
+        reservationRule.evaluateMint(_mintCtx(profileReservation1000Id, "profile"), reservationProof1000);
     }
 
-    function testBenchmark_profile_policy_07_whitelist100_checkMint() public view {
-        whitelistPolicy.checkMint(_mintCtx(profileWhitelist100Id, "profile"), whitelistProof100);
+    function testBenchmark_profile_rule_07_whitelist10_evaluateMint() public view {
+        whitelistRule.evaluateMint(_mintCtx(profileWhitelist10Id, "profile"), whitelistProof10);
     }
 
-    function testBenchmark_profile_policy_08_whitelist1000_checkMint() public view {
-        whitelistPolicy.checkMint(_mintCtx(profileWhitelist1000Id, "profile"), whitelistProof1000);
-    }
-
-    function testBenchmark_profile_policy_09_pausePolicy_checkMint() public view {
-        pausePolicy.checkMint(profileMintCtx, "");
-    }
-
-    function testBenchmark_profile_pricing_00_fixedDefault_quoteMint() public view {
-        fixedPricePricing.quoteMint(_mintCtx(profileFixedDefaultId, "profiledefault"), profileZeroPrice, "");
-    }
-
-    function testBenchmark_profile_pricing_01_fixedFiveLengthRules_quoteMint() public view {
-        fixedPricePricing.quoteMint(_mintCtx(profileFixedFiveRulesId, "profilerules"), profileZeroPrice, "");
-    }
-
-    function testBenchmark_profile_pricing_02_lengthBasedFiveRules_quoteMint() public view {
-        lengthPricing.quoteMint(_mintCtx(profileLengthFiveRulesId, "profilelength"), profileTokenPrice, "");
-    }
-
-    function testBenchmark_profile_pricing_03_emojiOnly_quoteMint() public view {
-        emojiPricing.quoteMint(_mintCtx(profileEmojiId, unicode"🔥"), profileTokenPrice, "");
-    }
-
-    function testBenchmark_profile_pricing_04_numberOnly_quoteMint() public view {
-        numberPricing.quoteMint(_mintCtx(profileNumberId, "12345"), profileTokenPrice, "");
-    }
-
-    function testBenchmark_profile_pricing_05_letterOnly_quoteMint() public view {
-        letterPricing.quoteMint(_mintCtx(profileLetterId, "profileletter"), profileTokenPrice, "");
+    function testBenchmark_profile_rule_08_whitelist1000_evaluateMint() public view {
+        whitelistRule.evaluateMint(_mintCtx(profileWhitelist1000Id, "profile"), whitelistProof1000);
     }
 
     function testBenchmark_profile_payment_00_collectMintERC20() public {
         vm.prank(address(controller));
-        erc20Payment.collectMint(profileMintCtx, profileTokenPrice, "");
+        erc20Payment.collectMint(profileDefaultMintCtx, profileTokenPrice, "");
     }
 
-    function testBenchmark_profile_processor_00_noop_processMint() public {
+    function testBenchmark_profile_payment_01_collectMintSplitERC20() public {
         vm.prank(address(controller));
-        noopProcessor.processMint(profileMintCtx, profileTokenPrice, "");
+        splitPayment.collectMint(profileFullStackMintCtx, profileTokenPrice, "");
     }
 
-    function testBenchmark_profile_processor_01_split_processMint() public {
+    function testBenchmark_profile_hook_00_recordingPostHook_afterMint() public {
         vm.prank(address(controller));
-        splitProcessor.processMint(profileMintCtx, profileTokenPrice, "");
+        postHook.afterMint(profileDefaultMintCtx, 1, "");
     }
 
-    function testBenchmark_profile_hook_00_setAddrToBuyer_afterMint() public {
+    function testBenchmark_profile_hook_01_batchResolverHookFiveWrites_afterMint() public {
         vm.prank(address(controller));
-        batchResolverHook.afterMint(profileMintCtx, 1, "");
+        batchResolverHook.afterMint(profileFullStackMintCtx, 1, fiveResolverWrites);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -379,279 +192,35 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
 
     function _prepareMintScenario(
         string memory label,
-        uint256 policyCount,
-        uint256 reservationSetSize,
-        uint256 whitelistSetSize,
-        uint256 pricingMode,
-        uint256 resolverRecordCount,
-        bool useSplitProcessor,
-        bool useResolver,
-        bool useReservation,
-        bool useWhitelist
+        NamespaceTypes.ActivationConfig memory config,
+        NamespaceTypes.RuntimeData memory runtimeData
     ) private returns (MintScenario memory scenario) {
-        scenario.activationId = _activate(
-            label,
-            policyCount,
-            reservationSetSize,
-            whitelistSetSize,
-            pricingMode,
-            resolverRecordCount,
-            useSplitProcessor,
-            useResolver,
-            useReservation,
-            useWhitelist
-        );
+        scenario.activationId = _activate(config);
         scenario.label = label;
-        scenario.runtimeData =
-            _runtimeData(label, policyCount, reservationSetSize, whitelistSetSize, pricingMode, resolverRecordCount);
+        scenario.runtimeData = runtimeData;
     }
 
-    function _prepareCompositeFullStackScenario(string memory label) private returns (MintScenario memory scenario) {
-        scenario.activationId = _activateCompositeFullStack(label);
-        scenario.label = label;
-        scenario.runtimeData = _compositeRuntimeData(label, 1000, 1000, 5);
-    }
-
-    function _activate(
-        string memory label,
-        uint256 policyCount,
-        uint256 reservationSetSize,
-        uint256 whitelistSetSize,
-        uint256 pricingMode,
-        uint256 resolverRecordCount,
-        bool useSplitProcessor,
-        bool useResolver,
-        bool useReservation,
-        bool useWhitelist
-    ) private returns (bytes32 activationId) {
-        NamespaceTypes.ActivationConfig memory config = NamespaceTypes.ActivationConfig({
-            registry: IPermissionedRegistry(address(registry)),
-            parentNode: keccak256("alice.eth"),
-            resolver: useResolver ? address(resolver) : address(0xBEEF),
-            buyerRoleBitmap: BUYER_ROLES,
-            policies: _policies(label, policyCount, reservationSetSize, whitelistSetSize, useReservation, useWhitelist),
-            pricingModules: _pricingModules(pricingMode),
-            paymentModule: _paymentModule(pricingMode, useSplitProcessor),
-            processor: _processor(useSplitProcessor),
-            postHooks: _postHooks(resolverRecordCount)
-        });
-
-        vm.prank(accounts.alice.addr);
-        activationId = controller.activate(config);
-    }
-
-    function _activateCompositeFullStack(string memory label) private returns (bytes32 activationId) {
-        NamespaceTypes.ActivationConfig memory config = NamespaceTypes.ActivationConfig({
-            registry: IPermissionedRegistry(address(registry)),
-            parentNode: keccak256("alice.eth"),
-            resolver: address(resolver),
-            buyerRoleBitmap: BUYER_ROLES,
-            policies: _compositePolicies(label, 1000, 1000),
-            pricingModules: _compositePricingModules(),
-            paymentModule: _splitPaymentModule(),
-            processor: _processor(false),
-            postHooks: _postHooks(5)
-        });
-
-        vm.prank(accounts.alice.addr);
-        activationId = controller.activate(config);
-    }
-
-    function _compositePolicies(string memory label, uint256 reservationSetSize, uint256 whitelistSetSize)
+    function _prepareFullStackScenario(string memory label, uint256 reservationSetSize, uint256 whitelistSetSize)
         private
-        view
-        returns (NamespaceTypes.ModuleConfig[] memory policies)
+        returns (MintScenario memory scenario)
     {
-        bytes32 labelHash = keccak256(bytes(label));
-        bytes32 reservationLeaf = compositePolicy.leaf(labelHash, accounts.buyer.addr, _reservationExpiry());
-        bytes32 whitelistLeaf = _accountLabelLeaf(accounts.buyer.addr, labelHash);
-        policies = new NamespaceTypes.ModuleConfig[](1);
-        policies[0] = NamespaceTypes.ModuleConfig({
-            module: address(compositePolicy),
-            configData: abi.encode(
-                CompositeMintPolicy.Params({
-                    startTime: 0,
-                    endTime: 0,
-                    minLength: 1,
-                    maxLength: 32,
-                    gateToken: token,
-                    minBalance: 100 ether,
-                    reservationRoot: _rootFor(reservationLeaf, reservationSetSize),
-                    whitelistMintRoot: _rootFor(whitelistLeaf, whitelistSetSize),
-                    whitelistRenewRoot: bytes32(0),
-                    whitelistLeafMode: MerkleWhitelistPolicy.LeafMode.ACCOUNT_LABEL
-                })
-            )
-        });
+        scenario.activationId = _activate(_fullStackConfig(label, reservationSetSize, whitelistSetSize));
+        scenario.label = label;
+        scenario.runtimeData = _fullStackRuntimeData(label, reservationSetSize, whitelistSetSize);
     }
 
-    function _policies(
+    function _prepareRenewScenario(
         string memory label,
-        uint256 count,
-        uint256 reservationSetSize,
-        uint256 whitelistSetSize,
-        bool useReservation,
-        bool useWhitelist
-    ) private view returns (NamespaceTypes.ModuleConfig[] memory policies) {
-        policies = new NamespaceTypes.ModuleConfig[](count);
-        if (count > 0) {
-            policies[0] = NamespaceTypes.ModuleConfig({
-                module: address(saleWindowPolicy),
-                configData: abi.encode(SaleWindowPolicy.Params({startTime: 0, endTime: 0}))
-            });
-        }
-        if (count > 1) {
-            policies[1] = NamespaceTypes.ModuleConfig({
-                module: address(labelLengthPolicy),
-                configData: abi.encode(LabelLengthPolicy.Params({minLength: 1, maxLength: 32}))
-            });
-        }
-        if (count > 2) {
-            policies[2] = NamespaceTypes.ModuleConfig({
-                module: address(erc20GatePolicy),
-                configData: abi.encode(ERC20BalanceGatePolicy.Params({token: token, minBalance: 100 ether}))
-            });
-        }
-        if (count > 3) {
-            uint256 setSize = useReservation ? reservationSetSize : 1;
-            bytes32 leaf = reservationPolicy.leaf(keccak256(bytes(label)), accounts.buyer.addr, _reservationExpiry());
-            policies[3] = NamespaceTypes.ModuleConfig({
-                module: address(reservationPolicy),
-                configData: abi.encode(ReservationPolicy.Params({reservationRoot: _rootFor(leaf, setSize)}))
-            });
-        }
-        if (count > 4) {
-            uint256 setSize = useWhitelist ? whitelistSetSize : 1;
-            bytes32 leaf = _accountLabelLeaf(accounts.buyer.addr, keccak256(bytes(label)));
-            policies[4] = NamespaceTypes.ModuleConfig({
-                module: address(whitelistPolicy),
-                configData: abi.encode(
-                    MerkleWhitelistPolicy.Params({
-                        mintRoot: _rootFor(leaf, setSize),
-                        renewRoot: bytes32(0),
-                        leafMode: MerkleWhitelistPolicy.LeafMode.ACCOUNT_LABEL
-                    })
-                )
-            });
-        }
+        NamespaceTypes.ActivationConfig memory config,
+        NamespaceTypes.RuntimeData memory runtimeData
+    ) private returns (MintScenario memory scenario) {
+        scenario = _prepareMintScenario(label, config, runtimeData);
+        _mint(scenario);
     }
 
-    function _pricingModules(uint256 mode) private view returns (NamespaceTypes.ModuleConfig[] memory pricingModules) {
-        if (mode == 0) {
-            return new NamespaceTypes.ModuleConfig[](0);
-        }
-        if (mode == 1) {
-            pricingModules = new NamespaceTypes.ModuleConfig[](1);
-            pricingModules[0] = _fixedPricingConfig(0);
-            return pricingModules;
-        }
-        if (mode == 2) {
-            pricingModules = new NamespaceTypes.ModuleConfig[](1);
-            pricingModules[0] = _fixedPricingConfig(5);
-            return pricingModules;
-        }
-        if (mode == 3) {
-            pricingModules = new NamespaceTypes.ModuleConfig[](1);
-            pricingModules[0] = _lengthPricingConfig(5);
-            return pricingModules;
-        }
-        if (mode == 4 || mode == 5 || mode == 6) {
-            pricingModules = new NamespaceTypes.ModuleConfig[](mode == 6 ? 3 : 1);
-            pricingModules[0] = NamespaceTypes.ModuleConfig({
-                module: mode == 4 ? address(emojiPricing) : mode == 5 ? address(numberPricing) : address(letterPricing),
-                configData: abi.encode(
-                    LabelClassPricing.Params({token: address(token), mintAmount: 10 ether, renewAmount: 5 ether})
-                )
-            });
-            if (mode == 6) {
-                pricingModules[1] = _fixedPricingConfig(5);
-                pricingModules[2] = _lengthPricingConfig(5);
-            }
-        }
-    }
-
-    function _compositePricingModules() private view returns (NamespaceTypes.ModuleConfig[] memory pricingModules) {
-        pricingModules = new NamespaceTypes.ModuleConfig[](1);
-        CompositePricing.LengthPrice[] memory lengthPrices = new CompositePricing.LengthPrice[](5);
-        uint128[] memory mintRates = new uint128[](5);
-        uint128[] memory renewRates = new uint128[](5);
-        for (uint256 i; i < 5;) {
-            lengthPrices[i] = CompositePricing.LengthPrice({
-                length: SafeCastLib.toUint16(i + 1),
-                mintAmount: SafeCastLib.toUint128((i + 1) * 1 ether),
-                renewAmount: SafeCastLib.toUint128((i + 1) * 0.5 ether)
-            });
-            mintRates[i] = uint128((i + 1) * 1 gwei);
-            renewRates[i] = uint128((i + 1) * 0.5 gwei);
-            unchecked {
-                ++i;
-            }
-        }
-        pricingModules[0] = NamespaceTypes.ModuleConfig({
-            module: address(compositePricing),
-            configData: abi.encode(
-                CompositePricing.Params({
-                    token: address(token),
-                    labelClass: LabelClassPricing.LabelClass.LETTER,
-                    classMintAmount: 10 ether,
-                    classRenewAmount: 5 ether,
-                    defaultMintAmount: 100 ether,
-                    defaultRenewAmount: 50 ether,
-                    lengthPrices: lengthPrices,
-                    mintPricePerSecondByLength: mintRates,
-                    renewPricePerSecondByLength: renewRates
-                })
-            )
-        });
-    }
-
-    function _runtimeData(
-        string memory label,
-        uint256 policyCount,
-        uint256 reservationSetSize,
-        uint256 whitelistSetSize,
-        uint256 pricingMode,
-        uint256 resolverRecordCount
-    ) private view returns (NamespaceTypes.RuntimeData memory runtimeData) {
-        runtimeData.policyData = new bytes[](policyCount);
-        runtimeData.pricingData = new bytes[](pricingMode == 0 ? 0 : pricingMode == 6 ? 3 : 1);
-        runtimeData.paymentData = "";
-        runtimeData.processorData = "";
-        runtimeData.postHookData = new bytes[](resolverRecordCount == 0 ? 0 : 1);
-
-        if (policyCount > 3) {
-            runtimeData.policyData[3] = _reservationProof(label, reservationSetSize);
-        }
-        if (policyCount > 4) {
-            runtimeData.policyData[4] = _whitelistProof(label, whitelistSetSize);
-        }
-        if (resolverRecordCount == 1) {
-            runtimeData.postHookData[0] = "";
-        } else if (resolverRecordCount > 1) {
-            runtimeData.postHookData[0] = _packedResolverOverrides(resolverRecordCount);
-        }
-    }
-
-    function _compositeRuntimeData(
-        string memory label,
-        uint256 reservationSetSize,
-        uint256 whitelistSetSize,
-        uint256 resolverRecordCount
-    ) private view returns (NamespaceTypes.RuntimeData memory runtimeData) {
-        runtimeData.policyData = new bytes[](1);
-        runtimeData.pricingData = new bytes[](1);
-        runtimeData.paymentData = "";
-        runtimeData.processorData = "";
-        runtimeData.postHookData = new bytes[](1);
-        runtimeData.policyData[0] = abi.encode(
-            CompositeMintPolicy.ReservationProofData({
-                account: accounts.buyer.addr,
-                expiry: _reservationExpiry(),
-                proof: _proofFor(_compositeReservationLeaf(label), reservationSetSize)
-            }),
-            _proofFor(_accountLabelLeaf(accounts.buyer.addr, keccak256(bytes(label))), whitelistSetSize)
-        );
-        runtimeData.postHookData[0] = _packedResolverOverrides(resolverRecordCount);
+    function _activate(NamespaceTypes.ActivationConfig memory config) private returns (bytes32 activationId) {
+        vm.prank(accounts.alice.addr);
+        activationId = controller.activate(config);
     }
 
     function _mint(MintScenario memory scenario) private {
@@ -662,29 +231,179 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         assertEq(registry.ownerOf(tokenId), accounts.buyer.addr);
     }
 
-    function _configureProfileModules() private {
-        profileActivationId = _activate("profile", 5, 1000, 1000, 6, 1, true, true, true, true);
-        profileFixedDefaultId = _activate("profiledefault", 0, 0, 0, 1, 0, false, false, false, false);
-        profileFixedFiveRulesId = _activate("profilerules", 0, 0, 0, 2, 0, false, false, false, false);
-        profileLengthFiveRulesId = _activate("profilelength", 0, 0, 0, 3, 0, false, false, false, false);
-        profileEmojiId = _activate(unicode"🔥", 0, 0, 0, 4, 0, false, false, false, false);
-        profileNumberId = _activate("12345", 0, 0, 0, 5, 0, false, false, false, false);
-        profileLetterId = _activate("profileletter", 0, 0, 0, 6, 0, false, false, false, false);
-        profileReservation10Id = _activate("profile", 4, 10, 0, 0, 0, false, false, true, false);
-        profileReservation100Id = _activate("profile", 4, 100, 0, 0, 0, false, false, true, false);
-        profileReservation200Id = _activate("profile", 4, 200, 0, 0, 0, false, false, true, false);
-        profileWhitelist10Id = _activate("profile", 5, 0, 10, 0, 0, false, false, false, true);
-        profileWhitelist100Id = _activate("profile", 5, 0, 100, 0, 0, false, false, false, true);
-        profileWhitelist1000Id = _activate("profile", 5, 0, 1000, 0, 0, false, false, false, true);
-        profileMintCtx = _mintCtx(profileActivationId, "profile");
-        profileZeroPrice = NamespaceTypes.Price({token: address(0), amount: 0});
-        profileTokenPrice = NamespaceTypes.Price({token: address(token), amount: 10 ether});
-        reservationProof10 = _reservationProof("profile", 10);
-        reservationProof100 = _reservationProof("profile", 100);
-        reservationProof200 = _reservationProof("profile", 200);
-        whitelistProof10 = _whitelistProof("profile", 10);
-        whitelistProof100 = _whitelistProof("profile", 100);
-        whitelistProof1000 = _whitelistProof("profile", 1000);
+    function _freeActivationConfig() private view returns (NamespaceTypes.ActivationConfig memory config) {
+        config = NamespaceTypes.ActivationConfig({
+            registry: IPermissionedRegistry(address(registry)),
+            parentNode: keccak256("alice.eth"),
+            resolver: address(0),
+            buyerRoleBitmap: BUYER_ROLES,
+            rules: new NamespaceTypes.RuleConfig[](0),
+            paymentModule: NamespaceTypes.ModuleConfig({module: address(0), configData: ""}),
+            postHooks: new NamespaceTypes.ModuleConfig[](0)
+        });
+    }
+
+    function _fullStackConfig(string memory label, uint256 reservationSetSize, uint256 whitelistSetSize)
+        private
+        view
+        returns (NamespaceTypes.ActivationConfig memory config)
+    {
+        NamespaceTypes.RuleConfig[] memory rules = new NamespaceTypes.RuleConfig[](7);
+        rules[0] = NamespaceTypes.RuleConfig({
+            module: address(saleWindowRule),
+            phase: NamespaceTypes.RulePhase.GUARD,
+            configData: abi.encode(SaleWindowRule.Params({startTime: 0, endTime: 0}))
+        });
+        rules[1] = NamespaceTypes.RuleConfig({
+            module: address(labelLengthRule),
+            phase: NamespaceTypes.RulePhase.ELIGIBILITY,
+            configData: abi.encode(LabelLengthRule.Params({minLength: 1, maxLength: 32}))
+        });
+        rules[2] = NamespaceTypes.RuleConfig({
+            module: address(whitelistRule),
+            phase: NamespaceTypes.RulePhase.ELIGIBILITY,
+            configData: abi.encode(
+                WhitelistRule.Params({
+                    mintRoot: _rootFor(whitelistRule.leaf(_whitelistClaim(label, whitelistSetSize)), whitelistSetSize),
+                    renewRoot: bytes32(0)
+                })
+            )
+        });
+        rules[3] = NamespaceTypes.RuleConfig({
+            module: address(fixedPriceRule),
+            phase: NamespaceTypes.RulePhase.BASE_PRICE,
+            configData: abi.encode(
+                FixedPriceRule.Params({
+                    token: address(token),
+                    defaultMintAmount: 100 ether,
+                    defaultRenewAmount: 50 ether,
+                    lengthPrices: new FixedPriceRule.LengthPrice[](0)
+                })
+            )
+        });
+        rules[4] = NamespaceTypes.RuleConfig({
+            module: address(lengthPremiumRule),
+            phase: NamespaceTypes.RulePhase.PREMIUM,
+            configData: abi.encode(_lengthPremiumParams(5))
+        });
+        rules[5] = NamespaceTypes.RuleConfig({
+            module: address(tokenBalanceRule),
+            phase: NamespaceTypes.RulePhase.DISCOUNT,
+            configData: abi.encode(
+                TokenBalanceRule.Params({token: ERC20(address(token)), minBalance: 100 ether, discountBps: 500})
+            )
+        });
+        rules[6] = NamespaceTypes.RuleConfig({
+            module: address(reservationRule),
+            phase: NamespaceTypes.RulePhase.OVERRIDE,
+            configData: abi.encode(
+                ReservationRule.Params({
+                    root: _rootFor(
+                        reservationRule.leaf(_reservationClaim(label, reservationSetSize)), reservationSetSize
+                    )
+                })
+            )
+        });
+
+        NamespaceTypes.ModuleConfig[] memory postHooks = new NamespaceTypes.ModuleConfig[](1);
+        postHooks[0] = NamespaceTypes.ModuleConfig({module: address(batchResolverHook), configData: ""});
+
+        config = NamespaceTypes.ActivationConfig({
+            registry: IPermissionedRegistry(address(registry)),
+            parentNode: keccak256("alice.eth"),
+            resolver: address(resolver),
+            buyerRoleBitmap: BUYER_ROLES,
+            rules: rules,
+            paymentModule: _splitPaymentModule(),
+            postHooks: postHooks
+        });
+    }
+
+    function _runtimeData(uint256 ruleCount, uint256 postHookCount)
+        private
+        pure
+        returns (NamespaceTypes.RuntimeData memory runtimeData)
+    {
+        runtimeData.ruleData = new bytes[](ruleCount);
+        runtimeData.paymentData = "";
+        runtimeData.postHookData = new bytes[](postHookCount);
+    }
+
+    function _fullStackRuntimeData(string memory label, uint256 reservationSetSize, uint256 whitelistSetSize)
+        private
+        view
+        returns (NamespaceTypes.RuntimeData memory runtimeData)
+    {
+        runtimeData = _runtimeData(7, 1);
+        runtimeData.ruleData[2] = abi.encode(_whitelistClaim(label, whitelistSetSize));
+        runtimeData.ruleData[6] = abi.encode(_reservationClaim(label, reservationSetSize));
+        runtimeData.postHookData[0] = _packedResolverOverrides(5);
+    }
+
+    function _splitPaymentModule() private view returns (NamespaceTypes.ModuleConfig memory paymentModule) {
+        ERC20SplitPaymentModule.Split[] memory splits = new ERC20SplitPaymentModule.Split[](2);
+        splits[0] = ERC20SplitPaymentModule.Split({recipient: accounts.alice.addr, bps: 7500});
+        splits[1] = ERC20SplitPaymentModule.Split({recipient: accounts.treasury.addr, bps: 2500});
+        paymentModule = NamespaceTypes.ModuleConfig({
+            module: address(splitPayment),
+            configData: abi.encode(ERC20SplitPaymentModule.Params({token: address(token), splits: splits}))
+        });
+    }
+
+    function _lengthPremiumParams(uint256 ruleCount) private view returns (LengthPremiumRule.Params memory params) {
+        uint128[] memory mintRates = new uint128[](ruleCount);
+        uint128[] memory renewRates = new uint128[](ruleCount);
+        for (uint256 i; i < ruleCount;) {
+            mintRates[i] = uint128((i + 1) * 1 gwei);
+            renewRates[i] = uint128((i + 1) * 0.5 gwei);
+            unchecked {
+                ++i;
+            }
+        }
+        params = LengthPremiumRule.Params({
+            token: address(token), mintPricePerSecondByLength: mintRates, renewPricePerSecondByLength: renewRates
+        });
+    }
+
+    function _reservationClaim(string memory label, uint256 setSize)
+        private
+        view
+        returns (ReservationRule.Claim memory claim)
+    {
+        claim = ReservationRule.Claim({
+            labelHash: keccak256(bytes(label)),
+            account: accounts.buyer.addr,
+            startTime: 0,
+            endTime: _reservationExpiry(),
+            mintable: true,
+            token: address(token),
+            mintPrice: 1000 ether,
+            renewPrice: 100 ether,
+            priceOp: NamespaceTypes.PriceOp.OVERRIDE,
+            proof: new bytes32[](0)
+        });
+        claim.proof = _proofFor(reservationRule.leaf(claim), setSize);
+    }
+
+    function _whitelistClaim(string memory label, uint256 setSize)
+        private
+        view
+        returns (WhitelistRule.Claim memory claim)
+    {
+        claim = WhitelistRule.Claim({
+            labelHash: keccak256(bytes(label)),
+            account: accounts.buyer.addr,
+            startTime: 0,
+            endTime: _reservationExpiry(),
+            mintable: true,
+            token: address(0),
+            mintPrice: 0,
+            renewPrice: 0,
+            discountBps: 0,
+            priceOp: NamespaceTypes.PriceOp.NONE,
+            proof: new bytes32[](0)
+        });
+        claim.proof = _proofFor(whitelistRule.leaf(claim), setSize);
     }
 
     function _mintCtx(bytes32 activationId, string memory label)
@@ -707,145 +426,78 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         });
     }
 
+    function _renewCtx(bytes32 activationId, string memory label)
+        private
+        view
+        returns (NamespaceTypes.RenewContext memory)
+    {
+        uint256 tokenId = uint256(keccak256(bytes(label)));
+        return NamespaceTypes.RenewContext({
+            activationId: activationId,
+            payer: accounts.buyer.addr,
+            registry: IPermissionedRegistry(address(registry)),
+            parentNode: keccak256("alice.eth"),
+            label: label,
+            labelHash: bytes32(tokenId),
+            tokenId: tokenId,
+            duration: 30 days,
+            currentExpiry: uint64(block.timestamp + 365 days),
+            newExpiry: uint64(block.timestamp + 395 days)
+        });
+    }
+
     function _approveBenchmarkModules() private {
-        bytes32 policyKind = controller.MODULE_KIND_POLICY();
-        bytes32 pricingKind = controller.MODULE_KIND_PRICING();
+        bytes32 ruleKind = controller.MODULE_KIND_RULE();
         bytes32 paymentKind = controller.MODULE_KIND_PAYMENT();
-        bytes32 processorKind = controller.MODULE_KIND_PROCESSOR();
         bytes32 postHookKind = controller.MODULE_KIND_POST_HOOK();
 
         vm.startPrank(accounts.owner.addr);
-        controller.setModuleApproval(policyKind, address(erc20GatePolicy), true);
-        controller.setModuleApproval(policyKind, address(reservationPolicy), true);
-        controller.setModuleApproval(policyKind, address(whitelistPolicy), true);
-        controller.setModuleApproval(policyKind, address(pausePolicy), true);
-        controller.setModuleApproval(policyKind, address(compositePolicy), true);
-        controller.setModuleApproval(pricingKind, address(lengthPricing), true);
-        controller.setModuleApproval(pricingKind, address(emojiPricing), true);
-        controller.setModuleApproval(pricingKind, address(numberPricing), true);
-        controller.setModuleApproval(pricingKind, address(letterPricing), true);
-        controller.setModuleApproval(pricingKind, address(compositePricing), true);
+        controller.setModuleApproval(ruleKind, address(tokenBalanceRule), true);
+        controller.setModuleApproval(ruleKind, address(reservationRule), true);
+        controller.setModuleApproval(ruleKind, address(whitelistRule), true);
+        controller.setModuleApproval(ruleKind, address(lengthPremiumRule), true);
         controller.setModuleApproval(paymentKind, address(splitPayment), true);
-        controller.setModuleApproval(processorKind, address(splitProcessor), true);
         controller.setModuleApproval(postHookKind, address(batchResolverHook), true);
         vm.stopPrank();
     }
 
-    function _fixedPricingConfig(uint256 lengthRuleCount) private view returns (NamespaceTypes.ModuleConfig memory) {
-        FixedPricePricing.LengthPrice[] memory lengthPrices = new FixedPricePricing.LengthPrice[](lengthRuleCount);
-        for (uint256 i; i < lengthRuleCount;) {
-            lengthPrices[i] = FixedPricePricing.LengthPrice({
-                length: SafeCastLib.toUint16(i + 1),
-                mintAmount: SafeCastLib.toUint128((i + 1) * 1 ether),
-                renewAmount: SafeCastLib.toUint128((i + 1) * 0.5 ether)
-            });
-            unchecked {
-                ++i;
-            }
-        }
-        return NamespaceTypes.ModuleConfig({
-            module: address(fixedPricePricing),
-            configData: abi.encode(
-                FixedPricePricing.Params({
-                    token: address(token),
-                    defaultMintAmount: 100 ether,
-                    defaultRenewAmount: 50 ether,
-                    lengthPrices: lengthPrices
-                })
+    function _configureProfileClaims() private {
+        profileReservation10Id = keccak256(abi.encode("profile-reservation", uint256(10)));
+        profileReservation1000Id = keccak256(abi.encode("profile-reservation", uint256(1000)));
+        profileWhitelist10Id = keccak256(abi.encode("profile-whitelist", uint256(10)));
+        profileWhitelist1000Id = keccak256(abi.encode("profile-whitelist", uint256(1000)));
+
+        vm.startPrank(address(controller));
+        reservationRule.configure(
+            profileReservation10Id,
+            abi.encode(
+                ReservationRule.Params({root: _rootFor(reservationRule.leaf(_reservationClaim("profile", 10)), 10)})
             )
-        });
-    }
-
-    function _lengthPricingConfig(uint256 ruleCount) private view returns (NamespaceTypes.ModuleConfig memory) {
-        uint128[] memory mintRates = new uint128[](ruleCount);
-        uint128[] memory renewRates = new uint128[](ruleCount);
-        for (uint256 i; i < ruleCount;) {
-            mintRates[i] = uint128((i + 1) * 1 gwei);
-            renewRates[i] = uint128((i + 1) * 0.5 gwei);
-            unchecked {
-                ++i;
-            }
-        }
-        return NamespaceTypes.ModuleConfig({
-            module: address(lengthPricing),
-            configData: abi.encode(
-                LengthBasedPricing.Params({
-                    token: address(token),
-                    mintPricePerSecondByLength: mintRates,
-                    renewPricePerSecondByLength: renewRates
-                })
-            )
-        });
-    }
-
-    function _processor(bool useSplitProcessor) private view returns (NamespaceTypes.ModuleConfig memory processor) {
-        if (!useSplitProcessor) {
-            return NamespaceTypes.ModuleConfig({module: address(0), configData: ""});
-        }
-
-        ERC20SplitProcessor.Split[] memory splits = new ERC20SplitProcessor.Split[](2);
-        splits[0] = ERC20SplitProcessor.Split({recipient: accounts.alice.addr, bps: 7500});
-        splits[1] = ERC20SplitProcessor.Split({recipient: accounts.treasury.addr, bps: 2500});
-        processor = NamespaceTypes.ModuleConfig({module: address(splitProcessor), configData: abi.encode(splits)});
-    }
-
-    function _paymentModule(uint256 pricingMode, bool useSplitProcessor)
-        private
-        view
-        returns (NamespaceTypes.ModuleConfig memory paymentModule)
-    {
-        if (pricingMode == 0) {
-            return NamespaceTypes.ModuleConfig({module: address(0), configData: ""});
-        }
-
-        paymentModule = NamespaceTypes.ModuleConfig({
-            module: address(erc20Payment),
-            configData: abi.encode(
-                ERC20PaymentModule.Params({
-                    token: token, recipient: useSplitProcessor ? address(splitProcessor) : accounts.treasury.addr
-                })
-            )
-        });
-    }
-
-    function _splitPaymentModule() private view returns (NamespaceTypes.ModuleConfig memory paymentModule) {
-        ERC20SplitPaymentModule.Split[] memory splits = new ERC20SplitPaymentModule.Split[](2);
-        splits[0] = ERC20SplitPaymentModule.Split({recipient: accounts.alice.addr, bps: 7500});
-        splits[1] = ERC20SplitPaymentModule.Split({recipient: accounts.treasury.addr, bps: 2500});
-        paymentModule = NamespaceTypes.ModuleConfig({
-            module: address(splitPayment),
-            configData: abi.encode(ERC20SplitPaymentModule.Params({token: address(token), splits: splits}))
-        });
-    }
-
-    function _postHooks(uint256 count) private view returns (NamespaceTypes.ModuleConfig[] memory postHooks) {
-        if (count == 0) {
-            return new NamespaceTypes.ModuleConfig[](0);
-        }
-        postHooks = new NamespaceTypes.ModuleConfig[](1);
-        postHooks[0] = NamespaceTypes.ModuleConfig({module: address(batchResolverHook), configData: ""});
-    }
-
-    function _reservationProof(string memory label, uint256 setSize) private view returns (bytes memory) {
-        return abi.encode(
-            ReservationPolicy.ProofData({
-                account: accounts.buyer.addr,
-                expiry: _reservationExpiry(),
-                proof: _proofFor(_reservationLeaf(label), setSize)
-            })
         );
-    }
-
-    function _whitelistProof(string memory label, uint256 setSize) private view returns (bytes memory) {
-        return abi.encode(_proofFor(_accountLabelLeaf(accounts.buyer.addr, keccak256(bytes(label))), setSize));
-    }
-
-    function _reservationLeaf(string memory label) private view returns (bytes32) {
-        return reservationPolicy.leaf(keccak256(bytes(label)), accounts.buyer.addr, _reservationExpiry());
-    }
-
-    function _compositeReservationLeaf(string memory label) private view returns (bytes32) {
-        return compositePolicy.leaf(keccak256(bytes(label)), accounts.buyer.addr, _reservationExpiry());
+        reservationRule.configure(
+            profileReservation1000Id,
+            abi.encode(
+                ReservationRule.Params({root: _rootFor(reservationRule.leaf(_reservationClaim("profile", 1000)), 1000)})
+            )
+        );
+        whitelistRule.configure(
+            profileWhitelist10Id,
+            abi.encode(
+                WhitelistRule.Params({
+                    mintRoot: _rootFor(whitelistRule.leaf(_whitelistClaim("profile", 10)), 10), renewRoot: bytes32(0)
+                })
+            )
+        );
+        whitelistRule.configure(
+            profileWhitelist1000Id,
+            abi.encode(
+                WhitelistRule.Params({
+                    mintRoot: _rootFor(whitelistRule.leaf(_whitelistClaim("profile", 1000)), 1000),
+                    renewRoot: bytes32(0)
+                })
+            )
+        );
+        vm.stopPrank();
     }
 
     function _rootFor(bytes32 leaf, uint256 setSize) private pure returns (bytes32 root) {
@@ -890,18 +542,6 @@ contract NamespaceIssuanceGasBenchmarks is NamespaceSetUp {
         PermissionedResolver resolverImpl = new PermissionedResolver(IHCAFactoryBasic(address(0)));
         bytes memory initData = abi.encodeCall(PermissionedResolver.initialize, (admin, roles));
         return PermissionedResolver(factory.deployProxy(address(resolverImpl), uint256(keccak256(initData)), initData));
-    }
-
-    function _accountLabelLeaf(address account, bytes32 labelHash) private pure returns (bytes32 result) {
-        bytes32 inner;
-        assembly ("memory-safe") {
-            let ptr := mload(0x40)
-            mstore(ptr, account)
-            mstore(add(ptr, 0x20), labelHash)
-            inner := keccak256(ptr, 0x40)
-            mstore(ptr, inner)
-            result := keccak256(ptr, 0x20)
-        }
     }
 
     function _hashPair(bytes32 a, bytes32 b) private pure returns (bytes32 result) {

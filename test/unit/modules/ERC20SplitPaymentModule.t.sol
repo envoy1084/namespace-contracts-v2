@@ -21,8 +21,7 @@ contract ERC20SplitPaymentModuleTest is NamespaceSetUp {
 
         vm.prank(address(controller));
         payment.configure(
-            activationId,
-            abi.encode(ERC20SplitPaymentModule.Params({token: address(token), splits: splits}))
+            activationId, abi.encode(ERC20SplitPaymentModule.Params({token: address(token), splits: splits}))
         );
 
         NamespaceTypes.MintContext memory ctx;

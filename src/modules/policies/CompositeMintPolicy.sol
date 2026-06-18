@@ -138,11 +138,10 @@ contract CompositeMintPolicy is NamespaceModule, IPolicyModule {
         }
     }
 
-    function _checkReservation(
-        NamespaceTypes.MintContext calldata ctx,
-        bytes32 root,
-        bytes calldata runtimeData
-    ) private view {
+    function _checkReservation(NamespaceTypes.MintContext calldata ctx, bytes32 root, bytes calldata runtimeData)
+        private
+        view
+    {
         if (root == bytes32(0)) {
             return;
         }
@@ -201,7 +200,10 @@ contract CompositeMintPolicy is NamespaceModule, IPolicyModule {
                     let accountWord := calldataload(tupleOffset)
                     let expiryWord := calldataload(add(tupleOffset, 0x20))
                     let proofRelativeOffset := calldataload(add(tupleOffset, 0x40))
-                    if and(eq(proofRelativeOffset, 0x60), and(iszero(shr(160, accountWord)), iszero(shr(64, expiryWord)))) {
+                    if and(
+                        eq(proofRelativeOffset, 0x60),
+                        and(iszero(shr(160, accountWord)), iszero(shr(64, expiryWord)))
+                    ) {
                         proofLength := calldataload(add(tupleOffset, proofRelativeOffset))
                         let proofByteLength := shl(5, proofLength)
                         if eq(whitelistRelativeOffset, add(0xc0, proofByteLength)) {

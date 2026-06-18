@@ -4,75 +4,56 @@ pragma solidity ^0.8.26;
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
-import {ERC20PaymentModule} from "src/modules/payment/ERC20PaymentModule.sol";
-import {ERC20BalanceGatePolicy} from "src/modules/policies/ERC20BalanceGatePolicy.sol";
-import {LabelLengthPolicy} from "src/modules/policies/LabelLengthPolicy.sol";
-import {MerkleWhitelistPolicy} from "src/modules/policies/MerkleWhitelistPolicy.sol";
-import {ReservationPolicy} from "src/modules/policies/ReservationPolicy.sol";
-import {SaleWindowPolicy} from "src/modules/policies/SaleWindowPolicy.sol";
-import {FixedPricePricing} from "src/modules/pricing/FixedPricePricing.sol";
-import {LengthBasedPricing} from "src/modules/pricing/LengthBasedPricing.sol";
-import {ERC20SplitProcessor} from "src/modules/processors/ERC20SplitProcessor.sol";
+import {ERC20SplitPaymentModule} from "src/modules/payment/ERC20SplitPaymentModule.sol";
+import {FixedPriceRule} from "src/modules/rules/FixedPriceRule.sol";
+import {LengthPremiumRule} from "src/modules/rules/LengthPremiumRule.sol";
+import {ReservationRule} from "src/modules/rules/ReservationRule.sol";
+import {TokenBalanceRule} from "src/modules/rules/TokenBalanceRule.sol";
+import {WhitelistRule} from "src/modules/rules/WhitelistRule.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
 
 contract NamespaceActivationFlowTest is NamespaceSetUp {
-    ERC20BalanceGatePolicy internal erc20GatePolicy;
-    ReservationPolicy internal reservationPolicy;
-    MerkleWhitelistPolicy internal whitelistPolicy;
-    LengthBasedPricing internal lengthPricing;
-    ERC20SplitProcessor internal splitProcessor;
+    TokenBalanceRule internal tokenBalanceRule;
+    ReservationRule internal reservationRule;
+    WhitelistRule internal whitelistRule;
+    LengthPremiumRule internal lengthPremiumRule;
+    ERC20SplitPaymentModule internal splitPayment;
 
     function setUp() public override {
         super.setUp();
-        erc20GatePolicy = ERC20BalanceGatePolicy(_deployModule(address(new ERC20BalanceGatePolicy())));
-        reservationPolicy = ReservationPolicy(_deployModule(address(new ReservationPolicy())));
-        whitelistPolicy = MerkleWhitelistPolicy(_deployModule(address(new MerkleWhitelistPolicy())));
-        lengthPricing = LengthBasedPricing(_deployModule(address(new LengthBasedPricing())));
-        splitProcessor = ERC20SplitProcessor(_deployModule(address(new ERC20SplitProcessor())));
+        tokenBalanceRule = TokenBalanceRule(_deployModule(address(new TokenBalanceRule())));
+        reservationRule = ReservationRule(_deployModule(address(new ReservationRule())));
+        whitelistRule = WhitelistRule(_deployModule(address(new WhitelistRule())));
+        lengthPremiumRule = LengthPremiumRule(_deployModule(address(new LengthPremiumRule())));
+        splitPayment = ERC20SplitPaymentModule(_deployModule(address(new ERC20SplitPaymentModule())));
 
         vm.startPrank(accounts.owner.addr);
-        controller.setModuleApproval(controller.MODULE_KIND_POLICY(), address(erc20GatePolicy), true);
-        controller.setModuleApproval(controller.MODULE_KIND_POLICY(), address(reservationPolicy), true);
-        controller.setModuleApproval(controller.MODULE_KIND_POLICY(), address(whitelistPolicy), true);
-        controller.setModuleApproval(controller.MODULE_KIND_PRICING(), address(lengthPricing), true);
-        controller.setModuleApproval(controller.MODULE_KIND_PROCESSOR(), address(splitProcessor), true);
+        controller.setModuleApproval(controller.MODULE_KIND_RULE(), address(tokenBalanceRule), true);
+        controller.setModuleApproval(controller.MODULE_KIND_RULE(), address(reservationRule), true);
+        controller.setModuleApproval(controller.MODULE_KIND_RULE(), address(whitelistRule), true);
+        controller.setModuleApproval(controller.MODULE_KIND_RULE(), address(lengthPremiumRule), true);
+        controller.setModuleApproval(controller.MODULE_KIND_PAYMENT(), address(splitPayment), true);
         vm.stopPrank();
     }
 
-    function test_mint_executesFullPolicyPricingPaymentProcessorRegistryFlow() public {
+    function test_mint_executesRulePaymentRegistryHookFlow() public {
         string memory label = "vip";
         bytes32 labelHash = keccak256(bytes(label));
         uint64 duration = 10;
-        bytes32 buyerLeaf = _accountLabelLeaf(accounts.buyer.addr, labelHash);
-        bytes32 aliceLeaf = _accountLabelLeaf(accounts.alice.addr, labelHash);
-        bytes32 whitelistRoot = _hashPair(buyerLeaf, aliceLeaf);
-
-        NamespaceTypes.ActivationConfig memory config = _integrationActivationConfig(labelHash, whitelistRoot);
-
-        vm.prank(accounts.alice.addr);
-        bytes32 activationId = controller.activate(config);
-
-        NamespaceTypes.RuntimeData memory runtimeData;
-        runtimeData.policyData = new bytes[](5);
-        runtimeData.policyData[3] = abi.encode(
-            ReservationPolicy.ProofData({
-                account: accounts.buyer.addr, expiry: uint64(block.timestamp + 1 days), proof: new bytes32[](0)
-            })
-        );
-        bytes32[] memory whitelistProof = new bytes32[](1);
-        whitelistProof[0] = aliceLeaf;
-        runtimeData.policyData[4] = abi.encode(whitelistProof);
-        runtimeData.pricingData = new bytes[](2);
-        runtimeData.postHookData = new bytes[](1);
-        runtimeData.postHookData[0] = hex"cafe";
+        bytes32 activationId = _activateIntegration(labelHash);
+        NamespaceTypes.RuntimeData memory runtimeData = _integrationRuntimeData(labelHash);
 
         uint256 quotedPrice = 100 ether + 20 ether;
 
         vm.startPrank(accounts.buyer.addr);
-        token.approve(address(erc20Payment), quotedPrice);
+        token.approve(address(splitPayment), quotedPrice);
         uint256 tokenId = controller.mint(activationId, label, duration, runtimeData);
         vm.stopPrank();
 
+        _assertMintedFlow(activationId, label, labelHash, tokenId);
+    }
+
+    function _assertMintedFlow(bytes32 activationId, string memory label, bytes32 labelHash, uint256 tokenId) private {
         IPermissionedRegistry.State memory state = registry.getState(tokenId);
         assertEq(uint256(state.status), uint256(IPermissionedRegistry.Status.REGISTERED));
         assertEq(state.latestOwner, accounts.buyer.addr);
@@ -82,7 +63,6 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
 
         assertEq(token.balanceOf(accounts.alice.addr), 90 ether);
         assertEq(token.balanceOf(accounts.treasury.addr), 30 ether);
-        assertEq(token.balanceOf(address(splitProcessor)), 0);
 
         assertEq(postHook.lastActivationId(), activationId);
         assertEq(postHook.lastBuyer(), accounts.buyer.addr);
@@ -91,51 +71,68 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
         assertEq(postHook.lastRuntimeData(), hex"cafe");
     }
 
-    function _integrationActivationConfig(bytes32 labelHash, bytes32 whitelistRoot)
+    function _activateIntegration(bytes32 labelHash) private returns (bytes32 activationId) {
+        ReservationRule.Claim memory reservationClaim = _reservationClaim(labelHash);
+        WhitelistRule.Claim memory whitelistClaim = _whitelistClaim(labelHash);
+        bytes32 whitelistRoot = _hashPair(whitelistRule.leaf(whitelistClaim), _whitelistSibling(labelHash));
+        NamespaceTypes.ActivationConfig memory config =
+            _integrationActivationConfig(reservationRule.leaf(reservationClaim), whitelistRoot);
+
+        vm.prank(accounts.alice.addr);
+        activationId = controller.activate(config);
+    }
+
+    function _integrationRuntimeData(bytes32 labelHash)
+        private
+        view
+        returns (NamespaceTypes.RuntimeData memory runtimeData)
+    {
+        ReservationRule.Claim memory reservationClaim = _reservationClaim(labelHash);
+        WhitelistRule.Claim memory whitelistClaim = _whitelistClaim(labelHash);
+        bytes32[] memory whitelistProof = new bytes32[](1);
+        whitelistProof[0] = _whitelistSibling(labelHash);
+        whitelistClaim.proof = whitelistProof;
+
+        runtimeData.ruleData = new bytes[](7);
+        runtimeData.ruleData[3] = abi.encode(reservationClaim);
+        runtimeData.ruleData[4] = abi.encode(whitelistClaim);
+        runtimeData.postHookData = new bytes[](1);
+        runtimeData.postHookData[0] = hex"cafe";
+    }
+
+    function _integrationActivationConfig(bytes32 reservationRoot, bytes32 whitelistRoot)
         private
         view
         returns (NamespaceTypes.ActivationConfig memory config)
     {
-        NamespaceTypes.ModuleConfig[] memory policies = new NamespaceTypes.ModuleConfig[](5);
-        policies[0] = NamespaceTypes.ModuleConfig({
-            module: address(saleWindowPolicy),
-            configData: abi.encode(SaleWindowPolicy.Params({startTime: uint64(block.timestamp), endTime: 0}))
+        NamespaceTypes.RuleConfig[] memory rules = new NamespaceTypes.RuleConfig[](7);
+        NamespaceTypes.ActivationConfig memory defaultConfig = _defaultActivationConfig();
+        rules[0] = defaultConfig.rules[0];
+        rules[1] = defaultConfig.rules[1];
+        rules[2] = NamespaceTypes.RuleConfig({
+            module: address(tokenBalanceRule),
+            phase: NamespaceTypes.RulePhase.ELIGIBILITY,
+            configData: abi.encode(TokenBalanceRule.Params({token: token, minBalance: 100 ether, discountBps: 0}))
         });
-        policies[1] = NamespaceTypes.ModuleConfig({
-            module: address(labelLengthPolicy),
-            configData: abi.encode(LabelLengthPolicy.Params({minLength: 3, maxLength: 12}))
+        rules[3] = NamespaceTypes.RuleConfig({
+            module: address(reservationRule),
+            phase: NamespaceTypes.RulePhase.ELIGIBILITY,
+            configData: abi.encode(ReservationRule.Params({root: reservationRoot}))
         });
-        policies[2] = NamespaceTypes.ModuleConfig({
-            module: address(erc20GatePolicy),
-            configData: abi.encode(ERC20BalanceGatePolicy.Params({token: token, minBalance: 100 ether}))
+        rules[4] = NamespaceTypes.RuleConfig({
+            module: address(whitelistRule),
+            phase: NamespaceTypes.RulePhase.ELIGIBILITY,
+            configData: abi.encode(WhitelistRule.Params({mintRoot: whitelistRoot, renewRoot: bytes32(0)}))
         });
-
-        bytes32 reservationRoot =
-            reservationPolicy.leaf(labelHash, accounts.buyer.addr, uint64(block.timestamp + 1 days));
-        policies[3] = NamespaceTypes.ModuleConfig({
-            module: address(reservationPolicy),
-            configData: abi.encode(ReservationPolicy.Params({reservationRoot: reservationRoot}))
-        });
-        policies[4] = NamespaceTypes.ModuleConfig({
-            module: address(whitelistPolicy),
+        rules[5] = NamespaceTypes.RuleConfig({
+            module: address(fixedPriceRule),
+            phase: NamespaceTypes.RulePhase.BASE_PRICE,
             configData: abi.encode(
-                MerkleWhitelistPolicy.Params({
-                    mintRoot: whitelistRoot,
-                    renewRoot: bytes32(0),
-                    leafMode: MerkleWhitelistPolicy.LeafMode.ACCOUNT_LABEL
-                })
-            )
-        });
-
-        NamespaceTypes.ModuleConfig[] memory pricingModules = new NamespaceTypes.ModuleConfig[](2);
-        pricingModules[0] = NamespaceTypes.ModuleConfig({
-            module: address(fixedPricePricing),
-            configData: abi.encode(
-                FixedPricePricing.Params({
+                FixedPriceRule.Params({
                     token: address(token),
                     defaultMintAmount: 100 ether,
                     defaultRenewAmount: 50 ether,
-                    lengthPrices: new FixedPricePricing.LengthPrice[](0)
+                    lengthPrices: new FixedPriceRule.LengthPrice[](0)
                 })
             )
         });
@@ -146,10 +143,11 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
         mintRates[2] = 2 ether;
         uint128[] memory renewRates = new uint128[](1);
         renewRates[0] = 1 ether;
-        pricingModules[1] = NamespaceTypes.ModuleConfig({
-            module: address(lengthPricing),
+        rules[6] = NamespaceTypes.RuleConfig({
+            module: address(lengthPremiumRule),
+            phase: NamespaceTypes.RulePhase.PREMIUM,
             configData: abi.encode(
-                LengthBasedPricing.Params({
+                LengthPremiumRule.Params({
                     token: address(token),
                     mintPricePerSecondByLength: mintRates,
                     renewPricePerSecondByLength: renewRates
@@ -157,9 +155,9 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
             )
         });
 
-        ERC20SplitProcessor.Split[] memory splits = new ERC20SplitProcessor.Split[](2);
-        splits[0] = ERC20SplitProcessor.Split({recipient: accounts.alice.addr, bps: 7500});
-        splits[1] = ERC20SplitProcessor.Split({recipient: accounts.treasury.addr, bps: 2500});
+        ERC20SplitPaymentModule.Split[] memory splits = new ERC20SplitPaymentModule.Split[](2);
+        splits[0] = ERC20SplitPaymentModule.Split({recipient: accounts.alice.addr, bps: 7500});
+        splits[1] = ERC20SplitPaymentModule.Split({recipient: accounts.treasury.addr, bps: 2500});
 
         NamespaceTypes.ModuleConfig[] memory postHooks = new NamespaceTypes.ModuleConfig[](1);
         postHooks[0] = NamespaceTypes.ModuleConfig({module: address(postHook), configData: ""});
@@ -169,27 +167,61 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
             parentNode: keccak256("alice.eth"),
             resolver: address(0xBEEF),
             buyerRoleBitmap: BUYER_ROLES,
-            policies: policies,
-            pricingModules: pricingModules,
+            rules: rules,
             paymentModule: NamespaceTypes.ModuleConfig({
-                module: address(erc20Payment),
-                configData: abi.encode(ERC20PaymentModule.Params({token: token, recipient: address(splitProcessor)}))
+                module: address(splitPayment),
+                configData: abi.encode(ERC20SplitPaymentModule.Params({token: address(token), splits: splits}))
             }),
-            processor: NamespaceTypes.ModuleConfig({module: address(splitProcessor), configData: abi.encode(splits)}),
             postHooks: postHooks
         });
     }
 
-    function _accountLabelLeaf(address account, bytes32 labelHash) private pure returns (bytes32 result) {
-        bytes32 inner;
-        assembly ("memory-safe") {
-            let ptr := mload(0x40)
-            mstore(ptr, account)
-            mstore(add(ptr, 0x20), labelHash)
-            inner := keccak256(ptr, 0x40)
-            mstore(ptr, inner)
-            result := keccak256(ptr, 0x20)
-        }
+    function _reservationClaim(bytes32 labelHash) private view returns (ReservationRule.Claim memory claim) {
+        claim = ReservationRule.Claim({
+            labelHash: labelHash,
+            account: accounts.buyer.addr,
+            startTime: 0,
+            endTime: uint64(block.timestamp + 1 days),
+            mintable: true,
+            token: address(0),
+            mintPrice: 0,
+            renewPrice: 0,
+            priceOp: NamespaceTypes.PriceOp.NONE,
+            proof: new bytes32[](0)
+        });
+    }
+
+    function _whitelistClaim(bytes32 labelHash) private view returns (WhitelistRule.Claim memory claim) {
+        claim = WhitelistRule.Claim({
+            labelHash: labelHash,
+            account: accounts.buyer.addr,
+            startTime: 0,
+            endTime: 0,
+            mintable: true,
+            token: address(0),
+            mintPrice: 0,
+            renewPrice: 0,
+            discountBps: 0,
+            priceOp: NamespaceTypes.PriceOp.NONE,
+            proof: new bytes32[](0)
+        });
+    }
+
+    function _whitelistSibling(bytes32 labelHash) private view returns (bytes32) {
+        WhitelistRule.Claim memory sibling = WhitelistRule.Claim({
+            labelHash: labelHash,
+            account: accounts.alice.addr,
+            startTime: 0,
+            endTime: 0,
+            mintable: true,
+            token: address(0),
+            mintPrice: 0,
+            renewPrice: 0,
+            discountBps: 0,
+            priceOp: NamespaceTypes.PriceOp.NONE,
+            proof: new bytes32[](0)
+        });
+        return whitelistRule.leaf(sibling);
     }
 
     function _hashPair(bytes32 a, bytes32 b) private pure returns (bytes32 result) {

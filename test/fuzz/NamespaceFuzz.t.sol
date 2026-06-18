@@ -4,22 +4,22 @@ pragma solidity ^0.8.26;
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
-import {LengthBasedPricing} from "src/modules/pricing/LengthBasedPricing.sol";
-import {ERC20SplitProcessor} from "src/modules/processors/ERC20SplitProcessor.sol";
+import {ERC20SplitPaymentModule} from "src/modules/payment/ERC20SplitPaymentModule.sol";
+import {LengthPremiumRule} from "src/modules/rules/LengthPremiumRule.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
 
 contract NamespaceFuzzTest is NamespaceSetUp {
-    LengthBasedPricing internal lengthPricing;
-    ERC20SplitProcessor internal splitProcessor;
+    LengthPremiumRule internal lengthPremiumRule;
+    ERC20SplitPaymentModule internal splitPayment;
 
     function setUp() public override {
         super.setUp();
-        lengthPricing = LengthBasedPricing(_deployModule(address(new LengthBasedPricing())));
-        splitProcessor = ERC20SplitProcessor(_deployModule(address(new ERC20SplitProcessor())));
+        lengthPremiumRule = LengthPremiumRule(_deployModule(address(new LengthPremiumRule())));
+        splitPayment = ERC20SplitPaymentModule(_deployModule(address(new ERC20SplitPaymentModule())));
 
         vm.startPrank(accounts.owner.addr);
-        controller.setModuleApproval(controller.MODULE_KIND_PRICING(), address(lengthPricing), true);
-        controller.setModuleApproval(controller.MODULE_KIND_PROCESSOR(), address(splitProcessor), true);
+        controller.setModuleApproval(controller.MODULE_KIND_RULE(), address(lengthPremiumRule), true);
+        controller.setModuleApproval(controller.MODULE_KIND_PAYMENT(), address(splitPayment), true);
         vm.stopPrank();
     }
 
@@ -63,10 +63,10 @@ contract NamespaceFuzzTest is NamespaceSetUp {
         renewRates[0] = 1;
 
         vm.prank(address(controller));
-        lengthPricing.configure(
+        lengthPremiumRule.configure(
             activationId,
             abi.encode(
-                LengthBasedPricing.Params({
+                LengthPremiumRule.Params({
                     token: address(token),
                     mintPricePerSecondByLength: mintRates,
                     renewPricePerSecondByLength: renewRates
@@ -79,12 +79,12 @@ contract NamespaceFuzzTest is NamespaceSetUp {
         ctx.label = _label(bytes32(uint256(labelLength)), labelLength);
         ctx.duration = duration;
 
-        NamespaceTypes.Price memory quoted =
-            lengthPricing.quoteMint(ctx, NamespaceTypes.Price({token: address(0), amount: 0}), "");
+        NamespaceTypes.RuleOutput memory output = lengthPremiumRule.evaluateMint(ctx, "");
 
         uint256 expectedRate = labelLength == 1 ? firstRate : labelLength == 2 ? middleRate : lastRate;
-        assertEq(quoted.token, address(token));
-        assertEq(quoted.amount, expectedRate * duration);
+        assertEq(uint256(output.priceOp), uint256(NamespaceTypes.PriceOp.ADD));
+        assertEq(output.token, address(token));
+        assertEq(output.amount, expectedRate * duration);
     }
 
     function testFuzz_erc20SplitConservesPayment(uint16 aliceBps, uint128 amount) public {
@@ -92,20 +92,26 @@ contract NamespaceFuzzTest is NamespaceSetUp {
         uint16 treasuryBps = uint16(10_000 - aliceBps);
 
         bytes32 activationId = keccak256("activation");
-        ERC20SplitProcessor.Split[] memory splits = new ERC20SplitProcessor.Split[](2);
-        splits[0] = ERC20SplitProcessor.Split({recipient: accounts.alice.addr, bps: aliceBps});
-        splits[1] = ERC20SplitProcessor.Split({recipient: accounts.treasury.addr, bps: treasuryBps});
+        ERC20SplitPaymentModule.Split[] memory splits = new ERC20SplitPaymentModule.Split[](2);
+        splits[0] = ERC20SplitPaymentModule.Split({recipient: accounts.alice.addr, bps: aliceBps});
+        splits[1] = ERC20SplitPaymentModule.Split({recipient: accounts.treasury.addr, bps: treasuryBps});
 
         vm.prank(address(controller));
-        splitProcessor.configure(activationId, abi.encode(splits));
+        splitPayment.configure(
+            activationId, abi.encode(ERC20SplitPaymentModule.Params({token: address(token), splits: splits}))
+        );
 
-        token.mint(address(splitProcessor), amount);
+        token.mint(accounts.buyer.addr, amount);
 
         NamespaceTypes.MintContext memory ctx;
         ctx.activationId = activationId;
+        ctx.payer = accounts.buyer.addr;
+
+        vm.prank(accounts.buyer.addr);
+        token.approve(address(splitPayment), amount);
 
         vm.prank(address(controller));
-        splitProcessor.processMint(ctx, NamespaceTypes.Price({token: address(token), amount: amount}), "");
+        splitPayment.collectMint(ctx, NamespaceTypes.Price({token: address(token), amount: amount}), "");
 
         uint256 expectedAlice = (uint256(amount) * aliceBps) / 10_000;
         assertEq(token.balanceOf(accounts.alice.addr), expectedAlice);

@@ -68,9 +68,9 @@ interface INamespaceController {
     function transferActivationOwnership(bytes32 activationId, address newOwner) external;
 
     /// @notice Update config for an existing module attached to an activation.
-    /// @dev For payment and processor modules, pass `index == 0`.
+    /// @dev For payment modules, pass `index == 0`.
     /// @param activationId Activation id.
-    /// @param kind Module kind, such as `MODULE_KIND_POLICY`.
+    /// @param kind Module kind, such as `MODULE_KIND_RULE`.
     /// @param index Module index in that kind's activation module list.
     /// @param configData New ABI-encoded module config.
     function updateModuleConfig(bytes32 activationId, bytes32 kind, uint256 index, bytes calldata configData) external;
@@ -85,7 +85,7 @@ interface INamespaceController {
     function setModuleApproval(address module, bool approved) external;
 
     /// @notice Approve or revoke a module contract for one module kind.
-    /// @param kind Module kind, such as `MODULE_KIND_POLICY`.
+    /// @param kind Module kind, such as `MODULE_KIND_RULE`.
     /// @param module Module contract address.
     /// @param approved Whether the module is approved.
     function setModuleApproval(bytes32 kind, address module, bool approved) external;
@@ -120,4 +120,9 @@ interface INamespaceController {
     /// @param activationId Activation id.
     /// @return activation Public activation metadata.
     function getActivation(bytes32 activationId) external view returns (NamespaceTypes.Activation memory activation);
+
+    /// @notice Return configured rule modules for an activation.
+    /// @param activationId Activation id.
+    /// @return rules Ordered rule module addresses.
+    function getRules(bytes32 activationId) external view returns (address[] memory rules);
 }

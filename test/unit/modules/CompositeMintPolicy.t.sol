@@ -27,11 +27,7 @@ contract CompositeMintPolicyTest is NamespaceSetUp {
         NamespaceTypes.MintContext memory ctx = _mintCtx("pay");
         bytes32[] memory emptyProof = new bytes32[](0);
         bytes memory runtimeData = abi.encode(
-            CompositeMintPolicy.ReservationProofData({
-                account: accounts.buyer.addr,
-                expiry: expiry,
-                proof: emptyProof
-            }),
+            CompositeMintPolicy.ReservationProofData({account: accounts.buyer.addr, expiry: expiry, proof: emptyProof}),
             emptyProof
         );
 
@@ -49,11 +45,7 @@ contract CompositeMintPolicyTest is NamespaceSetUp {
         NamespaceTypes.MintContext memory ctx = _mintCtx("pay");
         bytes32[] memory emptyProof = new bytes32[](0);
         bytes memory runtimeData = abi.encode(
-            CompositeMintPolicy.ReservationProofData({
-                account: accounts.buyer.addr,
-                expiry: expiry,
-                proof: emptyProof
-            }),
+            CompositeMintPolicy.ReservationProofData({account: accounts.buyer.addr, expiry: expiry, proof: emptyProof}),
             emptyProof
         );
 

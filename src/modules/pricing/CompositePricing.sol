@@ -88,7 +88,8 @@ contract CompositePricing is NamespaceModule, IPricingModule {
         if (labelLength == 0) {
             revert EmptyLabel();
         }
-        uint256 amount = _matches(ctx.label, LabelClassPricing.LabelClass(stored.labelClass)) ? stored.classMintAmount : 0;
+        uint256 amount =
+            _matches(ctx.label, LabelClassPricing.LabelClass(stored.labelClass)) ? stored.classMintAmount : 0;
         amount += _fixedAmount(stored, labelLength, true);
         amount += _rateFor(stored.mintRatesPointer, stored.mintRateCount, labelLength) * ctx.duration;
         price = _add(currentPrice, stored.token, amount);

@@ -17,6 +17,9 @@ import {LabelLengthPolicy} from "src/modules/policies/LabelLengthPolicy.sol";
 import {SaleWindowPolicy} from "src/modules/policies/SaleWindowPolicy.sol";
 import {FixedPricePricing} from "src/modules/pricing/FixedPricePricing.sol";
 import {NoopProcessor} from "src/modules/processors/NoopProcessor.sol";
+import {FixedPriceRule} from "src/modules/rules/FixedPriceRule.sol";
+import {LabelLengthRule} from "src/modules/rules/LabelLengthRule.sol";
+import {SaleWindowRule} from "src/modules/rules/SaleWindowRule.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 import {RecordingPostHook} from "test/mocks/RecordingPostHook.sol";
 
@@ -47,6 +50,9 @@ contract NamespaceSetUp is Test {
     ERC20PaymentModule internal erc20Payment;
     NoopProcessor internal noopProcessor;
     RecordingPostHook internal postHook;
+    SaleWindowRule internal saleWindowRule;
+    LabelLengthRule internal labelLengthRule;
+    FixedPriceRule internal fixedPriceRule;
 
     function setUp() public virtual {
         accounts = Accounts({
@@ -75,6 +81,9 @@ contract NamespaceSetUp is Test {
         erc20Payment = ERC20PaymentModule(_deployModule(address(new ERC20PaymentModule())));
         noopProcessor = NoopProcessor(_deployModule(address(new NoopProcessor())));
         postHook = RecordingPostHook(_deployModule(address(new RecordingPostHook())));
+        saleWindowRule = SaleWindowRule(_deployModule(address(new SaleWindowRule())));
+        labelLengthRule = LabelLengthRule(_deployModule(address(new LabelLengthRule())));
+        fixedPriceRule = FixedPriceRule(_deployModule(address(new FixedPriceRule())));
 
         registry.grantRootRoles(ROLE_REGISTRAR_ADMIN, accounts.alice.addr);
         registry.grantRootRoles(ROLE_REGISTRAR | ROLE_RENEW, address(controller));
@@ -84,25 +93,26 @@ contract NamespaceSetUp is Test {
     }
 
     function _defaultActivationConfig() internal view returns (NamespaceTypes.ActivationConfig memory config) {
-        NamespaceTypes.ModuleConfig[] memory policies = new NamespaceTypes.ModuleConfig[](2);
-        policies[0] = NamespaceTypes.ModuleConfig({
-            module: address(saleWindowPolicy),
-            configData: abi.encode(SaleWindowPolicy.Params({startTime: 0, endTime: 0}))
+        NamespaceTypes.RuleConfig[] memory rules = new NamespaceTypes.RuleConfig[](3);
+        rules[0] = NamespaceTypes.RuleConfig({
+            module: address(saleWindowRule),
+            phase: NamespaceTypes.RulePhase.GUARD,
+            configData: abi.encode(SaleWindowRule.Params({startTime: 0, endTime: 0}))
         });
-        policies[1] = NamespaceTypes.ModuleConfig({
-            module: address(labelLengthPolicy),
-            configData: abi.encode(LabelLengthPolicy.Params({minLength: 3, maxLength: 12}))
+        rules[1] = NamespaceTypes.RuleConfig({
+            module: address(labelLengthRule),
+            phase: NamespaceTypes.RulePhase.ELIGIBILITY,
+            configData: abi.encode(LabelLengthRule.Params({minLength: 3, maxLength: 12}))
         });
-
-        NamespaceTypes.ModuleConfig[] memory pricingModules = new NamespaceTypes.ModuleConfig[](1);
-        pricingModules[0] = NamespaceTypes.ModuleConfig({
-            module: address(fixedPricePricing),
+        rules[2] = NamespaceTypes.RuleConfig({
+            module: address(fixedPriceRule),
+            phase: NamespaceTypes.RulePhase.BASE_PRICE,
             configData: abi.encode(
-                FixedPricePricing.Params({
+                FixedPriceRule.Params({
                     token: address(token),
                     defaultMintAmount: 100 ether,
                     defaultRenewAmount: 50 ether,
-                    lengthPrices: new FixedPricePricing.LengthPrice[](0)
+                    lengthPrices: new FixedPriceRule.LengthPrice[](0)
                 })
             )
         });
@@ -115,22 +125,18 @@ contract NamespaceSetUp is Test {
             parentNode: keccak256("alice.eth"),
             resolver: address(0xBEEF),
             buyerRoleBitmap: BUYER_ROLES,
-            policies: policies,
-            pricingModules: pricingModules,
+            rules: rules,
             paymentModule: NamespaceTypes.ModuleConfig({
                 module: address(erc20Payment),
                 configData: abi.encode(ERC20PaymentModule.Params({token: token, recipient: accounts.treasury.addr}))
             }),
-            processor: NamespaceTypes.ModuleConfig({module: address(0), configData: ""}),
             postHooks: postHooks
         });
     }
 
     function _defaultRuntimeData() internal pure returns (NamespaceTypes.RuntimeData memory runtimeData) {
-        runtimeData.policyData = new bytes[](2);
-        runtimeData.pricingData = new bytes[](1);
+        runtimeData.ruleData = new bytes[](3);
         runtimeData.paymentData = "";
-        runtimeData.processorData = "";
         runtimeData.postHookData = new bytes[](1);
         runtimeData.postHookData[0] = hex"1234";
     }
@@ -160,15 +166,14 @@ contract NamespaceSetUp is Test {
     }
 
     function _approveDefaultModules() internal {
-        bytes32 policyKind = controller.MODULE_KIND_POLICY();
-        bytes32 pricingKind = controller.MODULE_KIND_PRICING();
+        bytes32 ruleKind = controller.MODULE_KIND_RULE();
         bytes32 paymentKind = controller.MODULE_KIND_PAYMENT();
         bytes32 postHookKind = controller.MODULE_KIND_POST_HOOK();
 
         vm.startPrank(accounts.owner.addr);
-        controller.setModuleApproval(policyKind, address(saleWindowPolicy), true);
-        controller.setModuleApproval(policyKind, address(labelLengthPolicy), true);
-        controller.setModuleApproval(pricingKind, address(fixedPricePricing), true);
+        controller.setModuleApproval(ruleKind, address(saleWindowRule), true);
+        controller.setModuleApproval(ruleKind, address(labelLengthRule), true);
+        controller.setModuleApproval(ruleKind, address(fixedPriceRule), true);
         controller.setModuleApproval(paymentKind, address(erc20Payment), true);
         controller.setModuleApproval(postHookKind, address(postHook), true);
         vm.stopPrank();
