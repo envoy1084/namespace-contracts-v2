@@ -12,7 +12,8 @@ Recommended reading order:
 6. [Subname Minting Flow](./ensv2-subname-minting.md)
 7. [Example Registry And Registrar](./ensv2-example-registry.md)
 8. [Namespace Contract Architecture](./namespace-subname-minting-design.md)
-9. [ENSv2 Source Map](./ensv2-source-map.md)
+9. [Namespace Architecture V2: Claims, Rules, Effects, And Settlement](./namespace-architecture-v2-claims-rules-settlement.md)
+10. [ENSv2 Source Map](./ensv2-source-map.md)
 
 ## One-Screen Summary
 
