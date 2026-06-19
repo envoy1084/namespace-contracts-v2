@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.26;
+
+import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
+
+import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
+import {NamespaceBenchmarkCombinations} from "test/benchmarks/common/NamespaceBenchmarkCombinations.sol";
+
+/// @notice Small base entry point used by concrete gas benchmark suites.
+abstract contract NamespaceBenchmarkBase is NamespaceBenchmarkCombinations {
+    struct MintScenario {
+        bytes32 activationId;
+        string label;
+        NamespaceTypes.RuntimeData runtimeData;
+    }
+
+    function _prepareMintScenario(
+        string memory label,
+        NamespaceTypes.ActivationConfig memory config,
+        NamespaceTypes.RuntimeData memory runtimeData
+    ) internal returns (MintScenario memory scenario) {
+        scenario.activationId = _activate(config);
+        scenario.label = label;
+        scenario.runtimeData = runtimeData;
+    }
+
+    function _prepareRenewScenario(
+        string memory label,
+        NamespaceTypes.ActivationConfig memory config,
+        NamespaceTypes.RuntimeData memory runtimeData
+    ) internal returns (MintScenario memory scenario) {
+        scenario = _prepareMintScenario(label, config, runtimeData);
+        _mint(scenario);
+    }
+
+    function _prepareComboScenario(uint8 preset, PaymentMode paymentMode, HookMode hookMode, uint8 resolverWrites)
+        internal
+        returns (MintScenario memory scenario)
+    {
+        string memory label = "12345";
+        ComboSpec memory spec = _comboSpec(preset, paymentMode, hookMode, resolverWrites);
+        scenario = _prepareMintScenario(label, _comboConfig(label, spec), _comboRuntimeData(label, spec));
+    }
+
+    function _activateCombo(uint8 preset, PaymentMode paymentMode, HookMode hookMode, uint8 resolverWrites) internal {
+        string memory label = "12345";
+        ComboSpec memory spec = _comboSpec(preset, paymentMode, hookMode, resolverWrites);
+        _activate(_comboConfig(label, spec));
+    }
+
+    function _activate(NamespaceTypes.ActivationConfig memory config) internal returns (bytes32 activationId) {
+        vm.prank(accounts.alice.addr);
+        activationId = controller.activate(config);
+    }
+
+    function _mint(MintScenario memory scenario) internal returns (uint256 tokenId) {
+        vm.prank(accounts.buyer.addr);
+        tokenId = controller.mint(scenario.activationId, scenario.label, 365 days, scenario.runtimeData);
+        IPermissionedRegistry.State memory state = registry.getState(tokenId);
+        assertEq(uint256(state.status), uint256(IPermissionedRegistry.Status.REGISTERED));
+        assertEq(registry.ownerOf(tokenId), accounts.buyer.addr);
+    }
+}

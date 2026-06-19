@@ -1,11 +1,33 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
+
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 
 /// @title INamespaceController
 /// @notice Main entry point for activation-based Namespace subname minting.
 interface INamespaceController {
+    error ActivationNotFound(bytes32 activationId);
+    error ActivationNotActive(bytes32 activationId);
+    error NotActivationOwner(bytes32 activationId, address caller);
+    error ZeroModule(bytes32 kind);
+    error UnapprovedModule(address module, bytes32 kind);
+    error ZeroRegistry();
+    error ZeroActivationOwner();
+    error UnauthorizedActivationOwner(address caller, address registry);
+    error ControllerMissingRegistryRoles(address registry, uint256 requiredRoles);
+    error ZeroDuration();
+    error RuntimeDataLengthMismatch(bytes32 kind, uint256 expected, uint256 actual);
+    error ModuleIndexOutOfBounds(bytes32 activationId, bytes32 kind, uint256 index, uint256 length);
+    error ModuleListTooLong(bytes32 kind, uint256 length);
+    error RulePhaseOrderInvalid(uint256 index, NamespaceTypes.RulePhase previous, NamespaceTypes.RulePhase current);
+    error RuleBlocked(bytes32 activationId, address rule, uint256 index);
+    error RequiredRuleFlagsMissing(bytes32 activationId, address rule, uint256 index, uint256 required, uint256 actual);
+    error RulePaymentTokenMismatch(address expected, address actual);
+    error InvalidRuleBps(address rule, uint16 bps);
+    error LabelNotRenewable(string label, IPermissionedRegistry.Status status);
+
     /// @notice Emitted when a namespace activation is created.
     event ActivationCreated(
         bytes32 indexed activationId, address indexed owner, address indexed registry, bytes32 parentNode
