@@ -281,7 +281,7 @@ contract NamespaceControllerStrictRulesTest is NamespaceSetUp {
         NamespaceTypes.ModuleConfig[] memory postHooks = new NamespaceTypes.ModuleConfig[](0);
         NamespaceTypes.ActivationConfig memory config = NamespaceTypes.ActivationConfig({
             registry: IPermissionedRegistry(address(registry)),
-            parentNode: keccak256("alice.eth"),
+            parentNode: _aliceNode(),
             resolver: address(0xBEEF),
             buyerRoleBitmap: BUYER_ROLES,
             minDuration: 1,

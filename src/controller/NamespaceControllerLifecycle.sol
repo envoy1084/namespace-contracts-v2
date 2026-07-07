@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
+
 import {INamespaceController} from "src/interfaces/INamespaceController.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {NamespaceControllerModules} from "src/controller/NamespaceControllerModules.sol";
@@ -16,6 +18,13 @@ abstract contract NamespaceControllerLifecycle is NamespaceControllerModules {
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
+
+    /// @inheritdoc INamespaceController
+    function setRootRegistry(IRegistry rootRegistry_) external onlyOwner {
+        if (address(rootRegistry_) == address(0)) revert ZeroRegistry();
+        rootRegistry = rootRegistry_;
+        emit RootRegistrySet(address(rootRegistry_));
+    }
 
     /// @inheritdoc INamespaceController
     function activate(NamespaceTypes.ActivationConfig calldata config)
@@ -111,6 +120,7 @@ abstract contract NamespaceControllerLifecycle is NamespaceControllerModules {
 
     function _checkActivationPreconditions(NamespaceTypes.ActivationConfig calldata config) private view {
         if (address(config.registry) == address(0)) revert ZeroRegistry();
+        _checkCanonicalParentNode(config.registry, config.parentNode);
         if (config.maxDuration == 0 || config.minDuration > config.maxDuration) {
             revert InvalidDurationBounds(config.minDuration, config.maxDuration);
         }

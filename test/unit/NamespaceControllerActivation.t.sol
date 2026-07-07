@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
+import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
+import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
+import {PermissionedRegistry} from "@ensv2/registry/PermissionedRegistry.sol";
+
 import {NamespaceController} from "src/NamespaceController.sol";
 import {INamespaceController} from "src/interfaces/INamespaceController.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
@@ -21,7 +26,7 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
         NamespaceTypes.Activation memory activation = controller.getActivation(activationId);
         assertEq(activation.owner, accounts.alice.addr);
         assertEq(address(activation.registry), address(registry));
-        assertEq(activation.parentNode, keccak256("alice.eth"));
+        assertEq(activation.parentNode, _aliceNode());
         assertEq(activation.resolver, address(0xBEEF));
         assertEq(activation.buyerRoleBitmap, BUYER_ROLES);
         assertEq(activation.minDuration, 1);
@@ -96,6 +101,55 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
             abi.encodeWithSelector(
                 INamespaceController.UnauthorizedActivationOwner.selector, accounts.alice.addr, address(registry)
             )
+        );
+        vm.prank(accounts.alice.addr);
+        controller.activate(config);
+    }
+
+    function test_activate_revertsWhenParentNodeDoesNotMatchRegistry() public {
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        bytes32 victimNode = keccak256("victim.eth");
+        config.parentNode = victimNode;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                INamespaceController.RegistryParentNodeMismatch.selector, address(registry), _aliceNode(), victimNode
+            )
+        );
+        vm.prank(accounts.alice.addr);
+        controller.activate(config);
+    }
+
+    function test_activate_revertsWhenRegistryChainDoesNotReachConfiguredRoot() public {
+        PermissionedRegistry fakeRoot = new PermissionedRegistry(
+            IHCAFactoryBasic(address(0)), registryMetadata, address(this), ROLE_REGISTRAR
+        );
+        PermissionedRegistry fakeEth = new PermissionedRegistry(
+            IHCAFactoryBasic(address(0)), registryMetadata, address(this), ROLE_REGISTRAR | ROLE_SET_PARENT
+        );
+        PermissionedRegistry fakeRegistry = new PermissionedRegistry(
+            IHCAFactoryBasic(address(0)),
+            registryMetadata,
+            address(this),
+            ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
+        );
+        fakeRoot.register(
+            "eth", accounts.owner.addr, IRegistry(address(fakeEth)), address(0), 0, type(uint64).max
+        );
+        fakeEth.setParent(fakeRoot, "eth");
+        fakeEth.register(
+            "alice", accounts.owner.addr, IRegistry(address(fakeRegistry)), address(0), 0, type(uint64).max
+        );
+        fakeRegistry.setParent(fakeEth, "alice");
+        fakeRegistry.grantRootRoles(ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN, accounts.alice.addr);
+        fakeRegistry.grantRootRoles(ROLE_REGISTRAR | ROLE_RENEW, address(controller));
+
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        config.registry = IPermissionedRegistry(address(fakeRegistry));
+        config.parentNode = _aliceNode();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(INamespaceController.RegistryParentNotConfigured.selector, address(fakeRoot))
         );
         vm.prank(accounts.alice.addr);
         controller.activate(config);

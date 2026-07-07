@@ -126,7 +126,7 @@ abstract contract NamespaceBenchmarkScenarios is NamespaceBenchmarkPricing {
             buyer: accounts.buyer.addr,
             payer: accounts.buyer.addr,
             registry: IPermissionedRegistry(address(registry)),
-            parentNode: keccak256("alice.eth"),
+            parentNode: _aliceNode(),
             label: label,
             labelHash: keccak256(bytes(label)),
             duration: 365 days,
@@ -144,7 +144,7 @@ abstract contract NamespaceBenchmarkScenarios is NamespaceBenchmarkPricing {
     ) internal view returns (NamespaceTypes.ActivationConfig memory config) {
         config = NamespaceTypes.ActivationConfig({
             registry: IPermissionedRegistry(address(registry)),
-            parentNode: keccak256("alice.eth"),
+            parentNode: _aliceNode(),
             resolver: resolver_,
             buyerRoleBitmap: BUYER_ROLES,
             minDuration: 1,

@@ -348,7 +348,7 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
     function test_getRulesAndPostHooks_returnsEmptyLists() public {
         NamespaceTypes.ActivationConfig memory config = NamespaceTypes.ActivationConfig({
             registry: registry,
-            parentNode: keccak256("empty.alice.eth"),
+            parentNode: _aliceNode(),
             resolver: address(0),
             buyerRoleBitmap: 0,
             minDuration: 1,
@@ -378,7 +378,7 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
 
         NamespaceTypes.ActivationConfig memory config = NamespaceTypes.ActivationConfig({
             registry: registry,
-            parentNode: keccak256("single.alice.eth"),
+            parentNode: _aliceNode(),
             resolver: address(0xBEEF),
             buyerRoleBitmap: 0,
             minDuration: 1,

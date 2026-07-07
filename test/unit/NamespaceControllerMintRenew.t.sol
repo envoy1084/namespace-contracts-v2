@@ -176,7 +176,7 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
     function test_renew_revertsWhenNativeValueHasNoPaymentModuleAndNoPrice() public {
         NamespaceTypes.ActivationConfig memory config = NamespaceTypes.ActivationConfig({
             registry: registry,
-            parentNode: keccak256("free.alice.eth"),
+            parentNode: _aliceNode(),
             resolver: address(0),
             buyerRoleBitmap: 0,
             minDuration: 1,
@@ -251,7 +251,7 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
 
         NamespaceTypes.ActivationConfig memory freeConfig = NamespaceTypes.ActivationConfig({
             registry: registry,
-            parentNode: keccak256("free.alice.eth"),
+            parentNode: _aliceNode(),
             resolver: address(0),
             buyerRoleBitmap: 0,
             minDuration: 1,

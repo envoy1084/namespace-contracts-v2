@@ -5,7 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 
+import {NameCoder} from "@ens/contracts/utils/NameCoder.sol";
 import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
+import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 import {RegistryRolesLib} from "@ensv2/registry/libraries/RegistryRolesLib.sol";
 import {PermissionedRegistry} from "@ensv2/registry/PermissionedRegistry.sol";
@@ -24,6 +26,7 @@ abstract contract NamespaceSetUp is Test {
     uint256 internal constant ROLE_REGISTRAR_ADMIN = RegistryRolesLib.ROLE_REGISTRAR_ADMIN;
     uint256 internal constant ROLE_RENEW = RegistryRolesLib.ROLE_RENEW;
     uint256 internal constant ROLE_RENEW_ADMIN = RegistryRolesLib.ROLE_RENEW_ADMIN;
+    uint256 internal constant ROLE_SET_PARENT = RegistryRolesLib.ROLE_SET_PARENT;
     uint256 internal constant ROLE_SET_RESOLVER = RegistryRolesLib.ROLE_SET_RESOLVER;
     uint256 internal constant ROLE_SET_RESOLVER_ADMIN = RegistryRolesLib.ROLE_SET_RESOLVER_ADMIN;
     uint256 internal constant ROLE_CAN_TRANSFER_ADMIN = RegistryRolesLib.ROLE_CAN_TRANSFER_ADMIN;
@@ -39,6 +42,8 @@ abstract contract NamespaceSetUp is Test {
     Accounts internal accounts;
     NamespaceController internal controller;
     SimpleRegistryMetadata internal registryMetadata;
+    PermissionedRegistry internal rootRegistry;
+    PermissionedRegistry internal ethRegistry;
     PermissionedRegistry internal registry;
     MockERC20 internal token;
     ERC20PaymentModule internal erc20Payment;
@@ -61,12 +66,28 @@ abstract contract NamespaceSetUp is Test {
 
         controller = _deployController(accounts.owner.addr);
         registryMetadata = new SimpleRegistryMetadata(IHCAFactoryBasic(address(0)));
+        rootRegistry = new PermissionedRegistry(
+            IHCAFactoryBasic(address(0)), registryMetadata, address(this), ROLE_REGISTRAR
+        );
+        ethRegistry = new PermissionedRegistry(
+            IHCAFactoryBasic(address(0)), registryMetadata, address(this), ROLE_REGISTRAR | ROLE_SET_PARENT
+        );
         registry = new PermissionedRegistry(
             IHCAFactoryBasic(address(0)),
             registryMetadata,
             address(this),
-            ROLE_REGISTRAR_ADMIN | RegistryRolesLib.ROLE_RENEW_ADMIN | RegistryRolesLib.ROLE_REGISTER_RESERVED_ADMIN
+            ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN | RegistryRolesLib.ROLE_REGISTER_RESERVED_ADMIN
         );
+        rootRegistry.register(
+            "eth", accounts.owner.addr, IRegistry(address(ethRegistry)), address(0), 0, type(uint64).max
+        );
+        ethRegistry.setParent(rootRegistry, "eth");
+        ethRegistry.register(
+            "alice", accounts.owner.addr, IRegistry(address(registry)), address(0), 0, type(uint64).max
+        );
+        registry.setParent(ethRegistry, "alice");
+        vm.prank(accounts.owner.addr);
+        controller.setRootRegistry(rootRegistry);
         token = new MockERC20("Mock USDC", "mUSDC");
         erc20Payment = ERC20PaymentModule(_deployModule(address(new ERC20PaymentModule())));
         postHook = RecordingPostHook(_deployModule(address(new RecordingPostHook())));
@@ -111,7 +132,7 @@ abstract contract NamespaceSetUp is Test {
 
         config = NamespaceTypes.ActivationConfig({
             registry: IPermissionedRegistry(address(registry)),
-            parentNode: keccak256("alice.eth"),
+            parentNode: _aliceNode(),
             resolver: address(0xBEEF),
             buyerRoleBitmap: BUYER_ROLES,
             minDuration: 1,
@@ -136,6 +157,10 @@ abstract contract NamespaceSetUp is Test {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
         vm.prank(accounts.alice.addr);
         activationId = controller.activate(config);
+    }
+
+    function _aliceNode() internal pure returns (bytes32) {
+        return NameCoder.namehash(NameCoder.ETH_NODE, keccak256(bytes("alice")));
     }
 
     function _deployController(address owner_) internal returns (NamespaceController deployed) {

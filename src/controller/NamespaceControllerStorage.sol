@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {NameCoder} from "@ens/contracts/utils/NameCoder.sol";
+import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {Initializable} from "solady/utils/Initializable.sol";
@@ -31,6 +33,7 @@ abstract contract NamespaceControllerStorage is
     uint256 internal constant ROLE_REGISTRAR_ADMIN = ROLE_REGISTRAR << 128;
     uint256 internal constant ROLE_RENEW = 1 << 16;
     uint256 internal constant ROLE_RENEW_ADMIN = ROLE_RENEW << 128;
+    uint256 private constant _MAX_REGISTRY_PARENT_DEPTH = 128;
 
     struct ActivationData {
         address owner;
@@ -67,6 +70,9 @@ abstract contract NamespaceControllerStorage is
     /// @notice Whether activation modules must be approved by the controller owner.
     bool public moduleApprovalRequired;
 
+    /// @notice Canonical ENSv2 root registry used to validate activation registry parent chains.
+    IRegistry public rootRegistry;
+
     mapping(bytes32 activationId => ActivationData activation) internal activations;
     mapping(address registry => mapping(bytes32 labelHash => bytes32 activationId)) internal labelActivations;
     mapping(bytes32 kind => mapping(address module => bool approved)) public approvedModules;
@@ -90,9 +96,42 @@ abstract contract NamespaceControllerStorage is
         }
     }
 
+    function _checkCanonicalParentNode(IPermissionedRegistry registry, bytes32 parentNode) internal view {
+        IRegistry root = rootRegistry;
+        if (address(root) == address(0)) {
+            revert RootRegistryNotConfigured();
+        }
+
+        bytes32 canonicalParentNode = _canonicalRegistryNode(registry, root, 0);
+        if (canonicalParentNode != parentNode) {
+            revert RegistryParentNodeMismatch(address(registry), canonicalParentNode, parentNode);
+        }
+    }
+
     function _checkDuration(bytes32 activationId, ActivationData storage activation, uint64 duration) internal view {
         if (duration < activation.minDuration || duration > activation.maxDuration) {
             revert DurationOutOfBounds(activationId, duration, activation.minDuration, activation.maxDuration);
         }
+    }
+
+    function _canonicalRegistryNode(IRegistry registry, IRegistry root, uint256 depth) private view returns (bytes32 node) {
+        if (address(registry) == address(root)) {
+            return bytes32(0);
+        }
+        if (depth > _MAX_REGISTRY_PARENT_DEPTH) {
+            revert RegistryParentChainTooDeep(address(registry));
+        }
+
+        (IRegistry parent, string memory label) = registry.getParent();
+        if (address(parent) == address(0)) {
+            revert RegistryParentNotConfigured(address(registry));
+        }
+
+        NameCoder.assertLabelSize(label);
+        IRegistry child = parent.getSubregistry(label);
+        if (address(child) != address(registry)) {
+            revert RegistryParentChildMismatch(address(registry), address(parent), label, address(child));
+        }
+        node = NameCoder.namehash(_canonicalRegistryNode(parent, root, depth + 1), keccak256(bytes(label)));
     }
 }

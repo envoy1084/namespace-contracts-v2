@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
+import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
 
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 
@@ -14,9 +15,14 @@ interface INamespaceController {
     error ZeroModule(bytes32 kind);
     error UnapprovedModule(address module, bytes32 kind);
     error ZeroRegistry();
+    error RootRegistryNotConfigured();
     error ZeroActivationOwner();
     error UnauthorizedActivationOwner(address caller, address registry);
     error ControllerMissingRegistryRoles(address registry, uint256 requiredRoles);
+    error RegistryParentNotConfigured(address registry);
+    error RegistryParentChainTooDeep(address registry);
+    error RegistryParentChildMismatch(address registry, address parent, string label, address child);
+    error RegistryParentNodeMismatch(address registry, bytes32 expectedParentNode, bytes32 actualParentNode);
     error ZeroDuration();
     error InvalidDurationBounds(uint64 minDuration, uint64 maxDuration);
     error DurationOutOfBounds(bytes32 activationId, uint64 duration, uint64 minDuration, uint64 maxDuration);
@@ -66,6 +72,9 @@ interface INamespaceController {
 
     /// @notice Emitted when a module approval status changes.
     event ModuleApprovalSet(bytes32 indexed kind, address indexed module, bool approved);
+
+    /// @notice Emitted when the canonical ENSv2 root registry used for activation validation changes.
+    event RootRegistrySet(address indexed rootRegistry);
 
     /// @notice Emitted after a subname is minted.
     event SubnameMinted(
@@ -126,6 +135,10 @@ interface INamespaceController {
     /// @param module Module contract address.
     /// @param approved Whether the module is approved.
     function setModuleApproval(bytes32 kind, address module, bool approved) external;
+
+    /// @notice Set the canonical ENSv2 root registry used to validate activation registry parent chains.
+    /// @param rootRegistry New root registry.
+    function setRootRegistry(IRegistry rootRegistry) external;
 
     /// @notice Mint a subname through a stored activation.
     /// @param activationId Activation id.
