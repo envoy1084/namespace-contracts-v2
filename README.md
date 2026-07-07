@@ -37,10 +37,13 @@ It lets a namespace owner configure a subname sale with ordered rules, payment s
 ```sh
 forge test
 forge lint
+forge coverage --exclude-tests --summary
 solhint 'src/**/*.sol' 'test/**/*.sol'
 ./scripts/slither-build.sh && slither .
 ./scripts/generate-benchmarks.sh
 ```
+
+Use `--exclude-tests` for coverage gates. The project targets 100% coverage for production contracts in `src/`; benchmark helpers and mocks are not part of that gate.
 
 ## Benchmarks
 
