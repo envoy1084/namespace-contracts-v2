@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {RegistryRolesLib} from "@ensv2/registry/libraries/RegistryRolesLib.sol";
+
 import {INamespaceController} from "src/interfaces/INamespaceController.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {NamespaceRule} from "src/modules/rules/NamespaceRule.sol";
@@ -25,6 +27,9 @@ contract PauseRule is NamespaceRule {
         NamespaceTypes.Activation memory activation = INamespaceController(controller).getActivation(activationId);
         if (msg.sender != activation.owner) {
             revert NotActivationOwner(activationId, msg.sender, activation.owner);
+        }
+        if (!activation.registry.hasRootRoles(RegistryRolesLib.ROLE_REGISTRAR_ADMIN, msg.sender)) {
+            revert INamespaceController.UnauthorizedActivationOwner(msg.sender, address(activation.registry));
         }
         paused[activationId] = paused_;
         emit PauseStatusChanged(activationId, paused_);

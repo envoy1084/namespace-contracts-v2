@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {INamespaceController} from "src/interfaces/INamespaceController.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {PauseRule} from "src/modules/rules/PauseRule.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
@@ -24,6 +25,19 @@ contract PauseRuleTest is NamespaceSetUp {
         pauseRule.setPaused(activationId, true);
 
         assertTrue(pauseRule.paused(activationId));
+    }
+
+    function test_setPaused_revertsWhenActivationOwnerLostRegistryAdmin() public {
+        bytes32 activationId = _activateWithPauseRule();
+        registry.revokeRootRoles(ROLE_REGISTRAR_ADMIN, accounts.alice.addr);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                INamespaceController.UnauthorizedActivationOwner.selector, accounts.alice.addr, address(registry)
+            )
+        );
+        vm.prank(accounts.alice.addr);
+        pauseRule.setPaused(activationId, true);
     }
 
     function test_setPaused_revertsForNonActivationOwner() public {
