@@ -175,6 +175,15 @@ contract USDOracleRuleTest is NamespaceSetUp {
         rule.evaluateMint(_mintCtx(activationId), "");
     }
 
+    function test_evaluateMint_revertsWhenOracleDecimalsIncreaseAfterConfigure() public {
+        bytes32 activationId = keccak256("activation");
+        _configure(activationId, 100e18, 25e18, 18, 1 days, NamespaceTypes.PriceOp.SET_BASE);
+        oracle.setDecimals(19);
+
+        vm.expectRevert(abi.encodeWithSelector(USDOracleRule.InvalidOracleDecimals.selector, uint8(19)));
+        rule.evaluateMint(_mintCtx(activationId), "");
+    }
+
     function _configure(
         bytes32 activationId,
         uint128 mintUsdPrice,

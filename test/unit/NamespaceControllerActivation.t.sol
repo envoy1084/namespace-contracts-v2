@@ -11,6 +11,7 @@ import {INamespaceController} from "src/interfaces/INamespaceController.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {SaleWindowRule} from "src/modules/rules/SaleWindowRule.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
+import {ParentChainRegistry} from "test/mocks/ParentChainRegistry.sol";
 
 contract NamespaceControllerActivationTest is NamespaceSetUp {
     bytes32 private constant _ERC1967_IMPLEMENTATION_SLOT =
@@ -92,6 +93,21 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
         assertEq(activation.owner, accounts.alice.addr);
     }
 
+    function test_setRootRegistry_revertsForZeroRegistry() public {
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.ZeroRegistry.selector));
+        vm.prank(accounts.owner.addr);
+        controller.setRootRegistry(IRegistry(address(0)));
+    }
+
+    function test_activate_revertsWhenRootRegistryIsNotConfigured() public {
+        NamespaceController freshController = _deployController(accounts.owner.addr);
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.RootRegistryNotConfigured.selector));
+        vm.prank(accounts.alice.addr);
+        freshController.activate(config);
+    }
+
     function test_activate_revertsWhenCallerLacksRenewAdmin() public {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
         registry.revokeRootRoles(ROLE_RENEW_ADMIN, accounts.alice.addr);
@@ -114,6 +130,34 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
         vm.expectRevert(
             abi.encodeWithSelector(
                 INamespaceController.RegistryParentNodeMismatch.selector, address(registry), _aliceNode(), victimNode
+            )
+        );
+        vm.prank(accounts.alice.addr);
+        controller.activate(config);
+    }
+
+    function test_activate_revertsWhenRegistryParentPointsToDifferentChild() public {
+        PermissionedRegistry fakeRegistry = new PermissionedRegistry(
+            IHCAFactoryBasic(address(0)),
+            registryMetadata,
+            address(this),
+            ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
+        );
+        fakeRegistry.setParent(ethRegistry, "alice");
+        fakeRegistry.grantRootRoles(ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN, accounts.alice.addr);
+        fakeRegistry.grantRootRoles(ROLE_REGISTRAR | ROLE_RENEW, address(controller));
+
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        config.registry = IPermissionedRegistry(address(fakeRegistry));
+        config.parentNode = _aliceNode();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                INamespaceController.RegistryParentChildMismatch.selector,
+                address(fakeRegistry),
+                address(ethRegistry),
+                "alice",
+                address(registry)
             )
         );
         vm.prank(accounts.alice.addr);
@@ -147,6 +191,40 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
 
         vm.expectRevert(
             abi.encodeWithSelector(INamespaceController.RegistryParentNotConfigured.selector, address(fakeRoot))
+        );
+        vm.prank(accounts.alice.addr);
+        controller.activate(config);
+    }
+
+    function test_activate_revertsWhenRegistryParentChainIsTooDeep() public {
+        uint256 length = 130;
+        ParentChainRegistry[] memory chain = new ParentChainRegistry[](length);
+        for (uint256 i; i < length;) {
+            chain[i] = new ParentChainRegistry();
+            unchecked {
+                ++i;
+            }
+        }
+
+        string memory firstLabel = "deep0";
+        rootRegistry.register(
+            firstLabel, accounts.owner.addr, IRegistry(address(chain[0])), address(0), 0, type(uint64).max
+        );
+        chain[0].setParent(rootRegistry, firstLabel);
+        for (uint256 i = 1; i < length;) {
+            string memory label = string.concat("deep", vm.toString(i));
+            chain[i - 1].setSubregistry(label, chain[i]);
+            chain[i].setParent(chain[i - 1], label);
+            unchecked {
+                ++i;
+            }
+        }
+
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        config.registry = IPermissionedRegistry(address(chain[length - 1]));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(INamespaceController.RegistryParentChainTooDeep.selector, address(chain[0]))
         );
         vm.prank(accounts.alice.addr);
         controller.activate(config);

@@ -239,6 +239,20 @@ contract CoreRulesCoverageTest is NamespaceSetUp {
         tokenBalanceRule.evaluateMint(ctx, "");
     }
 
+    function test_tokenBalance_allowsZeroHoldTimeWhenNoMinimumBalanceIsRequired() public {
+        bytes32 activationId = keccak256("activation");
+        vm.prank(address(controller));
+        tokenBalanceRule.configure(
+            activationId,
+            abi.encode(TokenBalanceRule.Params({token: token, minBalance: 0, discountBps: 500, minHoldTime: 0}))
+        );
+
+        NamespaceTypes.RuleOutput memory output = tokenBalanceRule.evaluateMint(_mintCtx(activationId, "token"), "");
+
+        assertEq(uint256(output.priceOp), uint256(NamespaceTypes.PriceOp.DISCOUNT_BPS));
+        assertEq(output.bps, 500);
+    }
+
     function test_lengthPremium_configureRevertsForEmptyAndTooLongTables() public {
         bytes32 activationId = keccak256("activation");
         uint128[] memory empty = new uint128[](0);

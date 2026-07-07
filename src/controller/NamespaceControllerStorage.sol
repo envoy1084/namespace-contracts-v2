@@ -114,28 +114,37 @@ abstract contract NamespaceControllerStorage is
         }
     }
 
-    function _canonicalRegistryNode(IRegistry registry, IRegistry root, uint256 depth)
-        private
-        view
-        returns (bytes32 node)
-    {
-        if (address(registry) == address(root)) {
-            return bytes32(0);
-        }
-        if (depth > _MAX_REGISTRY_PARENT_DEPTH) {
-            revert RegistryParentChainTooDeep(address(registry));
+    function _canonicalRegistryNode(IRegistry registry, IRegistry root, uint256) private view returns (bytes32 node) {
+        bytes32[] memory labels = new bytes32[](_MAX_REGISTRY_PARENT_DEPTH + 1);
+        IRegistry current = registry;
+        uint256 depth;
+        while (address(current) != address(root)) {
+            if (depth > _MAX_REGISTRY_PARENT_DEPTH) {
+                revert RegistryParentChainTooDeep(address(current));
+            }
+
+            (IRegistry parent, string memory label) = current.getParent();
+            if (address(parent) == address(0)) {
+                revert RegistryParentNotConfigured(address(current));
+            }
+
+            NameCoder.assertLabelSize(label);
+            IRegistry child = parent.getSubregistry(label);
+            if (address(child) != address(current)) {
+                revert RegistryParentChildMismatch(address(current), address(parent), label, address(child));
+            }
+            labels[depth] = keccak256(bytes(label));
+            current = parent;
+            unchecked {
+                ++depth;
+            }
         }
 
-        (IRegistry parent, string memory label) = registry.getParent();
-        if (address(parent) == address(0)) {
-            revert RegistryParentNotConfigured(address(registry));
+        while (depth != 0) {
+            unchecked {
+                --depth;
+            }
+            node = NameCoder.namehash(node, labels[depth]);
         }
-
-        NameCoder.assertLabelSize(label);
-        IRegistry child = parent.getSubregistry(label);
-        if (address(child) != address(registry)) {
-            revert RegistryParentChildMismatch(address(registry), address(parent), label, address(child));
-        }
-        node = NameCoder.namehash(_canonicalRegistryNode(parent, root, depth + 1), keccak256(bytes(label)));
     }
 }

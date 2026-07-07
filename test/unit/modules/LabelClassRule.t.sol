@@ -167,6 +167,24 @@ contract LabelClassRuleTest is NamespaceSetUp {
         rule.evaluateMint(_mintCtx(activationId, invalidLabel), "");
     }
 
+    function test_evaluateMint_rejectsInvalidTwoByteUtf8Continuation() public {
+        bytes32 activationId = keccak256("activation");
+        _configure(activationId, LabelClassRule.LabelClass.EMOJI, true, 10 ether, 5 ether);
+        string memory invalidLabel = string(bytes.concat(bytes1(0xC2), bytes1(0x20)));
+
+        vm.expectRevert(abi.encodeWithSelector(LabelClassRule.InvalidUtf8Label.selector, invalidLabel));
+        rule.evaluateMint(_mintCtx(activationId, invalidLabel), "");
+    }
+
+    function test_evaluateMint_rejectsInvalidThreeByteUtf8Range() public {
+        bytes32 activationId = keccak256("activation");
+        _configure(activationId, LabelClassRule.LabelClass.EMOJI, true, 10 ether, 5 ether);
+        string memory invalidLabel = string(bytes.concat(bytes1(0xE0), bytes1(0x80), bytes1(0x80)));
+
+        vm.expectRevert(abi.encodeWithSelector(LabelClassRule.InvalidUtf8Label.selector, invalidLabel));
+        rule.evaluateMint(_mintCtx(activationId, invalidLabel), "");
+    }
+
     function test_evaluateMint_skipsNonEmojiUtf8WhenNotRequired() public {
         bytes32 activationId = keccak256("activation");
         _configure(activationId, LabelClassRule.LabelClass.EMOJI, false, 10 ether, 5 ether);
