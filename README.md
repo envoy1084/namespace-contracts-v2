@@ -15,8 +15,10 @@ It lets a namespace owner configure a subname sale with ordered rules, payment s
 7. [Architecture Decision History](./research/architecture-decision-history.md)
 8. [Architecture And Gas Review](./research/namespace-architecture-gas-review.md)
 9. [Strict Effect Architecture Research](./research/strict-effect-architecture-research.md)
-10. [Gas Benchmarks](./BENCHMARKS.md)
-11. [ENSv2 Research Index](./research/ensv2-research-index.md)
+10. [Gas Benchmarks Index](./BENCHMARKS.md)
+11. [Profile Gas Benchmarks](./PROFILE_BENCHMARKS.md)
+12. [Scenario Gas Benchmarks](./SCENARIO_BENCHMARKS.md)
+13. [ENSv2 Research Index](./research/ensv2-research-index.md)
 
 ## Contract Groups
 
@@ -50,7 +52,7 @@ Regenerate the root benchmark report with:
 ./scripts/generate-benchmarks.sh
 ```
 
-The generated report is [BENCHMARKS.md](./BENCHMARKS.md). The previous policy/pricing baseline is archived in `benchmarks/baselines/` so rule-architecture gas can be compared side by side.
+The generated reports are [PROFILE_BENCHMARKS.md](./PROFILE_BENCHMARKS.md), [SCENARIO_BENCHMARKS.md](./SCENARIO_BENCHMARKS.md), and the index [BENCHMARKS.md](./BENCHMARKS.md). Machine-readable calculator inputs live in `benchmarks/gas-components.tsv` and `benchmarks/profile-gas-report.json`. The previous policy/pricing baseline is archived in `benchmarks/baselines/` so rule-architecture gas can be compared side by side.
 
 ## Research
 

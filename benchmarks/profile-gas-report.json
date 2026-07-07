@@ -1,0 +1,434 @@
+{
+  "deltas": {
+    "delta.all_rules_activation": {
+      "category": "delta",
+      "description": "Incremental activation setup cost from all current rules, split payment, and five resolver writes.",
+      "gas": 1153617,
+      "kind": "delta",
+      "source": "testBenchmark_activation_24_pncAllRulesSplitFiveResolverWrites - testBenchmark_activation_00_pncFreeNoRules"
+    },
+    "delta.all_rules_over_split_three_rules": {
+      "category": "delta",
+      "description": "Incremental mint cost from all rules over three-rule split sale.",
+      "gas": 280328,
+      "kind": "delta",
+      "source": "testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites - testBenchmark_mint_09_pncThreeRulesSplitPaymentNoResolver"
+    },
+    "delta.batch_resolver_three_writes": {
+      "category": "delta",
+      "description": "Incremental mint cost from three resolver writes on all-rule split sale.",
+      "gas": 81958,
+      "kind": "delta",
+      "source": "testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites - testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites"
+    },
+    "delta.batch_resolver_two_more_writes": {
+      "category": "delta",
+      "description": "Incremental mint cost from two additional resolver writes.",
+      "gas": 19917,
+      "kind": "delta",
+      "source": "testBenchmark_mint_24_pncAllRulesSplitFiveResolverWrites - testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites"
+    },
+    "delta.fixed_erc20_sale": {
+      "category": "delta",
+      "description": "Incremental mint cost from fixed-price rule plus direct ERC20 payment.",
+      "gas": 58443,
+      "kind": "delta",
+      "source": "testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment - testBenchmark_mint_00_pncFreeNoRules"
+    },
+    "delta.guard_rule": {
+      "category": "delta",
+      "description": "Incremental mint cost from adding one guard rule to a free mint.",
+      "gas": 18732,
+      "kind": "delta",
+      "source": "testBenchmark_mint_01_pncOneGuardRuleFree - testBenchmark_mint_00_pncFreeNoRules"
+    },
+    "delta.split_over_erc20": {
+      "category": "delta",
+      "description": "Incremental mint cost from split payment instead of direct ERC20 payment.",
+      "gas": 30736,
+      "kind": "delta",
+      "source": "testBenchmark_mint_03_pncOneFixedPriceRuleSplitPayment - testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment"
+    },
+    "delta.three_rules_over_fixed_erc20": {
+      "category": "delta",
+      "description": "Incremental mint cost from sale window and label-length rules over fixed ERC20 sale.",
+      "gas": 36930,
+      "kind": "delta",
+      "source": "testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver - testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment"
+    },
+    "delta.whitelist_over_three_rules": {
+      "category": "delta",
+      "description": "Incremental mint cost from adding whitelist proof to the common three-rule ERC20 sale.",
+      "gas": 57840,
+      "kind": "delta",
+      "source": "testBenchmark_mint_14_pncFourRulesWhitelistERC20PaymentNoResolver - testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver"
+    }
+  },
+  "estimator": {
+    "activationBaseKey": "activation.free_no_rules",
+    "componentCatalog": "benchmarks/gas-components.tsv",
+    "mintBaseKey": "mint.free_no_rules",
+    "notes": [
+      "Profile entries are standalone module-call measurements.",
+      "Use exact scenario keys when they match a production configuration.",
+      "Use profile keys for rough planning when combining arbitrary rules, payment modules, and hooks."
+    ]
+  },
+  "ethPriceUsd": 3000,
+  "exact": {
+    "activation.all_rules_split_five_resolver_writes": {
+      "category": "activation",
+      "description": "Activation with every current rule, split payment, and five resolver writes.",
+      "gas": 1352999,
+      "kind": "exact",
+      "source": "testBenchmark_activation_24_pncAllRulesSplitFiveResolverWrites"
+    },
+    "activation.free_no_rules": {
+      "category": "activation",
+      "description": "Activation with no rules, no payment, no hooks.",
+      "gas": 199382,
+      "kind": "exact",
+      "source": "testBenchmark_activation_00_pncFreeNoRules"
+    },
+    "mint.all_rules_split": {
+      "category": "mint",
+      "description": "Controller mint with every current rule and split payment, no resolver writes.",
+      "gas": 571297,
+      "kind": "exact",
+      "source": "testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites"
+    },
+    "mint.all_rules_split_five_resolver_writes": {
+      "category": "mint",
+      "description": "Controller mint with every current rule, split payment, and five resolver writes.",
+      "gas": 673172,
+      "kind": "exact",
+      "source": "testBenchmark_mint_24_pncAllRulesSplitFiveResolverWrites"
+    },
+    "mint.all_rules_split_three_resolver_writes": {
+      "category": "mint",
+      "description": "Controller mint with every current rule, split payment, and three resolver writes.",
+      "gas": 653255,
+      "kind": "exact",
+      "source": "testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites"
+    },
+    "mint.fixed_erc20": {
+      "category": "mint",
+      "description": "Controller mint with fixed price rule and direct ERC20 payment.",
+      "gas": 223261,
+      "kind": "exact",
+      "source": "testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment"
+    },
+    "mint.free_no_rules": {
+      "category": "mint",
+      "description": "Controller mint with no rules, no payment, no hooks.",
+      "gas": 164818,
+      "kind": "exact",
+      "source": "testBenchmark_mint_00_pncFreeNoRules"
+    },
+    "mint.reservation_split": {
+      "category": "mint",
+      "description": "Controller mint with reservation and token discount rules plus split payment.",
+      "gas": 372106,
+      "kind": "exact",
+      "source": "testBenchmark_mint_19_pncFiveRulesReservationDiscountSplitNoResolver"
+    },
+    "mint.three_rules_erc20": {
+      "category": "mint",
+      "description": "Controller mint with sale window, label length, fixed price, and direct ERC20 payment.",
+      "gas": 260191,
+      "kind": "exact",
+      "source": "testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver"
+    },
+    "mint.three_rules_premium_split_three_resolver_writes": {
+      "category": "mint",
+      "description": "Controller mint with three rules, premium pricing, split payment, and three resolver writes.",
+      "gas": 381738,
+      "kind": "exact",
+      "source": "testBenchmark_mint_13_pncThreeRulesPremiumSplitPaymentThreeResolverWrites"
+    },
+    "mint.three_rules_split_two_resolver_writes": {
+      "category": "mint",
+      "description": "Controller mint with three rules, split payment, and two resolver writes.",
+      "gas": 365174,
+      "kind": "exact",
+      "source": "testBenchmark_mint_11_pncThreeRulesSplitPaymentTwoResolverWrites"
+    },
+    "mint.whitelist_erc20": {
+      "category": "mint",
+      "description": "Controller mint with whitelist proof and direct ERC20 payment.",
+      "gas": 318031,
+      "kind": "exact",
+      "source": "testBenchmark_mint_14_pncFourRulesWhitelistERC20PaymentNoResolver"
+    },
+    "registry.register_buyer_roles": {
+      "category": "registry",
+      "description": "Direct ENSv2 registry register with buyer roles and no resolver.",
+      "gas": 123378,
+      "kind": "floor",
+      "source": "testBenchmark_registry_01_registerBuyerRolesNoResolver"
+    },
+    "registry.register_buyer_roles_resolver": {
+      "category": "registry",
+      "description": "Direct ENSv2 registry register with buyer roles and resolver.",
+      "gas": 127383,
+      "kind": "floor",
+      "source": "testBenchmark_registry_02_registerBuyerRolesWithResolver"
+    },
+    "registry.register_no_roles": {
+      "category": "registry",
+      "description": "Direct ENSv2 registry register with owner, no buyer roles, no resolver.",
+      "gas": 76072,
+      "kind": "floor",
+      "source": "testBenchmark_registry_00_registerNoRolesNoResolver"
+    },
+    "registry.renew_registered": {
+      "category": "registry",
+      "description": "Direct ENSv2 registry renewal baseline.",
+      "gas": 27975,
+      "kind": "floor",
+      "source": "testBenchmark_registry_04_renewRegistered"
+    },
+    "registry.reserve_no_owner": {
+      "category": "registry",
+      "description": "Direct ENSv2 registry reserve flow with owner set to zero.",
+      "gas": 45141,
+      "kind": "floor",
+      "source": "testBenchmark_registry_03_reserveLabelNoOwner"
+    },
+    "renew.three_rules_erc20": {
+      "category": "renew",
+      "description": "Controller renewal with three rules and direct ERC20 payment.",
+      "gas": 151488,
+      "kind": "exact",
+      "source": "testBenchmark_renew_00_threeRulesERC20PaymentNoHook"
+    }
+  },
+  "profiles": {
+    "hook.batch_resolver_1": {
+      "category": "hook",
+      "description": "BatchSetAddrToBuyerHook with one resolver write.",
+      "gas": 87634,
+      "kind": "profile",
+      "source": "testBenchmark_profile_hook_03_batchResolverHookOneWrite_afterMint"
+    },
+    "hook.batch_resolver_3": {
+      "category": "hook",
+      "description": "BatchSetAddrToBuyerHook with three resolver writes.",
+      "gas": 107599,
+      "kind": "profile",
+      "source": "testBenchmark_profile_hook_04_batchResolverHookThreeWrites_afterMint"
+    },
+    "hook.batch_resolver_5": {
+      "category": "hook",
+      "description": "BatchSetAddrToBuyerHook with five resolver writes.",
+      "gas": 127553,
+      "kind": "profile",
+      "source": "testBenchmark_profile_hook_05_batchResolverHookFiveWrites_afterMint"
+    },
+    "hook.recording": {
+      "category": "hook",
+      "description": "Recording post-hook profile.",
+      "gas": 130739,
+      "kind": "profile",
+      "source": "testBenchmark_profile_hook_00_recordingPostHook_afterMint"
+    },
+    "hook.set_addr_empty": {
+      "category": "hook",
+      "description": "SetAddrToBuyerHook using buyer address.",
+      "gas": 85082,
+      "kind": "profile",
+      "source": "testBenchmark_profile_hook_01_setAddrToBuyerEmpty_afterMint"
+    },
+    "hook.set_addr_override": {
+      "category": "hook",
+      "description": "SetAddrToBuyerHook using address override.",
+      "gas": 89853,
+      "kind": "profile",
+      "source": "testBenchmark_profile_hook_02_setAddrToBuyerOverride_afterMint"
+    },
+    "payment.erc20": {
+      "category": "payment",
+      "description": "Direct ERC20 transferFrom payment module.",
+      "gas": 83127,
+      "kind": "profile",
+      "source": "testBenchmark_profile_payment_00_collectMintERC20"
+    },
+    "payment.split_2": {
+      "category": "payment",
+      "description": "ERC20 split payment to two recipients.",
+      "gas": 101987,
+      "kind": "profile",
+      "source": "testBenchmark_profile_payment_01_collectMintSplitERC20TwoRecipients"
+    },
+    "payment.split_3": {
+      "category": "payment",
+      "description": "ERC20 split payment to three recipients.",
+      "gas": 130236,
+      "kind": "profile",
+      "source": "testBenchmark_profile_payment_02_collectMintSplitERC20ThreeRecipients"
+    },
+    "payment.split_5": {
+      "category": "payment",
+      "description": "ERC20 split payment to five recipients.",
+      "gas": 186872,
+      "kind": "profile",
+      "source": "testBenchmark_profile_payment_03_collectMintSplitERC20FiveRecipients"
+    },
+    "rule.fixed_price_20_exact": {
+      "category": "rule",
+      "description": "FixedPriceRule with twenty overrides and exact-length hit.",
+      "gas": 35094,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_07_fixedPriceTwentyOverridesExact_evaluateMint"
+    },
+    "rule.fixed_price_5_exact": {
+      "category": "rule",
+      "description": "FixedPriceRule with five overrides and exact-length hit.",
+      "gas": 34018,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_06_fixedPriceFiveOverridesExact_evaluateMint"
+    },
+    "rule.fixed_price_5_fallback": {
+      "category": "rule",
+      "description": "FixedPriceRule with five overrides and fallback label.",
+      "gas": 34092,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_05_fixedPriceFiveOverridesFallback_evaluateMint"
+    },
+    "rule.fixed_price_no_overrides": {
+      "category": "rule",
+      "description": "FixedPriceRule with no length overrides.",
+      "gas": 40676,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_04_fixedPriceNoLengthOverrides_evaluateMint"
+    },
+    "rule.label_class_emoji": {
+      "category": "rule",
+      "description": "LabelClassRule for emoji labels.",
+      "gas": 30651,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_20_labelClassEmoji_evaluateMint"
+    },
+    "rule.label_class_letter": {
+      "category": "rule",
+      "description": "LabelClassRule for ASCII letter labels.",
+      "gas": 31454,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_19_labelClassLetter_evaluateMint"
+    },
+    "rule.label_class_number": {
+      "category": "rule",
+      "description": "LabelClassRule for numeric labels.",
+      "gas": 30146,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_18_labelClassNumber_evaluateMint"
+    },
+    "rule.label_length": {
+      "category": "rule",
+      "description": "LabelLengthRule evaluateMint.",
+      "gas": 36201,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_03_labelLength_evaluateMint"
+    },
+    "rule.length_premium_20": {
+      "category": "rule",
+      "description": "LengthPremiumRule with twenty buckets.",
+      "gas": 31869,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_10_lengthPremiumTwentyBuckets_evaluateMint"
+    },
+    "rule.length_premium_5": {
+      "category": "rule",
+      "description": "LengthPremiumRule with five buckets.",
+      "gas": 31867,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_08_lengthPremiumFiveBuckets_evaluateMint"
+    },
+    "rule.length_premium_5_fallback": {
+      "category": "rule",
+      "description": "LengthPremiumRule with five buckets and fallback bucket.",
+      "gas": 31905,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_09_lengthPremiumFiveBucketsFallback_evaluateMint"
+    },
+    "rule.pause": {
+      "category": "rule",
+      "description": "PauseRule evaluateMint.",
+      "gas": 35729,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_00_pause_evaluateMint"
+    },
+    "rule.reservation_10": {
+      "category": "rule",
+      "description": "ReservationRule with Merkle set size 10.",
+      "gas": 65910,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_12_reservation10_evaluateMint"
+    },
+    "rule.reservation_100": {
+      "category": "rule",
+      "description": "ReservationRule with Merkle set size 100.",
+      "gas": 73375,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_13_reservation100_evaluateMint"
+    },
+    "rule.reservation_1000": {
+      "category": "rule",
+      "description": "ReservationRule with Merkle set size 1000.",
+      "gas": 80795,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_14_reservation1000_evaluateMint"
+    },
+    "rule.sale_window_bounded": {
+      "category": "rule",
+      "description": "SaleWindowRule evaluateMint with active start/end bounds.",
+      "gas": 24219,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_02_saleWindowBounded_evaluateMint"
+    },
+    "rule.sale_window_open": {
+      "category": "rule",
+      "description": "SaleWindowRule evaluateMint with open zero-bounds config.",
+      "gas": 36007,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_01_saleWindowOpen_evaluateMint"
+    },
+    "rule.token_balance_discount": {
+      "category": "rule",
+      "description": "TokenBalanceRule with minimum balance and discount.",
+      "gas": 45731,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_11_tokenBalanceDiscount_evaluateMint"
+    },
+    "rule.usd_oracle": {
+      "category": "rule",
+      "description": "USDOracleRule with Chainlink-compatible oracle.",
+      "gas": 46998,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_21_usdOracle_evaluateMint"
+    },
+    "rule.whitelist_10": {
+      "category": "rule",
+      "description": "WhitelistRule with Merkle set size 10.",
+      "gas": 67830,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_15_whitelist10_evaluateMint"
+    },
+    "rule.whitelist_100": {
+      "category": "rule",
+      "description": "WhitelistRule with Merkle set size 100.",
+      "gas": 75270,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_16_whitelist100_evaluateMint"
+    },
+    "rule.whitelist_1000": {
+      "category": "rule",
+      "description": "WhitelistRule with Merkle set size 1000.",
+      "gas": 82713,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_17_whitelist1000_evaluateMint"
+    }
+  },
+  "schemaVersion": 1,
+  "source": "test/benchmarks/.gas-snapshot"
+}
