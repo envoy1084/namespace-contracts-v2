@@ -59,6 +59,17 @@ DISCOUNT    TokenBalanceRule
 OVERRIDE    ReservationRule
 ```
 
+If a reusable rule can emit different price operations, place that configured instance in the phase that matches the operation you intend to allow. For example:
+
+| Intended behavior | Rule phase |
+| --- | --- |
+| Whitelist only gates buyers | `ELIGIBILITY` |
+| Whitelist applies BPS discount | `DISCOUNT` |
+| Whitelist adds a custom amount | `PREMIUM` |
+| Whitelist replaces the final price | `OVERRIDE` |
+| Reservation gates and blocks labels only | `ELIGIBILITY` |
+| Reservation sets exact reserved-label price | `OVERRIDE` |
+
 The same sale can later add a `WorldIdRule` or another verification rule without changing the controller.
 
 ## Activation Sequence

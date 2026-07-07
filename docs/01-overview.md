@@ -52,7 +52,9 @@ function evaluateRenew(RenewContext calldata ctx, bytes calldata runtimeData)
     returns (RuleOutput memory);
 ```
 
-Each rule can:
+Each rule returns one compact `RuleOutput`. The controller applies it only if the rule's configured phase allows that effect.
+
+Across all phases, a rule can:
 
 | Effect | Example |
 | --- | --- |
@@ -61,10 +63,10 @@ Each rule can:
 | Require proof | Buyer supplies a Merkle claim. |
 | Add flags | A verification rule can mark a buyer as verified. |
 | Require flags | A later rule can require earlier verification. |
-| Set a base price | Fixed price or USD oracle price. |
-| Add/subtract price | Length premium or discount amount. |
-| Apply BPS discount/markup | Token-holder discount. |
-| Override price | Reserved label has a custom flat price. |
+| Set a base price | Fixed price or USD oracle price in `BASE_PRICE`. |
+| Add/subtract price | Length premium in `PREMIUM`, discount amount in `DISCOUNT`. |
+| Apply BPS discount/markup | Token-holder discount in `DISCOUNT`, markup in `PREMIUM`. |
+| Override price | Reserved label has a custom flat price in `OVERRIDE`. |
 
 ## Rule Phases
 
@@ -78,9 +80,30 @@ Rules are stored in activation order and must be sorted by `RulePhase`.
 | `PREMIUM` | Length premiums, class premiums, dynamic add-ons. |
 | `DISCOUNT` | Token-holder, whitelist, or campaign discounts. |
 | `OVERRIDE` | Final custom price for reservations or special deals. |
-| `FINAL_CHECK` | Last invariant checks before payment/registry. |
+| `FINAL_CHECK` | Last invariant checks before registry/payment. |
 
-The controller enforces phase ordering at activation time. This keeps pricing deterministic and makes mixed eligibility/pricing rules composable.
+The controller enforces phase ordering at activation time and phase/output compatibility at mint and renewal time. This keeps pricing deterministic and makes mixed eligibility/pricing rules composable without letting an eligibility rule unexpectedly rewrite the final price.
+
+`PriceOp.NONE` is accepted from every phase. Allowed non-`NONE` price operations by phase:
+
+| Phase | Allowed non-`NONE` price operations |
+| --- | --- |
+| `GUARD` | none |
+| `ELIGIBILITY` | none |
+| `BASE_PRICE` | `SET_BASE` |
+| `PREMIUM` | `ADD`, `MARKUP_BPS`, `MIN` |
+| `DISCOUNT` | `SUBTRACT`, `DISCOUNT_BPS`, `MAX` |
+| `OVERRIDE` | `OVERRIDE` |
+| `FINAL_CHECK` | `MIN`, `MAX` |
+
+Additional controller checks:
+
+| Check | Why |
+| --- | --- |
+| Only one `SET_BASE` | Multiple base prices are probably a configuration mistake. |
+| No discount before any price exists | Discounting zero hides a broken sale config. |
+| No price changes after `OVERRIDE` | Override means exact final price. |
+| No mixed payment tokens | One mint settles one final token and amount. |
 
 ## ENSv2 Boundary
 

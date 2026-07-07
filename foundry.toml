@@ -9,6 +9,7 @@ src = "src"
 out = "out"
 dynamic_test_linking = true
 gas_reports = ["*"]
+ignored_warnings_from = ["lib/"]
 
 # Fuzz testing
 [fuzz]

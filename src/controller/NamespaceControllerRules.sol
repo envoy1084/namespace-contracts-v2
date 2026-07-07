@@ -10,19 +10,26 @@ import {NamespaceControllerLifecycle} from "src/controller/NamespaceControllerLi
 /// @title NamespaceControllerRules
 /// @notice Rule evaluation and price-effect application.
 abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
+    uint256 private constant STATUS_TOKEN_SET = 1 << 0;
+    uint256 private constant STATUS_BASE_SET = 1 << 1;
+    uint256 private constant STATUS_PRICE_MUTATED = 1 << 2;
+    uint256 private constant STATUS_OVERRIDDEN = 1 << 3;
+    uint256 private constant STATUS_DISCOUNTED = 1 << 4;
+
     function _evaluateMintRules(
         ActivationData storage activation,
         NamespaceTypes.MintContext memory ctx,
         bytes[] calldata ruleData
     ) internal returns (NamespaceTypes.Price memory price) {
         uint256 length = activation.ruleCount;
-        EvaluationState memory state = EvaluationState({amount: 0, flags: 0, token: address(0), tokenSet: false});
+        EvaluationState memory state = EvaluationState({amount: 0, flags: 0, token: address(0), status: 0});
         if (length == 0) return NamespaceTypes.Price({token: address(0), amount: 0});
         if (length == 1) {
             _applyRuleOutput(
                 ctx.activationId,
                 activation.rules,
                 0,
+                NamespaceTypes.RulePhase(activation.firstRulePhase),
                 IRuleModule(activation.rules).evaluateMint(ctx, ruleData[0]),
                 state
             );
@@ -30,8 +37,15 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
         }
         bytes memory rules = SSTORE2.read(activation.rules);
         for (uint256 i; i < length;) {
-            address rule = _ruleAt(rules, i).module;
-            _applyRuleOutput(ctx.activationId, rule, i, IRuleModule(rule).evaluateMint(ctx, ruleData[i]), state);
+            RuleRef memory ref = _ruleAt(rules, i);
+            _applyRuleOutput(
+                ctx.activationId,
+                ref.module,
+                i,
+                ref.phase,
+                IRuleModule(ref.module).evaluateMint(ctx, ruleData[i]),
+                state
+            );
             unchecked {
                 ++i;
             }
@@ -45,13 +59,14 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
         bytes[] calldata ruleData
     ) internal returns (NamespaceTypes.Price memory price) {
         uint256 length = activation.ruleCount;
-        EvaluationState memory state = EvaluationState({amount: 0, flags: 0, token: address(0), tokenSet: false});
+        EvaluationState memory state = EvaluationState({amount: 0, flags: 0, token: address(0), status: 0});
         if (length == 0) return NamespaceTypes.Price({token: address(0), amount: 0});
         if (length == 1) {
             _applyRuleOutput(
                 ctx.activationId,
                 activation.rules,
                 0,
+                NamespaceTypes.RulePhase(activation.firstRulePhase),
                 IRuleModule(activation.rules).evaluateRenew(ctx, ruleData[0]),
                 state
             );
@@ -59,8 +74,15 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
         }
         bytes memory rules = SSTORE2.read(activation.rules);
         for (uint256 i; i < length;) {
-            address rule = _ruleAt(rules, i).module;
-            _applyRuleOutput(ctx.activationId, rule, i, IRuleModule(rule).evaluateRenew(ctx, ruleData[i]), state);
+            RuleRef memory ref = _ruleAt(rules, i);
+            _applyRuleOutput(
+                ctx.activationId,
+                ref.module,
+                i,
+                ref.phase,
+                IRuleModule(ref.module).evaluateRenew(ctx, ruleData[i]),
+                state
+            );
             unchecked {
                 ++i;
             }
@@ -97,6 +119,7 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
         bytes32 activationId,
         address rule,
         uint256 index,
+        NamespaceTypes.RulePhase phase,
         NamespaceTypes.RuleOutput memory output,
         EvaluationState memory state
     ) internal pure {
@@ -111,6 +134,9 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
         NamespaceTypes.PriceOp op = output.priceOp;
         if (op == NamespaceTypes.PriceOp.NONE) return;
 
+        _checkPhaseOperation(activationId, rule, index, phase, op);
+        _checkPriceState(activationId, rule, index, op, state.status);
+
         if (
             op == NamespaceTypes.PriceOp.SET_BASE || op == NamespaceTypes.PriceOp.ADD
                 || op == NamespaceTypes.PriceOp.SUBTRACT || op == NamespaceTypes.PriceOp.MIN
@@ -121,32 +147,100 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
 
         if (op == NamespaceTypes.PriceOp.SET_BASE || op == NamespaceTypes.PriceOp.OVERRIDE) {
             state.amount = output.amount;
+            state.status |= op == NamespaceTypes.PriceOp.SET_BASE
+                ? STATUS_BASE_SET | STATUS_PRICE_MUTATED
+                : STATUS_PRICE_MUTATED | STATUS_OVERRIDDEN;
         } else if (op == NamespaceTypes.PriceOp.ADD) {
             state.amount += output.amount;
+            state.status |= STATUS_PRICE_MUTATED;
         } else if (op == NamespaceTypes.PriceOp.SUBTRACT) {
             state.amount = output.amount > state.amount ? 0 : state.amount - output.amount;
+            state.status |= STATUS_PRICE_MUTATED | STATUS_DISCOUNTED;
         } else if (op == NamespaceTypes.PriceOp.DISCOUNT_BPS) {
             _checkBps(rule, output.bps);
             state.amount = (state.amount * (BPS_DENOMINATOR - output.bps)) / BPS_DENOMINATOR;
+            state.status |= STATUS_PRICE_MUTATED | STATUS_DISCOUNTED;
         } else if (op == NamespaceTypes.PriceOp.MARKUP_BPS) {
             _checkBps(rule, output.bps);
             state.amount = (state.amount * (BPS_DENOMINATOR + output.bps)) / BPS_DENOMINATOR;
+            state.status |= STATUS_PRICE_MUTATED;
         } else if (op == NamespaceTypes.PriceOp.MIN) {
             if (state.amount < output.amount) state.amount = output.amount;
+            state.status |= STATUS_PRICE_MUTATED;
         } else if (op == NamespaceTypes.PriceOp.MAX && state.amount > output.amount) {
             state.amount = output.amount;
+            state.status |= STATUS_PRICE_MUTATED;
         }
     }
     // slither-disable-end cyclomatic-complexity
     // slither-disable-end incorrect-equality
 
     function _applyToken(address token, EvaluationState memory state) private pure {
-        if (!state.tokenSet) {
+        if ((state.status & STATUS_TOKEN_SET) == 0) {
             state.token = token;
-            state.tokenSet = true;
+            state.status |= STATUS_TOKEN_SET;
             return;
         }
         if (state.token != token) revert RulePaymentTokenMismatch(state.token, token);
+    }
+
+    function _checkPhaseOperation(
+        bytes32 activationId,
+        address rule,
+        uint256 index,
+        NamespaceTypes.RulePhase phase,
+        NamespaceTypes.PriceOp op
+    ) private pure {
+        if (_phaseAllowsOperation(phase, op)) return;
+        revert RuleOperationNotAllowed(activationId, rule, index, phase, op);
+    }
+
+    function _phaseAllowsOperation(NamespaceTypes.RulePhase phase, NamespaceTypes.PriceOp op)
+        private
+        pure
+        returns (bool)
+    {
+        if (phase == NamespaceTypes.RulePhase.BASE_PRICE) {
+            return op == NamespaceTypes.PriceOp.SET_BASE;
+        }
+        if (phase == NamespaceTypes.RulePhase.PREMIUM) {
+            return op == NamespaceTypes.PriceOp.ADD || op == NamespaceTypes.PriceOp.MARKUP_BPS
+                || op == NamespaceTypes.PriceOp.MIN;
+        }
+        if (phase == NamespaceTypes.RulePhase.DISCOUNT) {
+            return op == NamespaceTypes.PriceOp.SUBTRACT || op == NamespaceTypes.PriceOp.DISCOUNT_BPS
+                || op == NamespaceTypes.PriceOp.MAX;
+        }
+        if (phase == NamespaceTypes.RulePhase.OVERRIDE) {
+            return op == NamespaceTypes.PriceOp.OVERRIDE;
+        }
+        if (phase == NamespaceTypes.RulePhase.FINAL_CHECK) {
+            return op == NamespaceTypes.PriceOp.MIN || op == NamespaceTypes.PriceOp.MAX;
+        }
+        return false;
+    }
+
+    function _checkPriceState(
+        bytes32 activationId,
+        address rule,
+        uint256 index,
+        NamespaceTypes.PriceOp op,
+        uint256 status
+    ) private pure {
+        if ((status & STATUS_OVERRIDDEN) != 0) {
+            revert RulePriceAlreadyOverridden(activationId, rule, index);
+        }
+        if (op == NamespaceTypes.PriceOp.SET_BASE && (status & STATUS_BASE_SET) != 0) {
+            revert RuleBasePriceAlreadySet(activationId, rule, index);
+        }
+        if (
+            (op == NamespaceTypes.PriceOp.SUBTRACT
+                    || op == NamespaceTypes.PriceOp.DISCOUNT_BPS
+                    || op == NamespaceTypes.PriceOp.MARKUP_BPS
+                    || op == NamespaceTypes.PriceOp.MAX) && (status & STATUS_PRICE_MUTATED) == 0
+        ) {
+            revert RulePriceOperationBeforePrice(activationId, rule, index, op);
+        }
     }
 
     function _checkBps(address rule, uint16 bps) private pure {

@@ -1,6 +1,14 @@
-# Namespace Architecture V2: Claims, Rules, Effects, And Settlement
+# Namespace Architecture: Claims, Rules, Effects, And Settlement
 
 This document proposes a long-term Namespace architecture for selling ENSv2 subnames with high flexibility and low mint cost.
+
+Current status:
+
+```text
+This is earlier broad architecture research.
+The current implementation path is the strict generic rule engine with no composite packs.
+Composite packs remain a deferred optimization path; see architecture-decision-history.md and strict-effect-architecture-research.md.
+```
 
 It intentionally steps back from the current contract shape. The current implementation is useful research and a working baseline, but the next architecture should be designed around the hard cases:
 

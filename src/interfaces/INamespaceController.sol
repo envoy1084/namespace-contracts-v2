@@ -26,6 +26,18 @@ interface INamespaceController {
     error RequiredRuleFlagsMissing(bytes32 activationId, address rule, uint256 index, uint256 required, uint256 actual);
     error RulePaymentTokenMismatch(address expected, address actual);
     error InvalidRuleBps(address rule, uint16 bps);
+    error RuleOperationNotAllowed(
+        bytes32 activationId,
+        address rule,
+        uint256 index,
+        NamespaceTypes.RulePhase phase,
+        NamespaceTypes.PriceOp operation
+    );
+    error RuleBasePriceAlreadySet(bytes32 activationId, address rule, uint256 index);
+    error RulePriceAlreadyOverridden(bytes32 activationId, address rule, uint256 index);
+    error RulePriceOperationBeforePrice(
+        bytes32 activationId, address rule, uint256 index, NamespaceTypes.PriceOp operation
+    );
     error LabelNotRenewable(string label, IPermissionedRegistry.Status status);
 
     /// @notice Emitted when a namespace activation is created.

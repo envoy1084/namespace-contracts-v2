@@ -55,7 +55,7 @@ abstract contract NamespaceControllerStorage is
         uint256 amount;
         uint256 flags;
         address token;
-        bool tokenSet;
+        uint256 status;
     }
 
     /// @notice Total number of activations created by this controller.

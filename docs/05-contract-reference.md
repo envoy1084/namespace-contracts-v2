@@ -13,8 +13,8 @@ Responsibilities:
 - store compact rule and hook lists;
 - configure modules;
 - evaluate rules;
-- collect payment;
 - call official ENSv2 registry;
+- collect payment;
 - run post hooks;
 - expose activation metadata.
 
@@ -23,8 +23,8 @@ Important methods:
 | Method | Purpose |
 | --- | --- |
 | `activate` | Create and configure a sale activation. |
-| `mint` | Execute rule evaluation, payment, registry mint, and hooks. |
-| `renew` | Execute rule evaluation, payment, registry renewal, and hooks. |
+| `mint` | Execute rule evaluation, registry mint, payment, and hooks. |
+| `renew` | Execute rule evaluation, registry renewal, payment, and hooks. |
 | `updateModuleConfig` | Reconfigure an existing rule, payment module, or hook. |
 | `setActivationStatus` | Enable or disable an activation. |
 | `transferActivationOwnership` | Move activation ownership to another registry admin. |
@@ -65,6 +65,16 @@ Key enums:
 | `RulePhase` | Deterministic rule ordering. |
 | `Decision` | `PASS`, `BLOCK`, or `SKIP`. |
 | `PriceOp` | Price transformation. |
+
+Rule-engine errors:
+
+| Error | Meaning |
+| --- | --- |
+| `RuleOperationNotAllowed` | A rule returned a non-`NONE` price operation that is illegal for its configured phase. |
+| `RuleBasePriceAlreadySet` | More than one rule attempted to set the base price. |
+| `RulePriceAlreadyOverridden` | A later rule attempted to change price after an exact override. |
+| `RulePriceOperationBeforePrice` | A discount, markup, or cap ran before any price existed. |
+| `RulePaymentTokenMismatch` | Two price effects tried to use different payment tokens. |
 
 ## Interfaces
 

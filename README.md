@@ -12,9 +12,11 @@ It lets a namespace owner configure a subname sale with ordered rules, payment s
 4. [Module Catalog](./docs/04-module-catalog.md)
 5. [Contract Reference](./docs/05-contract-reference.md)
 6. [Security And Operations](./docs/06-security-and-operations.md)
-7. [Architecture And Gas Review](./research/namespace-architecture-gas-review.md)
-8. [Gas Benchmarks](./BENCHMARKS.md)
-9. [ENSv2 Research Index](./research/ensv2-research-index.md)
+7. [Architecture Decision History](./research/architecture-decision-history.md)
+8. [Architecture And Gas Review](./research/namespace-architecture-gas-review.md)
+9. [Strict Effect Architecture Research](./research/strict-effect-architecture-research.md)
+10. [Gas Benchmarks](./BENCHMARKS.md)
+11. [ENSv2 Research Index](./research/ensv2-research-index.md)
 
 ## Contract Groups
 

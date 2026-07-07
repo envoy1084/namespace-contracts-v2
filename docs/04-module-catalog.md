@@ -26,6 +26,20 @@ struct RuleOutput {
 }
 ```
 
+The controller accepts `PriceOp.NONE` from any phase. Every non-`NONE` price operation must match the configured rule phase:
+
+| Phase | Allowed non-`NONE` price ops |
+| --- | --- |
+| `GUARD` | none |
+| `ELIGIBILITY` | none |
+| `BASE_PRICE` | `SET_BASE` |
+| `PREMIUM` | `ADD`, `MARKUP_BPS`, `MIN` |
+| `DISCOUNT` | `SUBTRACT`, `DISCOUNT_BPS`, `MAX` |
+| `OVERRIDE` | `OVERRIDE` |
+| `FINAL_CHECK` | `MIN`, `MAX` |
+
+Rules that can emit several price operations are reusable, but each activation instance must be placed in the phase matching the operation that runtime claims will emit.
+
 ### PauseRule
 
 Purpose: activation-owner pause switch.
@@ -155,6 +169,8 @@ Examples:
 | Emoji premium | `labelClass = EMOJI`, `requireMatch = false`, `priceOp = ADD` |
 | Letter-only sale | `labelClass = LETTER`, `requireMatch = true` |
 
+Use it in `ELIGIBILITY` when `priceOp = NONE`, `BASE_PRICE` when `priceOp = SET_BASE`, `PREMIUM` when `priceOp = ADD`, or `OVERRIDE` when `priceOp = OVERRIDE`.
+
 ### USDOracleRule
 
 Purpose: convert USD-denominated mint/renew prices into token amounts through a Chainlink-compatible token/USD oracle.
@@ -171,7 +187,7 @@ USDOracleRule.Params({
 })
 ```
 
-Use `SET_BASE` for a USD base price or `ADD` for a USD premium. The rule rejects stale, invalid, or incomplete oracle rounds.
+Use `SET_BASE` in `BASE_PRICE` for a USD base price, `ADD` in `PREMIUM` for a USD premium, or `OVERRIDE` in `OVERRIDE` for an exact USD-denominated special price. The rule rejects stale, invalid, or incomplete oracle rounds.
 
 ### ReservationRule
 
@@ -210,7 +226,7 @@ Supported behavior:
 | `priceOp` | `NONE`, `ADD`, or `OVERRIDE`. |
 | `mintPrice/renewPrice` | Custom price effect. |
 
-Use in `OVERRIDE` phase when reservation-specific prices should replace normal pricing.
+Use in `ELIGIBILITY` when reservations only gate/block labels, in `PREMIUM` when `priceOp = ADD`, or in `OVERRIDE` when reservation-specific prices should replace normal pricing. A reservation claim that emits `OVERRIDE` from `ELIGIBILITY` or `PREMIUM` will revert in the controller.
 
 ### WhitelistRule
 
@@ -251,6 +267,8 @@ Whitelist claims can be:
 | `discountBps > 0` | Applies a BPS discount. |
 | `priceOp = ADD/OVERRIDE` | Applies custom price effect. |
 | `mintable = false` | Blocks matching claim. |
+
+Use in `ELIGIBILITY` for allowlist-only claims, `DISCOUNT` for `discountBps`, `PREMIUM` for `priceOp = ADD`, or `OVERRIDE` for `priceOp = OVERRIDE`. A whitelist claim must not mix discount and custom price in one rule output.
 
 ## Payment Modules
 

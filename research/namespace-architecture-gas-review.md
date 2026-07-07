@@ -21,8 +21,8 @@ The conclusion of this review is:
 
 ```text
 Keep the effect-based rule model.
-Do not make arbitrary external-rule stacks the only production mint path.
-Add gas-optimized rule-set kinds for common sales.
+Use strict generic rule stacks as the launch path.
+Defer gas-optimized rule-set kinds until usage and benchmark data justify them.
 ```
 
 ## Current Architecture
@@ -65,7 +65,7 @@ Current core pieces:
 | Activation | One stored sale config per namespace | Good model. Needs stronger registry binding and metadata. |
 | Rule | External module implementing `IRuleModule` | Good for long-tail extensibility. Expensive if every common rule is external. |
 | RuleOutput | One compact effect per rule | Good gas-aware shape. Needs stricter semantics. |
-| Phases | Sorted at activation | Good. Currently too advisory because op/phase compatibility is not enforced. |
+| Phases | Sorted at activation | Good. Op/phase compatibility is now enforced by the controller. |
 | Payment | One payment module | Good default. Advanced settlement should be separate. |
 | Hooks | Required post-mint hooks | Good for resolver writes. Non-critical hooks should not brick mints. |
 | Config storage | Module-owned `mapping(activationId => Params)` | Simple, but expensive and weak for repeated module instances. |
@@ -119,7 +119,7 @@ uint256 addFlags;
 uint256 requireFlags;
 ```
 
-Rules that need complex behavior should either be composite packs or advanced custom modules.
+Rules that need complex behavior should use dedicated official rules, signed quotes, or future optimized modules when benchmarks justify them.
 
 ## Main Problems
 
@@ -136,17 +136,17 @@ Current benchmark numbers:
 
 | Scenario | Current gas | USD at 1 gwei |
 | --- | ---: | ---: |
-| No rules, free mint | `171,303` | `$0.51` |
-| Fixed ERC20 price | `228,753` | `$0.69` |
-| Sale window + length + fixed ERC20 | `265,912` | `$0.80` |
-| Three rules + split payment | `296,690` | `$0.89` |
-| Whitelist + split + resolver writes | `428,744` | `$1.29` |
-| All rules + split, no resolver writes | `573,161` | `$1.72` |
-| All rules + split + three resolver writes | `655,119` | `$1.97` |
+| No rules, free mint | `164,818` | `$0.49` |
+| Fixed ERC20 price | `223,261` | `$0.67` |
+| Sale window + length + fixed ERC20 | `260,191` | `$0.78` |
+| Three rules + split payment | `290,969` | `$0.87` |
+| Whitelist + split + resolver writes | `423,040` | `$1.27` |
+| All rules + split, no resolver writes | `571,297` | `$1.71` |
+| All rules + split + three resolver writes | `653,255` | `$1.96` |
 
-There is also a benchmark caveat: current mint benchmarks call `getState` and `ownerOf` after `controller.mint` for assertions. That makes them excellent comparative benchmarks, but they are not pure call-only transaction measurements. A call-only benchmark should be added before publishing final production gas claims.
+These are call-only mint benchmarks for the Namespace transaction path. They do not include post-mint test assertions.
 
-Even with that caveat, the current path is unlikely to reach `66k-100k` gas while also doing:
+Even with call-only measurements, the current path is unlikely to reach `66k-100k` gas while also doing:
 
 - official ENSv2 registry mint;
 - ERC20 `transferFrom`;
@@ -156,7 +156,7 @@ Even with that caveat, the current path is unlikely to reach `66k-100k` gas whil
 
 The official `PermissionedRegistry.register` itself writes registry state, mints the ERC1155-style token, grants roles, and emits events. Namespace cannot micro-optimize that away from the controller.
 
-### 2. External Rule Calls Are The Wrong Default For Common Sales
+### 2. External Rule Calls Are The Main Future Optimization Target
 
 The generic path currently makes one external call per rule:
 
@@ -166,15 +166,15 @@ The generic path currently makes one external call per rule:
 10 rules = 10 external calls
 ```
 
-That is acceptable for custom integrations. It is not the right default for the most common sale types.
+That is acceptable for launch-stage modularity and custom integrations. The strict-engine benchmark shows the extra controller checks are small compared with registry, payment, proof, and hook costs.
 
-Common sale logic should be compiled into one rule-set call:
+Common sale logic can later be compiled into one optimized rule-set call:
 
 ```text
 window + length + fixed price + premium + whitelist + reservation
 ```
 
-This preserves the same semantic model but removes multiple external calls, repeated context passing, repeated module storage reads, and repeated output application branches.
+This preserves the same semantic model but removes multiple external calls, repeated context passing, repeated module storage reads, and repeated output application branches. It should be added only after real activation usage shows which bundles matter.
 
 ### 3. Module Config Is Too Coarse
 
@@ -305,18 +305,21 @@ The current benchmarks show these rough components:
 
 | Component | Current benchmark signal |
 | --- | ---: |
-| Free no-rule mint plus benchmark assertions | `171,303` gas |
-| One fixed-price ERC20 sale over no-rule | `+57,450` gas |
+| Free no-rule mint | `164,818` gas |
+| One fixed-price ERC20 sale over no-rule | `+58,443` gas |
 | Split payment over direct ERC20 | `+30,736` gas |
-| Three-rule paid stack over one fixed-price rule | `+37,159` gas |
-| All-rule stack over three-rule split stack | `+276,471` gas |
+| Three-rule paid stack over one fixed-price rule | `+36,930` gas |
+| All-rule stack over three-rule split stack | `+280,328` gas |
 | Three resolver writes | `+81,958` gas |
 | Each extra resolver write | about `+9,958` gas |
-| ERC20 direct payment profile | `83,171` gas |
-| ERC20 split payment profile | `113,953` gas |
-| Whitelist proof depth 4 | `67,851` gas |
-| Reservation proof depth 4 | `65,955` gas |
-| USD oracle rule | `47,000` gas |
+| ERC20 direct payment profile | `83,127` gas |
+| ERC20 split payment, two recipients | `101,987` gas |
+| ERC20 split payment, five recipients | `186,872` gas |
+| Whitelist Merkle set size 10 | `67,830` gas |
+| Whitelist Merkle set size 1000 | `82,713` gas |
+| Reservation Merkle set size 10 | `65,910` gas |
+| Reservation Merkle set size 1000 | `80,795` gas |
+| USD oracle rule | `46,998` gas |
 
 The most important conclusion:
 
@@ -334,14 +337,14 @@ To reach that range, one of these must be true:
 
 ## Recommended Architecture
 
-Use three execution lanes behind one product model.
+Use two launch execution lanes behind one product model, while keeping a deferred pack lane open for later optimization.
 
 ```mermaid
 flowchart TD
     Buyer["Buyer"] --> Controller["NamespaceController"]
     Controller --> Kind{"RuleSet kind"}
     Kind -->|"Generic"| Generic["External IRuleModule[]"]
-    Kind -->|"Packed"| Pack["Composite sale pack"]
+    Kind -->|"Deferred packed"| Pack["Composite sale pack"]
     Kind -->|"Signed"| Quote["Signed quote verifier"]
     Generic --> Effects["Final decision + price"]
     Pack --> Effects
@@ -369,11 +372,11 @@ Required improvements:
 - expose full activation metadata;
 - add quote interfaces;
 - add module version/deprecation metadata;
-- add call-only gas benchmarks.
+- add pack benchmarks only after common activation patterns are known.
 
-### Lane B: Composite Sale Packs
+### Deferred Lane B: Composite Sale Packs
 
-This should become the default production path for most users.
+Do not build these now. They are a future optimization lane if many users converge on the same sale bundles or if mint gas becomes dominated by repeated external rule calls.
 
 Example packs:
 
@@ -434,21 +437,17 @@ This is not as trustless as on-chain rules, but it is the practical path for:
 
 ## Gas Roadmap
 
-### Step 1: Make Benchmarks More Precise
+### Step 1: Keep Benchmarks Precise
 
-Add call-only benchmarks:
+The benchmark suite now includes call-only mint benchmarks, direct ENSv2 registry baselines, and per-rule profiles. Keep extending it before changing architecture:
 
 ```text
-mint only
-mint + direct ERC20
-mint + split ERC20
-mint + each rule pack
-registry.register direct baseline
-registry.register with zero buyer roles
-registry.register with typical buyer roles
+packed RuleOutput experiment
+StandardSalePack
+WhitelistReservationPack
+SignedQuotePack
+claim calldata parsing vs abi.decode
 ```
-
-Current benchmarks include useful assertions after mint. Keep them, but add pure transaction benchmarks for production estimates.
 
 ### Step 2: Make Cheap Defaults Actually Cheap
 
@@ -465,9 +464,9 @@ Examples:
 
 This can move average users from "advanced stack by default" toward a lower baseline.
 
-### Step 3: Add Fast Packs
+### Step 3: Revisit Fast Packs Later
 
-Implement one pack first:
+Only implement a pack when benchmark and usage data show that a specific bundle is worth the extra contract surface. A likely future candidate is:
 
 ```text
 StandardSalePack:
@@ -479,13 +478,13 @@ StandardSalePack:
   optional reservation override
 ```
 
-This pack should benchmark against:
+This future pack should benchmark against the strict-engine profiles:
 
-- current 3-rule paid stack: `265,912`;
-- current whitelist stack: `323,735`;
-- current reservation stack: `376,203`.
+- current 3-rule paid stack: `260,191`;
+- current whitelist ERC20 stack: `318,031`;
+- current reservation split stack: `372,106`.
 
-Success is not immediately `66k-100k`. Success is removing the generic external-call tax and proving a path toward low-cost production mints.
+Success is not immediately `66k-100k`. Success would be removing the generic external-call tax for a proven high-volume path without changing the rule/effect mental model.
 
 ### Step 4: Compact Claims
 
@@ -535,8 +534,8 @@ Expose this in contract reads and UI.
 
 | Architecture | Gas | Flexibility | Security | Recommendation |
 | --- | --- | --- | --- | --- |
-| Current generic engine only | Medium/high cost | Highest | Depends on module trust | Keep for custom path, not default. |
-| Composite packs | Low/medium cost | Medium | Easier to audit | Make first-class production path. |
+| Strict generic engine | Medium/high cost | Highest | Depends on module trust | Use as launch path. |
+| Composite packs | Low/medium cost | Medium | Easier to audit | Defer until usage and benchmarks justify. |
 | Signed quote intents | Low cost | Very high off-chain | Signer trust | Use for dynamic pricing/integrations. |
 | Rule VM/opcodes | Medium/low cost | Medium | Interpreter risk | Consider later if packs proliferate. |
 | Sale clones | Low mint cost | Low/medium | Template-specific | Good for high-volume templates. |
@@ -646,7 +645,7 @@ The current effect architecture is good, but incomplete.
 
 Do not go back to separate policy and pricing modules. That model fails for real-world features.
 
-Do not rely only on arbitrary external rules. That model will stay too expensive for common high-volume sales.
+Use strict generic rules as the default pre-deployment architecture. The measured overhead is small enough to keep the simple activation UX where Alice passes the rules she needs.
 
 The right long-term shape is:
 
@@ -655,8 +654,8 @@ One semantic model:
   claims -> rules -> effects -> final decision -> settlement
 
 Multiple execution lanes:
-  generic modules for extensibility
-  composite packs for common cheap sales
+  strict generic modules for default extensibility
+  composite packs later for proven common cheap sales
   signed quote path for dynamic/off-chain integrations
 ```
 
@@ -667,7 +666,8 @@ Generic advanced mints:
   optimize for flexibility, expect >300k gas with registry/payment/proofs.
 
 Common production mints:
-  optimize with packs, minimal roles, no optional hooks, and direct payment.
+  first optimize with fewer rules, minimal roles, no optional hooks, and direct payment.
+  add packs only after benchmark data proves a specific common path deserves them.
 
 Sub-100k mints:
   require registry fast path, lazy settlement, L2/namechain assumptions, or signed/off-chain aggregation.

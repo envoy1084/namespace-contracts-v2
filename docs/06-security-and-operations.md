@@ -55,6 +55,20 @@ FINAL_CHECK
 
 This avoids ambiguous price behavior. For example, a token-holder discount should normally run after the base price and premiums. A reservation custom price should normally run in `OVERRIDE` so it can replace earlier pricing.
 
+The controller accepts `PriceOp.NONE` from any phase, but non-`NONE` price operations are phase-limited:
+
+| Phase | Allowed non-`NONE` price ops |
+| --- | --- |
+| `GUARD` | none |
+| `ELIGIBILITY` | none |
+| `BASE_PRICE` | `SET_BASE` |
+| `PREMIUM` | `ADD`, `MARKUP_BPS`, `MIN` |
+| `DISCOUNT` | `SUBTRACT`, `DISCOUNT_BPS`, `MAX` |
+| `OVERRIDE` | `OVERRIDE` |
+| `FINAL_CHECK` | `MIN`, `MAX` |
+
+The controller also rejects repeated base prices, discounts before any price exists, mixed payment tokens, and any price change after `OVERRIDE`.
+
 ## Claims
 
 `ReservationRule` and `WhitelistRule` use double-hashed Merkle leaves and runtime claims.
@@ -122,8 +136,10 @@ Native ETH pricing is represented by `Price.token == address(0)`, but the curren
 External calls happen in this order:
 
 ```text
-rules -> payment -> registry -> hooks
+rules -> registry -> payment -> hooks
 ```
+
+Payment happens after the registry write, but the transaction is atomic. If payment or a hook reverts, the registry write reverts with the rest of the transaction.
 
 If any later call reverts, the whole transaction reverts.
 

@@ -12,9 +12,11 @@ Recommended reading order:
 6. [Subname Minting Flow](./ensv2-subname-minting.md)
 7. [Example Registry And Registrar](./ensv2-example-registry.md)
 8. [Namespace Contract Architecture](./namespace-subname-minting-design.md)
-9. [Namespace Architecture V2: Claims, Rules, Effects, And Settlement](./namespace-architecture-v2-claims-rules-settlement.md)
-10. [Namespace Architecture And Gas Review](./namespace-architecture-gas-review.md)
-11. [ENSv2 Source Map](./ensv2-source-map.md)
+9. [Namespace Architecture: Claims, Rules, Effects, And Settlement](./namespace-architecture-v2-claims-rules-settlement.md)
+10. [Architecture Decision History](./architecture-decision-history.md)
+11. [Namespace Architecture And Gas Review](./namespace-architecture-gas-review.md)
+12. [Strict Effect Architecture Research](./strict-effect-architecture-research.md)
+13. [ENSv2 Source Map](./ensv2-source-map.md)
 
 ## One-Screen Summary
 

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+
 import {IAggregatorV3} from "src/interfaces/IAggregatorV3.sol";
 import {ERC20SplitPaymentModule} from "src/modules/payment/ERC20SplitPaymentModule.sol";
 import {LabelClassRule} from "src/modules/rules/LabelClassRule.sol";
@@ -186,7 +188,7 @@ abstract contract NamespaceBenchmarkProfiles is NamespaceBenchmarkBase {
         ERC20SplitPaymentModule.Split[] memory splits = new ERC20SplitPaymentModule.Split[](count);
         uint256 remaining = 10_000;
         for (uint256 i; i < count;) {
-            uint16 bps = i == count - 1 ? uint16(remaining) : uint16(10_000 / count);
+            uint16 bps = SafeCastLib.toUint16(i == count - 1 ? remaining : 10_000 / count);
             splits[i] = ERC20SplitPaymentModule.Split({recipient: _splitRecipient(i), bps: bps});
             remaining -= bps;
             unchecked {
