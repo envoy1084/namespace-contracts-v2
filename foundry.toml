@@ -22,3 +22,4 @@ runs = 200
 # Linting
 [lint]
 severity = ["high", "med", "low", "info", "gas", "code-size"]
+ignore = ["lib"]
