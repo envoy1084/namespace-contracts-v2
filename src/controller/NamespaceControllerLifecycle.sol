@@ -76,6 +76,8 @@ abstract contract NamespaceControllerLifecycle is NamespaceControllerModules {
             parentNode: stored.parentNode,
             resolver: stored.resolver,
             buyerRoleBitmap: stored.buyerRoleBitmap,
+            minDuration: stored.minDuration,
+            maxDuration: stored.maxDuration,
             active: stored.active,
             paymentModule: stored.paymentModule
         });
@@ -96,6 +98,8 @@ abstract contract NamespaceControllerLifecycle is NamespaceControllerModules {
         activation.parentNode = config.parentNode;
         activation.resolver = config.resolver;
         activation.buyerRoleBitmap = config.buyerRoleBitmap;
+        activation.minDuration = config.minDuration;
+        activation.maxDuration = config.maxDuration;
         activation.active = true;
         activation.ruleCount = ruleCount;
         activation.firstRulePhase = firstRulePhase;
@@ -107,6 +111,9 @@ abstract contract NamespaceControllerLifecycle is NamespaceControllerModules {
 
     function _checkActivationPreconditions(NamespaceTypes.ActivationConfig calldata config) private view {
         if (address(config.registry) == address(0)) revert ZeroRegistry();
+        if (config.maxDuration == 0 || config.minDuration > config.maxDuration) {
+            revert InvalidDurationBounds(config.minDuration, config.maxDuration);
+        }
         if (config.paymentModule.module != address(0)) {
             _checkModule(config.paymentModule.module, MODULE_KIND_PAYMENT);
         }

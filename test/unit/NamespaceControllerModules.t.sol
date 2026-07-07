@@ -351,6 +351,8 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
             parentNode: keccak256("empty.alice.eth"),
             resolver: address(0),
             buyerRoleBitmap: 0,
+            minDuration: 1,
+            maxDuration: 365 days,
             rules: new NamespaceTypes.RuleConfig[](0),
             paymentModule: NamespaceTypes.ModuleConfig({module: address(0), configData: ""}),
             postHooks: new NamespaceTypes.ModuleConfig[](0)
@@ -379,6 +381,8 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
             parentNode: keccak256("single.alice.eth"),
             resolver: address(0xBEEF),
             buyerRoleBitmap: 0,
+            minDuration: 1,
+            maxDuration: 365 days,
             rules: rules,
             paymentModule: NamespaceTypes.ModuleConfig({module: address(0), configData: ""}),
             postHooks: postHooks

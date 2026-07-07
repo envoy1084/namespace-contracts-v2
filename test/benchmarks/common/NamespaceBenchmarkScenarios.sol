@@ -147,6 +147,8 @@ abstract contract NamespaceBenchmarkScenarios is NamespaceBenchmarkPricing {
             parentNode: keccak256("alice.eth"),
             resolver: resolver_,
             buyerRoleBitmap: BUYER_ROLES,
+            minDuration: 1,
+            maxDuration: 365 days,
             rules: rules,
             paymentModule: paymentModule,
             postHooks: postHooks

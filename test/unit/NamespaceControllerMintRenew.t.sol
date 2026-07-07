@@ -99,6 +99,20 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
         controller.mint(activationId, "pay", 365 days, runtimeData);
     }
 
+    function test_mint_revertsWhenDurationExceedsActivationMax() public {
+        bytes32 activationId = _activateDefault();
+        NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
+        uint64 duration = type(uint64).max - uint64(block.timestamp);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                INamespaceController.DurationOutOfBounds.selector, activationId, duration, uint64(1), uint64(365 days)
+            )
+        );
+        vm.prank(accounts.buyer.addr);
+        controller.mint(activationId, "pay", duration, runtimeData);
+    }
+
     function test_renew_revertsForZeroDuration() public {
         vm.expectRevert(abi.encodeWithSelector(INamespaceController.ZeroDuration.selector));
         controller.renew(bytes32(0), "pay", 0, _defaultRuntimeData());
@@ -165,6 +179,8 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
             parentNode: keccak256("free.alice.eth"),
             resolver: address(0),
             buyerRoleBitmap: 0,
+            minDuration: 1,
+            maxDuration: 365 days,
             rules: new NamespaceTypes.RuleConfig[](0),
             paymentModule: NamespaceTypes.ModuleConfig({module: address(0), configData: ""}),
             postHooks: new NamespaceTypes.ModuleConfig[](0)
@@ -238,6 +254,8 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
             parentNode: keccak256("free.alice.eth"),
             resolver: address(0),
             buyerRoleBitmap: 0,
+            minDuration: 1,
+            maxDuration: 365 days,
             rules: new NamespaceTypes.RuleConfig[](0),
             paymentModule: NamespaceTypes.ModuleConfig({module: address(0), configData: ""}),
             postHooks: new NamespaceTypes.ModuleConfig[](0)

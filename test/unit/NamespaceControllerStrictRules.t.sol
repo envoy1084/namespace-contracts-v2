@@ -284,6 +284,8 @@ contract NamespaceControllerStrictRulesTest is NamespaceSetUp {
             parentNode: keccak256("alice.eth"),
             resolver: address(0xBEEF),
             buyerRoleBitmap: BUYER_ROLES,
+            minDuration: 1,
+            maxDuration: 365 days,
             rules: rules,
             paymentModule: paymentModule,
             postHooks: postHooks

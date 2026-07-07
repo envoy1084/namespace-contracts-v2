@@ -31,6 +31,7 @@ contract NamespaceController is NamespaceControllerRules {
         ActivationData storage activation = _requireActivation(activationId);
         if (!activation.active) revert ActivationNotActive(activationId);
         _checkRegistryAdminAuthority(activation.owner, activation.registry);
+        _checkDuration(activationId, activation, duration);
         _checkRuntimeDataLengths(activation, runtimeData);
 
         uint256 labelId = uint256(keccak256(bytes(label)));
@@ -61,6 +62,7 @@ contract NamespaceController is NamespaceControllerRules {
         ActivationData storage activation = _requireActivation(activationId);
         if (!activation.active) revert ActivationNotActive(activationId);
         _checkRegistryAdminAuthority(activation.owner, activation.registry);
+        _checkDuration(activationId, activation, duration);
         _checkRuntimeDataLengths(activation, runtimeData);
 
         uint256 labelId = uint256(keccak256(bytes(label)));

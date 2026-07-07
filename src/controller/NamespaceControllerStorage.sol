@@ -37,6 +37,8 @@ abstract contract NamespaceControllerStorage is
         bytes32 parentNode;
         address resolver;
         uint256 buyerRoleBitmap;
+        uint64 minDuration;
+        uint64 maxDuration;
         bool active;
         uint8 ruleCount;
         uint8 firstRulePhase;
@@ -84,6 +86,12 @@ abstract contract NamespaceControllerStorage is
     function _checkRegistryAdminAuthority(address account, IPermissionedRegistry registry) internal view {
         if (!registry.hasRootRoles(ROLE_REGISTRAR_ADMIN, account)) {
             revert UnauthorizedActivationOwner(account, address(registry));
+        }
+    }
+
+    function _checkDuration(bytes32 activationId, ActivationData storage activation, uint64 duration) internal view {
+        if (duration < activation.minDuration || duration > activation.maxDuration) {
+            revert DurationOutOfBounds(activationId, duration, activation.minDuration, activation.maxDuration);
         }
     }
 }

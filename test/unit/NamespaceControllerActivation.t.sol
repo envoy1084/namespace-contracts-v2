@@ -24,6 +24,8 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
         assertEq(activation.parentNode, keccak256("alice.eth"));
         assertEq(activation.resolver, address(0xBEEF));
         assertEq(activation.buyerRoleBitmap, BUYER_ROLES);
+        assertEq(activation.minDuration, 1);
+        assertEq(activation.maxDuration, 365 days);
         assertTrue(activation.active);
         assertEq(activation.paymentModule, address(erc20Payment));
 
@@ -52,6 +54,27 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
             )
         );
         vm.prank(accounts.buyer.addr);
+        controller.activate(config);
+    }
+
+    function test_activate_revertsForInvalidDurationBounds() public {
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        config.minDuration = 30 days;
+        config.maxDuration = 7 days;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(INamespaceController.InvalidDurationBounds.selector, uint64(30 days), uint64(7 days))
+        );
+        vm.prank(accounts.alice.addr);
+        controller.activate(config);
+
+        config.minDuration = 0;
+        config.maxDuration = 0;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(INamespaceController.InvalidDurationBounds.selector, uint64(0), uint64(0))
+        );
+        vm.prank(accounts.alice.addr);
         controller.activate(config);
     }
 

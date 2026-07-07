@@ -67,6 +67,8 @@ library NamespaceTypes {
     /// @param parentNode Namehash of the parent name, e.g. alice.eth.
     /// @param resolver Default resolver assigned to minted subnames.
     /// @param buyerRoleBitmap ENSv2 registry roles granted to subname buyers.
+    /// @param minDuration Smallest mint or renewal duration allowed. Use 0 to allow any non-zero duration.
+    /// @param maxDuration Largest mint or renewal duration allowed. Must be non-zero.
     /// @param rules Ordered rule modules that validate and price mints/renewals.
     /// @param paymentModule Optional module that collects payment from the payer; required when rules can return non-zero.
     /// @param postHooks Hooks called after the ENSv2 registry mint succeeds.
@@ -75,6 +77,8 @@ library NamespaceTypes {
         bytes32 parentNode;
         address resolver;
         uint256 buyerRoleBitmap;
+        uint64 minDuration;
+        uint64 maxDuration;
         RuleConfig[] rules;
         ModuleConfig paymentModule;
         ModuleConfig[] postHooks;
@@ -86,6 +90,8 @@ library NamespaceTypes {
     /// @param parentNode Namehash of the parent name.
     /// @param resolver Default resolver assigned during mint.
     /// @param buyerRoleBitmap ENSv2 registry roles granted to minted-name owners.
+    /// @param minDuration Smallest mint or renewal duration allowed.
+    /// @param maxDuration Largest mint or renewal duration allowed.
     /// @param active Whether mints are currently enabled for this activation.
     /// @param paymentModule Active payment module.
     struct Activation {
@@ -94,6 +100,8 @@ library NamespaceTypes {
         bytes32 parentNode;
         address resolver;
         uint256 buyerRoleBitmap;
+        uint64 minDuration;
+        uint64 maxDuration;
         bool active;
         address paymentModule;
     }

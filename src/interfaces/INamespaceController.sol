@@ -18,6 +18,8 @@ interface INamespaceController {
     error UnauthorizedActivationOwner(address caller, address registry);
     error ControllerMissingRegistryRoles(address registry, uint256 requiredRoles);
     error ZeroDuration();
+    error InvalidDurationBounds(uint64 minDuration, uint64 maxDuration);
+    error DurationOutOfBounds(bytes32 activationId, uint64 duration, uint64 minDuration, uint64 maxDuration);
     error RuntimeDataLengthMismatch(bytes32 kind, uint256 expected, uint256 actual);
     error ModuleIndexOutOfBounds(bytes32 activationId, bytes32 kind, uint256 index, uint256 length);
     error ModuleListTooLong(bytes32 kind, uint256 length);
