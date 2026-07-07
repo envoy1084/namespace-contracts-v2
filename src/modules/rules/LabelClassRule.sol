@@ -163,23 +163,42 @@ contract LabelClassRule is NamespaceRule {
             return (first, offset + 1);
         }
         if (first >= 0xC2 && first <= 0xDF && offset + 1 < data.length) {
-            return ((uint256(first & 0x1F) << 6) | uint256(uint8(data[offset + 1]) & 0x3F), offset + 2);
+            uint8 second = uint8(data[offset + 1]);
+            if (!_isContinuation(second)) revert InvalidUtf8Label(string(data));
+            return ((uint256(first & 0x1F) << 6) | uint256(second & 0x3F), offset + 2);
         }
         if (first >= 0xE0 && first <= 0xEF && offset + 2 < data.length) {
-            return (
-                (uint256(first & 0x0F) << 12) | (uint256(uint8(data[offset + 1]) & 0x3F) << 6)
-                    | uint256(uint8(data[offset + 2]) & 0x3F),
-                offset + 3
-            );
+            uint8 second = uint8(data[offset + 1]);
+            uint8 third = uint8(data[offset + 2]);
+            if (
+                !_isContinuation(second) || !_isContinuation(third) || (first == 0xE0 && second < 0xA0)
+                    || (first == 0xED && second > 0x9F)
+            ) {
+                revert InvalidUtf8Label(string(data));
+            }
+            return ((uint256(first & 0x0F) << 12) | (uint256(second & 0x3F) << 6) | uint256(third & 0x3F), offset + 3);
         }
         if (first >= 0xF0 && first <= 0xF4 && offset + 3 < data.length) {
+            uint8 second = uint8(data[offset + 1]);
+            uint8 third = uint8(data[offset + 2]);
+            uint8 fourth = uint8(data[offset + 3]);
+            if (
+                !_isContinuation(second) || !_isContinuation(third) || !_isContinuation(fourth)
+                    || (first == 0xF0 && second < 0x90) || (first == 0xF4 && second > 0x8F)
+            ) {
+                revert InvalidUtf8Label(string(data));
+            }
             return (
-                (uint256(first & 0x07) << 18) | (uint256(uint8(data[offset + 1]) & 0x3F) << 12)
-                    | (uint256(uint8(data[offset + 2]) & 0x3F) << 6) | uint256(uint8(data[offset + 3]) & 0x3F),
+                (uint256(first & 0x07) << 18) | (uint256(second & 0x3F) << 12) | (uint256(third & 0x3F) << 6)
+                    | uint256(fourth & 0x3F),
                 offset + 4
             );
         }
         revert InvalidUtf8Label(string(data));
+    }
+
+    function _isContinuation(uint8 char) private pure returns (bool) {
+        return char >= 0x80 && char <= 0xBF;
     }
 
     function _isEmojiCodepoint(uint256 codepoint) private pure returns (bool) {
