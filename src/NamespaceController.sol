@@ -40,6 +40,7 @@ contract NamespaceController is NamespaceControllerRules {
             .register(
                 label, msg.sender, IRegistry(address(0)), activation.resolver, activation.buyerRoleBitmap, ctx.expiry
             );
+        labelActivations[address(activation.registry)][bytes32(labelId)] = activationId;
 
         _collectMint(activation, ctx, price, runtimeData.paymentData);
         _runPostMintHooks(activation, ctx, tokenId, runtimeData.postHookData);
@@ -62,8 +63,13 @@ contract NamespaceController is NamespaceControllerRules {
 
         uint256 labelId = uint256(keccak256(bytes(label)));
         IPermissionedRegistry.State memory state = activation.registry.getState(labelId);
-        if (state.status == IPermissionedRegistry.Status.AVAILABLE) {
+        if (state.status != IPermissionedRegistry.Status.REGISTERED) {
             revert LabelNotRenewable(label, state.status);
+        }
+        bytes32 labelHash = bytes32(labelId);
+        bytes32 labelActivationId = labelActivations[address(activation.registry)][labelHash];
+        if (labelActivationId != activationId) {
+            revert LabelActivationMismatch(label, activationId, labelActivationId);
         }
 
         newExpiry = state.expiry + duration;
@@ -73,7 +79,7 @@ contract NamespaceController is NamespaceControllerRules {
             registry: activation.registry,
             parentNode: activation.parentNode,
             label: label,
-            labelHash: bytes32(labelId),
+            labelHash: labelHash,
             tokenId: state.tokenId,
             duration: duration,
             currentExpiry: state.expiry,

@@ -39,6 +39,7 @@ interface INamespaceController {
         bytes32 activationId, address rule, uint256 index, NamespaceTypes.PriceOp operation
     );
     error LabelNotRenewable(string label, IPermissionedRegistry.Status status);
+    error LabelActivationMismatch(string label, bytes32 expectedActivationId, bytes32 actualActivationId);
 
     /// @notice Emitted when a namespace activation is created.
     event ActivationCreated(

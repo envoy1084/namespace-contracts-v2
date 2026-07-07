@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -163,6 +164,66 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
         );
         controller.renew(activationId, "pay", 30 days, runtimeData);
         vm.stopPrank();
+    }
+
+    function test_renew_revertsForReservedLabel() public {
+        bytes32 activationId = _activateDefault();
+        NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
+        uint64 reservedExpiry = uint64(block.timestamp + 365 days);
+
+        vm.prank(address(controller));
+        registry.register("vip", address(0), IRegistry(address(0)), address(0), 0, reservedExpiry);
+
+        IPermissionedRegistry.State memory beforeRenew = registry.getState(uint256(keccak256(bytes("vip"))));
+        assertEq(uint256(beforeRenew.status), uint256(IPermissionedRegistry.Status.RESERVED));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                INamespaceController.LabelNotRenewable.selector, "vip", IPermissionedRegistry.Status.RESERVED
+            )
+        );
+        vm.prank(accounts.buyer.addr);
+        controller.renew(activationId, "vip", 30 days, runtimeData);
+
+        IPermissionedRegistry.State memory afterRenew = registry.getState(uint256(keccak256(bytes("vip"))));
+        assertEq(afterRenew.expiry, reservedExpiry);
+    }
+
+    function test_renew_revertsWhenActivationDidNotMintLabel() public {
+        bytes32 paidActivationId = _activateDefault();
+        NamespaceTypes.RuntimeData memory paidRuntimeData = _defaultRuntimeData();
+
+        vm.startPrank(accounts.buyer.addr);
+        token.approve(address(erc20Payment), 100 ether);
+        controller.mint(paidActivationId, "pay", 365 days, paidRuntimeData);
+        vm.stopPrank();
+
+        NamespaceTypes.ActivationConfig memory freeConfig = NamespaceTypes.ActivationConfig({
+            registry: registry,
+            parentNode: keccak256("free.alice.eth"),
+            resolver: address(0),
+            buyerRoleBitmap: 0,
+            rules: new NamespaceTypes.RuleConfig[](0),
+            paymentModule: NamespaceTypes.ModuleConfig({module: address(0), configData: ""}),
+            postHooks: new NamespaceTypes.ModuleConfig[](0)
+        });
+
+        vm.prank(accounts.alice.addr);
+        bytes32 freeActivationId = controller.activate(freeConfig);
+
+        NamespaceTypes.RuntimeData memory freeRuntimeData;
+        freeRuntimeData.ruleData = new bytes[](0);
+        freeRuntimeData.postHookData = new bytes[](0);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                INamespaceController.LabelActivationMismatch.selector, "pay", freeActivationId, paidActivationId
+            )
+        );
+        vm.prank(accounts.buyer.addr);
+        controller.renew(freeActivationId, "pay", 30 days, freeRuntimeData);
+
+        assertEq(token.balanceOf(accounts.treasury.addr), 100 ether);
     }
 
     function test_mint_respectsReservationRule() public {

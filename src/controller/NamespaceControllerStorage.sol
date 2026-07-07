@@ -65,6 +65,7 @@ abstract contract NamespaceControllerStorage is
     bool public moduleApprovalRequired;
 
     mapping(bytes32 activationId => ActivationData activation) internal activations;
+    mapping(address registry => mapping(bytes32 labelHash => bytes32 activationId)) internal labelActivations;
     mapping(bytes32 kind => mapping(address module => bool approved)) public approvedModules;
 
     function _requireActivation(bytes32 activationId) internal view returns (ActivationData storage activation) {
