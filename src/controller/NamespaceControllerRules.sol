@@ -23,7 +23,7 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
     ) internal returns (NamespaceTypes.Price memory price) {
         uint256 length = activation.ruleCount;
         if (length == 0) return NamespaceTypes.Price({token: address(0), amount: 0});
-        EvaluationState memory state;
+        EvaluationState memory state = EvaluationState({amount: 0, flags: 0, token: address(0), status: 0});
         if (length == 1) {
             address rule = activation.rules;
             _applyRuleOutput(
@@ -61,7 +61,7 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
     ) internal returns (NamespaceTypes.Price memory price) {
         uint256 length = activation.ruleCount;
         if (length == 0) return NamespaceTypes.Price({token: address(0), amount: 0});
-        EvaluationState memory state;
+        EvaluationState memory state = EvaluationState({amount: 0, flags: 0, token: address(0), status: 0});
         if (length == 1) {
             address rule = activation.rules;
             _applyRuleOutput(
@@ -174,9 +174,8 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
             state.status |= STATUS_PRICE_MUTATED;
         }
     }
-    // slither-disable-end cyclomatic-complexity
-    // slither-disable-end incorrect-equality
 
+    // slither-disable-end cyclomatic-complexity
     function _applyToken(address token, EvaluationState memory state) private pure {
         if ((state.status & STATUS_TOKEN_SET) == 0) {
             state.token = token;
@@ -244,6 +243,7 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
             revert RulePriceOperationBeforePrice(activationId, rule, index, op);
         }
     }
+    // slither-disable-end incorrect-equality
 
     function _checkBps(address rule, uint16 bps) private pure {
         if (bps > BPS_DENOMINATOR) revert InvalidRuleBps(rule, bps);

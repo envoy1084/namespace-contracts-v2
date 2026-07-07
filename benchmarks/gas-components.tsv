@@ -2,16 +2,16 @@ key	kind	gas	source	description	activationGas
 activation.free_no_rules	exact	199382	testBenchmark_activation_00_pncFreeNoRules	Activation with no rules, no payment, no hooks.	n/a
 activation.all_rules_split_five_resolver_writes	exact	1352999	testBenchmark_activation_24_pncAllRulesSplitFiveResolverWrites	Activation with every current rule, split payment, and five resolver writes.	n/a
 mint.free_no_rules	exact	162444	testBenchmark_mint_00_pncFreeNoRules	Controller mint with no rules, no payment, no hooks.	n/a
-mint.fixed_erc20	exact	220769	testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment	Controller mint with fixed price rule and direct ERC20 payment.	n/a
-mint.three_rules_erc20	exact	257794	testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver	Controller mint with sale window, label length, fixed price, and direct ERC20 payment.	n/a
-mint.three_rules_split_two_resolver_writes	exact	364408	testBenchmark_mint_11_pncThreeRulesSplitPaymentTwoResolverWrites	Controller mint with three rules, split payment, and two resolver writes.	n/a
-mint.three_rules_premium_split_three_resolver_writes	exact	380808	testBenchmark_mint_13_pncThreeRulesPremiumSplitPaymentThreeResolverWrites	Controller mint with three rules, premium pricing, split payment, and three resolver writes.	n/a
-mint.whitelist_erc20	exact	315634	testBenchmark_mint_14_pncFourRulesWhitelistERC20PaymentNoResolver	Controller mint with whitelist proof and direct ERC20 payment.	n/a
-mint.reservation_split	exact	369363	testBenchmark_mint_19_pncFiveRulesReservationDiscountSplitNoResolver	Controller mint with reservation and token discount rules plus split payment.	n/a
-mint.all_rules_split	exact	568621	testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites	Controller mint with every current rule and split payment, no resolver writes.	n/a
-mint.all_rules_split_three_resolver_writes	exact	652392	testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites	Controller mint with every current rule, split payment, and three resolver writes.	n/a
-mint.all_rules_split_five_resolver_writes	exact	671981	testBenchmark_mint_24_pncAllRulesSplitFiveResolverWrites	Controller mint with every current rule, split payment, and five resolver writes.	n/a
-renew.three_rules_erc20	exact	149091	testBenchmark_renew_00_threeRulesERC20PaymentNoHook	Controller renewal with three rules and direct ERC20 payment.	n/a
+mint.fixed_erc20	exact	220761	testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment	Controller mint with fixed price rule and direct ERC20 payment.	n/a
+mint.three_rules_erc20	exact	257786	testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver	Controller mint with sale window, label length, fixed price, and direct ERC20 payment.	n/a
+mint.three_rules_split_two_resolver_writes	exact	364400	testBenchmark_mint_11_pncThreeRulesSplitPaymentTwoResolverWrites	Controller mint with three rules, split payment, and two resolver writes.	n/a
+mint.three_rules_premium_split_three_resolver_writes	exact	380800	testBenchmark_mint_13_pncThreeRulesPremiumSplitPaymentThreeResolverWrites	Controller mint with three rules, premium pricing, split payment, and three resolver writes.	n/a
+mint.whitelist_erc20	exact	315626	testBenchmark_mint_14_pncFourRulesWhitelistERC20PaymentNoResolver	Controller mint with whitelist proof and direct ERC20 payment.	n/a
+mint.reservation_split	exact	369355	testBenchmark_mint_19_pncFiveRulesReservationDiscountSplitNoResolver	Controller mint with reservation and token discount rules plus split payment.	n/a
+mint.all_rules_split	exact	568613	testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites	Controller mint with every current rule and split payment, no resolver writes.	n/a
+mint.all_rules_split_three_resolver_writes	exact	652384	testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites	Controller mint with every current rule, split payment, and three resolver writes.	n/a
+mint.all_rules_split_five_resolver_writes	exact	671973	testBenchmark_mint_24_pncAllRulesSplitFiveResolverWrites	Controller mint with every current rule, split payment, and five resolver writes.	n/a
+renew.three_rules_erc20	exact	149083	testBenchmark_renew_00_threeRulesERC20PaymentNoHook	Controller renewal with three rules and direct ERC20 payment.	n/a
 registry.register_no_roles	floor	76072	testBenchmark_registry_00_registerNoRolesNoResolver	Direct ENSv2 registry register with owner, no buyer roles, no resolver.	n/a
 registry.register_buyer_roles	floor	123378	testBenchmark_registry_01_registerBuyerRolesNoResolver	Direct ENSv2 registry register with buyer roles and no resolver.	n/a
 registry.register_buyer_roles_resolver	floor	127383	testBenchmark_registry_02_registerBuyerRolesWithResolver	Direct ENSv2 registry register with buyer roles and resolver.	n/a
@@ -49,8 +49,8 @@ hook.set_addr_override	profile	89711	testBenchmark_profile_hook_02_setAddrToBuye
 hook.batch_resolver_1	profile	87492	testBenchmark_profile_hook_03_batchResolverHookOneWrite_afterMint	BatchSetAddrToBuyerHook with one resolver write.	58124
 hook.batch_resolver_3	profile	107129	testBenchmark_profile_hook_04_batchResolverHookThreeWrites_afterMint	BatchSetAddrToBuyerHook with three resolver writes.	58124
 hook.batch_resolver_5	profile	126755	testBenchmark_profile_hook_05_batchResolverHookFiveWrites_afterMint	BatchSetAddrToBuyerHook with five resolver writes.	58124
-delta.guard_rule	delta	18751	testBenchmark_mint_01_pncOneGuardRuleFree - testBenchmark_mint_00_pncFreeNoRules	Incremental mint cost from adding one guard rule to a free mint.	n/a
-delta.fixed_erc20_sale	delta	58325	testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment - testBenchmark_mint_00_pncFreeNoRules	Incremental mint cost from fixed-price rule plus direct ERC20 payment.	n/a
+delta.guard_rule	delta	18743	testBenchmark_mint_01_pncOneGuardRuleFree - testBenchmark_mint_00_pncFreeNoRules	Incremental mint cost from adding one guard rule to a free mint.	n/a
+delta.fixed_erc20_sale	delta	58317	testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment - testBenchmark_mint_00_pncFreeNoRules	Incremental mint cost from fixed-price rule plus direct ERC20 payment.	n/a
 delta.split_over_erc20	delta	30390	testBenchmark_mint_03_pncOneFixedPriceRuleSplitPayment - testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment	Incremental mint cost from split payment instead of direct ERC20 payment.	n/a
 delta.three_rules_over_fixed_erc20	delta	37025	testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver - testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment	Incremental mint cost from sale window and label-length rules over fixed ERC20 sale.	n/a
 delta.whitelist_over_three_rules	delta	57840	testBenchmark_mint_14_pncFourRulesWhitelistERC20PaymentNoResolver - testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver	Incremental mint cost from adding whitelist proof to the common three-rule ERC20 sale.	n/a

@@ -31,14 +31,14 @@
     "delta.fixed_erc20_sale": {
       "category": "delta",
       "description": "Incremental mint cost from fixed-price rule plus direct ERC20 payment.",
-      "gas": 58325,
+      "gas": 58317,
       "kind": "delta",
       "source": "testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment - testBenchmark_mint_00_pncFreeNoRules"
     },
     "delta.guard_rule": {
       "category": "delta",
       "description": "Incremental mint cost from adding one guard rule to a free mint.",
-      "gas": 18751,
+      "gas": 18743,
       "kind": "delta",
       "source": "testBenchmark_mint_01_pncOneGuardRuleFree - testBenchmark_mint_00_pncFreeNoRules"
     },
@@ -93,28 +93,28 @@
     "mint.all_rules_split": {
       "category": "mint",
       "description": "Controller mint with every current rule and split payment, no resolver writes.",
-      "gas": 568621,
+      "gas": 568613,
       "kind": "exact",
       "source": "testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites"
     },
     "mint.all_rules_split_five_resolver_writes": {
       "category": "mint",
       "description": "Controller mint with every current rule, split payment, and five resolver writes.",
-      "gas": 671981,
+      "gas": 671973,
       "kind": "exact",
       "source": "testBenchmark_mint_24_pncAllRulesSplitFiveResolverWrites"
     },
     "mint.all_rules_split_three_resolver_writes": {
       "category": "mint",
       "description": "Controller mint with every current rule, split payment, and three resolver writes.",
-      "gas": 652392,
+      "gas": 652384,
       "kind": "exact",
       "source": "testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites"
     },
     "mint.fixed_erc20": {
       "category": "mint",
       "description": "Controller mint with fixed price rule and direct ERC20 payment.",
-      "gas": 220769,
+      "gas": 220761,
       "kind": "exact",
       "source": "testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment"
     },
@@ -128,35 +128,35 @@
     "mint.reservation_split": {
       "category": "mint",
       "description": "Controller mint with reservation and token discount rules plus split payment.",
-      "gas": 369363,
+      "gas": 369355,
       "kind": "exact",
       "source": "testBenchmark_mint_19_pncFiveRulesReservationDiscountSplitNoResolver"
     },
     "mint.three_rules_erc20": {
       "category": "mint",
       "description": "Controller mint with sale window, label length, fixed price, and direct ERC20 payment.",
-      "gas": 257794,
+      "gas": 257786,
       "kind": "exact",
       "source": "testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver"
     },
     "mint.three_rules_premium_split_three_resolver_writes": {
       "category": "mint",
       "description": "Controller mint with three rules, premium pricing, split payment, and three resolver writes.",
-      "gas": 380808,
+      "gas": 380800,
       "kind": "exact",
       "source": "testBenchmark_mint_13_pncThreeRulesPremiumSplitPaymentThreeResolverWrites"
     },
     "mint.three_rules_split_two_resolver_writes": {
       "category": "mint",
       "description": "Controller mint with three rules, split payment, and two resolver writes.",
-      "gas": 364408,
+      "gas": 364400,
       "kind": "exact",
       "source": "testBenchmark_mint_11_pncThreeRulesSplitPaymentTwoResolverWrites"
     },
     "mint.whitelist_erc20": {
       "category": "mint",
       "description": "Controller mint with whitelist proof and direct ERC20 payment.",
-      "gas": 315634,
+      "gas": 315626,
       "kind": "exact",
       "source": "testBenchmark_mint_14_pncFourRulesWhitelistERC20PaymentNoResolver"
     },
@@ -198,7 +198,7 @@
     "renew.three_rules_erc20": {
       "category": "renew",
       "description": "Controller renewal with three rules and direct ERC20 payment.",
-      "gas": 149091,
+      "gas": 149083,
       "kind": "exact",
       "source": "testBenchmark_renew_00_threeRulesERC20PaymentNoHook"
     }
