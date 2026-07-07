@@ -68,7 +68,7 @@ contract USDOracleRuleTest is NamespaceSetUp {
             )
         );
 
-        vm.expectRevert(abi.encodeWithSelector(USDOracleRule.InvalidTokenDecimals.selector, uint8(37)));
+        vm.expectRevert(abi.encodeWithSelector(USDOracleRule.InvalidMaxStaleness.selector));
         vm.prank(address(controller));
         rule.configure(
             activationId,
@@ -76,7 +76,42 @@ contract USDOracleRuleTest is NamespaceSetUp {
                 USDOracleRule.Params({
                     token: address(token),
                     oracle: IAggregatorV3(address(oracle)),
-                    tokenDecimals: 37,
+                    tokenDecimals: 18,
+                    maxStaleness: 0,
+                    mintUsdPrice: 100e18,
+                    renewUsdPrice: 25e18,
+                    priceOp: NamespaceTypes.PriceOp.SET_BASE
+                })
+            )
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(USDOracleRule.InvalidTokenDecimals.selector, uint8(19)));
+        vm.prank(address(controller));
+        rule.configure(
+            activationId,
+            abi.encode(
+                USDOracleRule.Params({
+                    token: address(token),
+                    oracle: IAggregatorV3(address(oracle)),
+                    tokenDecimals: 19,
+                    maxStaleness: 1 days,
+                    mintUsdPrice: 100e18,
+                    renewUsdPrice: 25e18,
+                    priceOp: NamespaceTypes.PriceOp.SET_BASE
+                })
+            )
+        );
+
+        MockAggregatorV3 highDecimalOracle = new MockAggregatorV3(19, 2_000e8);
+        vm.expectRevert(abi.encodeWithSelector(USDOracleRule.InvalidOracleDecimals.selector, uint8(19)));
+        vm.prank(address(controller));
+        rule.configure(
+            activationId,
+            abi.encode(
+                USDOracleRule.Params({
+                    token: address(token),
+                    oracle: IAggregatorV3(address(highDecimalOracle)),
+                    tokenDecimals: 18,
                     maxStaleness: 1 days,
                     mintUsdPrice: 100e18,
                     renewUsdPrice: 25e18,

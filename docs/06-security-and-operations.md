@@ -106,15 +106,17 @@ Use conservative settings:
 
 | Setting | Recommendation |
 | --- | --- |
-| `maxStaleness` | Set a non-zero bound appropriate for the asset. |
-| `tokenDecimals` | Match the payment token exactly. |
+| `maxStaleness` | Required to be non-zero. Set a bound appropriate for the asset. |
+| `tokenDecimals` | Match the payment token exactly. Values above 18 are rejected. |
+| oracle decimals | Chainlink-compatible oracle `decimals()` values above 18 are rejected. |
 | `priceOp` | Use `SET_BASE` for a USD base price or `ADD` for a USD premium. |
 
 The rule rejects:
 
 - non-positive oracle answers;
 - incomplete rounds;
-- stale answers.
+- stale answers;
+- unsafe decimal configurations.
 
 ## Payment
 

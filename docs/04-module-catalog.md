@@ -189,6 +189,12 @@ USDOracleRule.Params({
 
 Use `SET_BASE` in `BASE_PRICE` for a USD base price, `ADD` in `PREMIUM` for a USD premium, or `OVERRIDE` in `OVERRIDE` for an exact USD-denominated special price. The rule rejects stale, invalid, or incomplete oracle rounds.
 
+Production constraints:
+
+- `maxStaleness` must be non-zero. Oracle freshness cannot be disabled.
+- `tokenDecimals` must be 18 or lower.
+- the oracle's own `decimals()` value must be 18 or lower.
+
 ### ReservationRule
 
 Purpose: claim-based reserved label behavior.

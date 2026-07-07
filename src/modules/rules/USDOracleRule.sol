@@ -11,6 +11,7 @@ import {NamespaceRule} from "src/modules/rules/NamespaceRule.sol";
 /// @notice Converts USD-denominated mint and renewal prices into payment token amounts.
 contract USDOracleRule is NamespaceRule {
     uint256 private constant _USD_DECIMALS = 1e18;
+    uint8 private constant _MAX_SUPPORTED_DECIMALS = 18;
 
     /// @notice USD oracle rule parameters for one activation.
     /// @param token Payment token. Use address(0) for native ETH.
@@ -34,6 +35,8 @@ contract USDOracleRule is NamespaceRule {
 
     error ZeroOracle(bytes32 activationId);
     error InvalidTokenDecimals(uint8 tokenDecimals);
+    error InvalidOracleDecimals(uint8 oracleDecimals);
+    error InvalidMaxStaleness();
     error InvalidOraclePrice(int256 answer);
     error InvalidOracleRound(uint80 roundId, uint256 startedAt, uint80 answeredInRound);
     error StaleOraclePrice(uint256 updatedAt, uint256 maxStaleness, uint256 currentTime);
@@ -45,8 +48,15 @@ contract USDOracleRule is NamespaceRule {
         if (address(decoded.oracle) == address(0)) {
             revert ZeroOracle(activationId);
         }
-        if (decoded.tokenDecimals > 36) {
+        if (decoded.maxStaleness == 0) {
+            revert InvalidMaxStaleness();
+        }
+        if (decoded.tokenDecimals > _MAX_SUPPORTED_DECIMALS) {
             revert InvalidTokenDecimals(decoded.tokenDecimals);
+        }
+        uint8 oracleDecimals = decoded.oracle.decimals();
+        if (oracleDecimals > _MAX_SUPPORTED_DECIMALS) {
+            revert InvalidOracleDecimals(oracleDecimals);
         }
         _checkPriceOp(decoded.priceOp);
         params[activationId] = decoded;
@@ -105,12 +115,16 @@ contract USDOracleRule is NamespaceRule {
             revert InvalidOracleRound(roundId, startedAt, answeredInRound);
         }
         uint256 currentTime = block.timestamp;
-        if (stored.maxStaleness != 0 && currentTime > updatedAt + stored.maxStaleness) {
+        if (currentTime > updatedAt + stored.maxStaleness) {
             revert StaleOraclePrice(updatedAt, stored.maxStaleness, currentTime);
         }
 
         uint256 tokenUnit = 10 ** stored.tokenDecimals;
-        uint256 oracleUnit = 10 ** stored.oracle.decimals();
+        uint8 oracleDecimals = stored.oracle.decimals();
+        if (oracleDecimals > _MAX_SUPPORTED_DECIMALS) {
+            revert InvalidOracleDecimals(oracleDecimals);
+        }
+        uint256 oracleUnit = 10 ** oracleDecimals;
         uint256 numerator = usdAmount * tokenUnit * oracleUnit;
         uint256 denominator = SafeCastLib.toUint256(answer) * _USD_DECIMALS;
         return _ceilDiv(numerator, denominator);
