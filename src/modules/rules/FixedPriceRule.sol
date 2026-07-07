@@ -125,14 +125,16 @@ contract FixedPriceRule is NamespaceRule {
         }
 
         uint256 length = stored.lengthPriceCount;
-        bytes memory prices = length == 0 ? bytes("") : SSTORE2.read(stored.lengthPricesPointer);
-        for (uint256 i; i < length;) {
-            LengthPrice memory lengthPrice = _unpackLengthPrice(prices, i);
-            if (lengthPrice.length == labelLength) {
-                return mint ? lengthPrice.mintAmount : lengthPrice.renewAmount;
-            }
-            unchecked {
-                ++i;
+        if (length != 0) {
+            bytes memory prices = SSTORE2.read(stored.lengthPricesPointer);
+            for (uint256 i; i < length;) {
+                LengthPrice memory lengthPrice = _unpackLengthPrice(prices, i);
+                if (lengthPrice.length == labelLength) {
+                    return mint ? lengthPrice.mintAmount : lengthPrice.renewAmount;
+                }
+                unchecked {
+                    ++i;
+                }
             }
         }
         amount = mint ? stored.defaultMintAmount : stored.defaultRenewAmount;

@@ -59,12 +59,13 @@ contract ERC20PaymentModule is NamespaceModule, IPaymentModule {
             revert NativeValueNotAccepted(msg.value);
         }
 
-        Params memory stored = params[activationId];
-        if (address(stored.token) != price.token) {
-            revert PaymentTokenMismatch(address(stored.token), price.token);
+        Params storage stored = params[activationId];
+        address token_ = address(stored.token);
+        if (token_ != price.token) {
+            revert PaymentTokenMismatch(token_, price.token);
         }
         if (price.amount != 0) {
-            SafeTransferLib.safeTransferFrom(address(stored.token), payer, stored.recipient, price.amount);
+            SafeTransferLib.safeTransferFrom(token_, payer, stored.recipient, price.amount);
         }
     }
 }

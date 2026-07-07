@@ -33,10 +33,10 @@ Estimate arbitrary profile stacks:
 | `testBenchmark_profile_rule_01_saleWindowOpen_evaluateMint()` | sale Window Open evaluate Mint | 36007 | $0.108021 |
 | `testBenchmark_profile_rule_02_saleWindowBounded_evaluateMint()` | sale Window Bounded evaluate Mint | 24219 | $0.072657 |
 | `testBenchmark_profile_rule_03_labelLength_evaluateMint()` | label Length evaluate Mint | 36201 | $0.108603 |
-| `testBenchmark_profile_rule_04_fixedPriceNoLengthOverrides_evaluateMint()` | fixed Price No Length Overrides evaluate Mint | 40676 | $0.122028 |
-| `testBenchmark_profile_rule_05_fixedPriceFiveOverridesFallback_evaluateMint()` | fixed Price Five Overrides Fallback evaluate Mint | 34092 | $0.102276 |
-| `testBenchmark_profile_rule_06_fixedPriceFiveOverridesExact_evaluateMint()` | fixed Price Five Overrides Exact evaluate Mint | 34018 | $0.102054 |
-| `testBenchmark_profile_rule_07_fixedPriceTwentyOverridesExact_evaluateMint()` | fixed Price Twenty Overrides Exact evaluate Mint | 35094 | $0.105282 |
+| `testBenchmark_profile_rule_04_fixedPriceNoLengthOverrides_evaluateMint()` | fixed Price No Length Overrides evaluate Mint | 40598 | $0.121794 |
+| `testBenchmark_profile_rule_05_fixedPriceFiveOverridesFallback_evaluateMint()` | fixed Price Five Overrides Fallback evaluate Mint | 34081 | $0.102243 |
+| `testBenchmark_profile_rule_06_fixedPriceFiveOverridesExact_evaluateMint()` | fixed Price Five Overrides Exact evaluate Mint | 34006 | $0.102018 |
+| `testBenchmark_profile_rule_07_fixedPriceTwentyOverridesExact_evaluateMint()` | fixed Price Twenty Overrides Exact evaluate Mint | 35082 | $0.105246 |
 | `testBenchmark_profile_rule_08_lengthPremiumFiveBuckets_evaluateMint()` | length Premium Five Buckets evaluate Mint | 31867 | $0.095601 |
 | `testBenchmark_profile_rule_09_lengthPremiumFiveBucketsFallback_evaluateMint()` | length Premium Five Buckets Fallback evaluate Mint | 31905 | $0.095715 |
 | `testBenchmark_profile_rule_10_lengthPremiumTwentyBuckets_evaluateMint()` | length Premium Twenty Buckets evaluate Mint | 31869 | $0.095607 |
@@ -48,7 +48,7 @@ Estimate arbitrary profile stacks:
 | `testBenchmark_profile_rule_16_whitelist100_evaluateMint()` | whitelist100 evaluate Mint | 75270 | $0.225810 |
 | `testBenchmark_profile_rule_17_whitelist1000_evaluateMint()` | whitelist1000 evaluate Mint | 82713 | $0.248139 |
 | `testBenchmark_profile_rule_18_labelClassNumber_evaluateMint()` | label Class Number evaluate Mint | 30146 | $0.090438 |
-| `testBenchmark_profile_rule_19_labelClassLetter_evaluateMint()` | label Class Letter evaluate Mint | 31454 | $0.094362 |
+| `testBenchmark_profile_rule_19_labelClassLetter_evaluateMint()` | label Class Letter evaluate Mint | 31118 | $0.093354 |
 | `testBenchmark_profile_rule_20_labelClassEmoji_evaluateMint()` | label Class Emoji evaluate Mint | 30651 | $0.091953 |
 | `testBenchmark_profile_rule_21_usdOracle_evaluateMint()` | usd Oracle evaluate Mint | 46998 | $0.140994 |
 
@@ -56,21 +56,21 @@ Estimate arbitrary profile stacks:
 
 | Name | Scenario | Gwei used | USD @ 1 gwei |
 | --- | --- | ---: | ---: |
-| `testBenchmark_profile_payment_00_collectMintERC20()` | collect Mint ERC20 | 83127 | $0.249381 |
-| `testBenchmark_profile_payment_01_collectMintSplitERC20TwoRecipients()` | collect Mint Split ERC20 Two Recipients | 101987 | $0.305961 |
-| `testBenchmark_profile_payment_02_collectMintSplitERC20ThreeRecipients()` | collect Mint Split ERC20 Three Recipients | 130236 | $0.390708 |
-| `testBenchmark_profile_payment_03_collectMintSplitERC20FiveRecipients()` | collect Mint Split ERC20 Five Recipients | 186872 | $0.560616 |
+| `testBenchmark_profile_payment_00_collectMintERC20()` | collect Mint ERC20 | 83068 | $0.249204 |
+| `testBenchmark_profile_payment_01_collectMintSplitERC20TwoRecipients()` | collect Mint Split ERC20 Two Recipients | 101582 | $0.304746 |
+| `testBenchmark_profile_payment_02_collectMintSplitERC20ThreeRecipients()` | collect Mint Split ERC20 Three Recipients | 129514 | $0.388542 |
+| `testBenchmark_profile_payment_03_collectMintSplitERC20FiveRecipients()` | collect Mint Split ERC20 Five Recipients | 185516 | $0.556548 |
 
 ## Hook Function Profiles
 
 | Name | Scenario | Gwei used | USD @ 1 gwei |
 | --- | --- | ---: | ---: |
 | `testBenchmark_profile_hook_00_recordingPostHook_afterMint()` | recording Post Hook after Mint | 130739 | $0.392217 |
-| `testBenchmark_profile_hook_01_setAddrToBuyerEmpty_afterMint()` | set Addr To Buyer Empty after Mint | 85082 | $0.255246 |
-| `testBenchmark_profile_hook_02_setAddrToBuyerOverride_afterMint()` | set Addr To Buyer Override after Mint | 89853 | $0.269559 |
-| `testBenchmark_profile_hook_03_batchResolverHookOneWrite_afterMint()` | batch Resolver Hook One Write after Mint | 87634 | $0.262902 |
-| `testBenchmark_profile_hook_04_batchResolverHookThreeWrites_afterMint()` | batch Resolver Hook Three Writes after Mint | 107599 | $0.322797 |
-| `testBenchmark_profile_hook_05_batchResolverHookFiveWrites_afterMint()` | batch Resolver Hook Five Writes after Mint | 127553 | $0.382659 |
+| `testBenchmark_profile_hook_01_setAddrToBuyerEmpty_afterMint()` | set Addr To Buyer Empty after Mint | 84940 | $0.254820 |
+| `testBenchmark_profile_hook_02_setAddrToBuyerOverride_afterMint()` | set Addr To Buyer Override after Mint | 89711 | $0.269133 |
+| `testBenchmark_profile_hook_03_batchResolverHookOneWrite_afterMint()` | batch Resolver Hook One Write after Mint | 87492 | $0.262476 |
+| `testBenchmark_profile_hook_04_batchResolverHookThreeWrites_afterMint()` | batch Resolver Hook Three Writes after Mint | 107129 | $0.321387 |
+| `testBenchmark_profile_hook_05_batchResolverHookFiveWrites_afterMint()` | batch Resolver Hook Five Writes after Mint | 126755 | $0.380265 |
 
 ## Activation Setup Profiles
 
@@ -104,10 +104,10 @@ Estimate arbitrary profile stacks:
 | `rule.sale_window_open` | rule | 36007 | 39668 | SaleWindowRule evaluateMint with open zero-bounds config. |
 | `rule.sale_window_bounded` | rule | 24219 | 39668 | SaleWindowRule evaluateMint with active start/end bounds. |
 | `rule.label_length` | rule | 36201 | 59609 | LabelLengthRule evaluateMint. |
-| `rule.fixed_price_no_overrides` | rule | 40676 | 87686 | FixedPriceRule with no length overrides. |
-| `rule.fixed_price_5_fallback` | rule | 34092 | 184476 | FixedPriceRule with five overrides and fallback label. |
-| `rule.fixed_price_5_exact` | rule | 34018 | 184476 | FixedPriceRule with five overrides and exact-length hit. |
-| `rule.fixed_price_20_exact` | rule | 35094 | 338193 | FixedPriceRule with twenty overrides and exact-length hit. |
+| `rule.fixed_price_no_overrides` | rule | 40598 | 87686 | FixedPriceRule with no length overrides. |
+| `rule.fixed_price_5_fallback` | rule | 34081 | 184476 | FixedPriceRule with five overrides and fallback label. |
+| `rule.fixed_price_5_exact` | rule | 34006 | 184476 | FixedPriceRule with five overrides and exact-length hit. |
+| `rule.fixed_price_20_exact` | rule | 35082 | 338193 | FixedPriceRule with twenty overrides and exact-length hit. |
 | `rule.length_premium_5` | rule | 31867 | 213530 | LengthPremiumRule with five buckets. |
 | `rule.length_premium_5_fallback` | rule | 31905 | 213530 | LengthPremiumRule with five buckets and fallback bucket. |
 | `rule.length_premium_20` | rule | 31869 | 333952 | LengthPremiumRule with twenty buckets. |
@@ -119,16 +119,16 @@ Estimate arbitrary profile stacks:
 | `rule.whitelist_100` | rule | 75270 | n/a | WhitelistRule with Merkle set size 100. |
 | `rule.whitelist_1000` | rule | 82713 | 84858 | WhitelistRule with Merkle set size 1000. |
 | `rule.label_class_number` | rule | 30146 | 107324 | LabelClassRule for numeric labels. |
-| `rule.label_class_letter` | rule | 31454 | 107324 | LabelClassRule for ASCII letter labels. |
+| `rule.label_class_letter` | rule | 31118 | 107324 | LabelClassRule for ASCII letter labels. |
 | `rule.label_class_emoji` | rule | 30651 | 107324 | LabelClassRule for emoji labels. |
 | `rule.usd_oracle` | rule | 46998 | 131618 | USDOracleRule with Chainlink-compatible oracle. |
-| `payment.erc20` | payment | 83127 | 65212 | Direct ERC20 transferFrom payment module. |
-| `payment.split_2` | payment | 101987 | 113302 | ERC20 split payment to two recipients. |
-| `payment.split_3` | payment | 130236 | n/a | ERC20 split payment to three recipients. |
-| `payment.split_5` | payment | 186872 | n/a | ERC20 split payment to five recipients. |
+| `payment.erc20` | payment | 83068 | 65212 | Direct ERC20 transferFrom payment module. |
+| `payment.split_2` | payment | 101582 | 113302 | ERC20 split payment to two recipients. |
+| `payment.split_3` | payment | 129514 | n/a | ERC20 split payment to three recipients. |
+| `payment.split_5` | payment | 185516 | n/a | ERC20 split payment to five recipients. |
 | `hook.recording` | hook | 130739 | 56014 | Recording post-hook profile. |
-| `hook.set_addr_empty` | hook | 85082 | 58124 | SetAddrToBuyerHook using buyer address. |
-| `hook.set_addr_override` | hook | 89853 | 58124 | SetAddrToBuyerHook using address override. |
-| `hook.batch_resolver_1` | hook | 87634 | 58124 | BatchSetAddrToBuyerHook with one resolver write. |
-| `hook.batch_resolver_3` | hook | 107599 | 58124 | BatchSetAddrToBuyerHook with three resolver writes. |
-| `hook.batch_resolver_5` | hook | 127553 | 58124 | BatchSetAddrToBuyerHook with five resolver writes. |
+| `hook.set_addr_empty` | hook | 84940 | 58124 | SetAddrToBuyerHook using buyer address. |
+| `hook.set_addr_override` | hook | 89711 | 58124 | SetAddrToBuyerHook using address override. |
+| `hook.batch_resolver_1` | hook | 87492 | 58124 | BatchSetAddrToBuyerHook with one resolver write. |
+| `hook.batch_resolver_3` | hook | 107129 | 58124 | BatchSetAddrToBuyerHook with three resolver writes. |
+| `hook.batch_resolver_5` | hook | 126755 | 58124 | BatchSetAddrToBuyerHook with five resolver writes. |

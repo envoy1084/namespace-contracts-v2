@@ -118,6 +118,7 @@ contract NamespaceController is NamespaceControllerRules {
         bytes[] calldata postHookData
     ) private {
         uint256 length = activation.postHookCount;
+        if (length == 0) return;
         if (length == 1) {
             IPostHookModule(activation.postHooks).afterMint(ctx, tokenId, postHookData[0]);
             return;
@@ -137,6 +138,7 @@ contract NamespaceController is NamespaceControllerRules {
         bytes[] calldata postHookData
     ) private {
         uint256 length = activation.postHookCount;
+        if (length == 0) return;
         if (length == 1) {
             IPostHookModule(activation.postHooks).afterRenew(ctx, postHookData[0]);
             return;

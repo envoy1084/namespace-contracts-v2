@@ -26,29 +26,32 @@ contract BatchSetAddrToBuyerHook is NamespaceModule, IPostHookModule {
         external
         onlyController
     {
-        if (ctx.resolver == address(0)) {
+        address resolver = ctx.resolver;
+        if (resolver == address(0)) {
             revert ResolverNotConfigured(ctx.activationId);
         }
 
         bytes32 node = EfficientHashLib.hash(ctx.parentNode, ctx.labelHash);
+        address buyer = ctx.buyer;
         uint256 length = runtimeData.length;
         if (length == 0) {
-            IAddrResolver(ctx.resolver).setAddr(node, ctx.buyer);
+            IAddrResolver(resolver).setAddr(node, buyer);
             return;
         }
         if (length % 20 != 0) {
             revert InvalidRuntimeDataLength(length);
         }
 
+        IAddrResolver addrResolver = IAddrResolver(resolver);
         for (uint256 offset; offset < length;) {
             address addr_;
             assembly ("memory-safe") {
                 addr_ := shr(96, calldataload(add(runtimeData.offset, offset)))
             }
             if (addr_ == address(0)) {
-                addr_ = ctx.buyer;
+                addr_ = buyer;
             }
-            IAddrResolver(ctx.resolver).setAddr(node, addr_);
+            addrResolver.setAddr(node, addr_);
             unchecked {
                 offset += 20;
             }

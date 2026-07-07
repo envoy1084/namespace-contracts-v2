@@ -128,9 +128,7 @@ contract LabelClassRule is NamespaceRule {
         uint256 length = data.length;
         for (uint256 i; i < length;) {
             bytes1 char = data[i];
-            bool uppercase = char >= 0x41 && char <= 0x5A;
-            bool lowercase = char >= 0x61 && char <= 0x7A;
-            if (!uppercase && !lowercase) {
+            if (!((char >= 0x41 && char <= 0x5A) || (char >= 0x61 && char <= 0x7A))) {
                 return false;
             }
             unchecked {

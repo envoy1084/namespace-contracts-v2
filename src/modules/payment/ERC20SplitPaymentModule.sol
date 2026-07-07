@@ -93,20 +93,24 @@ contract ERC20SplitPaymentModule is NamespaceModule, IPaymentModule {
         }
 
         StoredParams storage stored = _params[activationId];
-        if (stored.token != price.token) {
-            revert PaymentTokenMismatch(stored.token, price.token);
+        address token_ = stored.token;
+        if (token_ != price.token) {
+            revert PaymentTokenMismatch(token_, price.token);
         }
 
-        uint256 remaining = price.amount;
-        uint256 last = stored.splits.length - 1;
+        Split[] storage splits = stored.splits;
+        uint256 total = price.amount;
+        uint256 remaining = total;
+        uint256 last = splits.length - 1;
         for (uint256 i; i < last;) {
-            uint256 amount = (price.amount * stored.splits[i].bps) / BPS_DENOMINATOR;
+            Split storage split = splits[i];
+            uint256 amount = (total * split.bps) / BPS_DENOMINATOR;
             remaining -= amount;
-            SafeTransferLib.safeTransferFrom(stored.token, payer, stored.splits[i].recipient, amount);
+            SafeTransferLib.safeTransferFrom(token_, payer, split.recipient, amount);
             unchecked {
                 ++i;
             }
         }
-        SafeTransferLib.safeTransferFrom(stored.token, payer, stored.splits[last].recipient, remaining);
+        SafeTransferLib.safeTransferFrom(token_, payer, splits[last].recipient, remaining);
     }
 }

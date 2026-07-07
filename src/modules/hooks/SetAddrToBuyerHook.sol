@@ -25,7 +25,8 @@ contract SetAddrToBuyerHook is NamespaceModule, IPostHookModule {
         external
         onlyController
     {
-        if (ctx.resolver == address(0)) {
+        address resolver = ctx.resolver;
+        if (resolver == address(0)) {
             revert ResolverNotConfigured(ctx.activationId);
         }
 
@@ -37,7 +38,7 @@ contract SetAddrToBuyerHook is NamespaceModule, IPostHookModule {
             addr_ = abi.decode(runtimeData, (address));
         }
 
-        IAddrResolver(ctx.resolver).setAddr(_childNode(ctx.parentNode, ctx.labelHash), addr_);
+        IAddrResolver(resolver).setAddr(_childNode(ctx.parentNode, ctx.labelHash), addr_);
     }
 
     /// @inheritdoc IPostHookModule

@@ -22,15 +22,16 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
         bytes[] calldata ruleData
     ) internal returns (NamespaceTypes.Price memory price) {
         uint256 length = activation.ruleCount;
-        EvaluationState memory state = EvaluationState({amount: 0, flags: 0, token: address(0), status: 0});
         if (length == 0) return NamespaceTypes.Price({token: address(0), amount: 0});
+        EvaluationState memory state;
         if (length == 1) {
+            address rule = activation.rules;
             _applyRuleOutput(
                 ctx.activationId,
-                activation.rules,
+                rule,
                 0,
                 NamespaceTypes.RulePhase(activation.firstRulePhase),
-                IRuleModule(activation.rules).evaluateMint(ctx, ruleData[0]),
+                IRuleModule(rule).evaluateMint(ctx, ruleData[0]),
                 state
             );
             return NamespaceTypes.Price({token: state.token, amount: state.amount});
@@ -59,15 +60,16 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
         bytes[] calldata ruleData
     ) internal returns (NamespaceTypes.Price memory price) {
         uint256 length = activation.ruleCount;
-        EvaluationState memory state = EvaluationState({amount: 0, flags: 0, token: address(0), status: 0});
         if (length == 0) return NamespaceTypes.Price({token: address(0), amount: 0});
+        EvaluationState memory state;
         if (length == 1) {
+            address rule = activation.rules;
             _applyRuleOutput(
                 ctx.activationId,
-                activation.rules,
+                rule,
                 0,
                 NamespaceTypes.RulePhase(activation.firstRulePhase),
-                IRuleModule(activation.rules).evaluateRenew(ctx, ruleData[0]),
+                IRuleModule(rule).evaluateRenew(ctx, ruleData[0]),
                 state
             );
             return NamespaceTypes.Price({token: state.token, amount: state.amount});

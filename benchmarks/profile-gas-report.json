@@ -10,49 +10,49 @@
     "delta.all_rules_over_split_three_rules": {
       "category": "delta",
       "description": "Incremental mint cost from all rules over three-rule split sale.",
-      "gas": 280328,
+      "gas": 280395,
       "kind": "delta",
       "source": "testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites - testBenchmark_mint_09_pncThreeRulesSplitPaymentNoResolver"
     },
     "delta.batch_resolver_three_writes": {
       "category": "delta",
       "description": "Incremental mint cost from three resolver writes on all-rule split sale.",
-      "gas": 81958,
+      "gas": 83771,
       "kind": "delta",
       "source": "testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites - testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites"
     },
     "delta.batch_resolver_two_more_writes": {
       "category": "delta",
       "description": "Incremental mint cost from two additional resolver writes.",
-      "gas": 19917,
+      "gas": 19589,
       "kind": "delta",
       "source": "testBenchmark_mint_24_pncAllRulesSplitFiveResolverWrites - testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites"
     },
     "delta.fixed_erc20_sale": {
       "category": "delta",
       "description": "Incremental mint cost from fixed-price rule plus direct ERC20 payment.",
-      "gas": 58443,
+      "gas": 58325,
       "kind": "delta",
       "source": "testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment - testBenchmark_mint_00_pncFreeNoRules"
     },
     "delta.guard_rule": {
       "category": "delta",
       "description": "Incremental mint cost from adding one guard rule to a free mint.",
-      "gas": 18732,
+      "gas": 18751,
       "kind": "delta",
       "source": "testBenchmark_mint_01_pncOneGuardRuleFree - testBenchmark_mint_00_pncFreeNoRules"
     },
     "delta.split_over_erc20": {
       "category": "delta",
       "description": "Incremental mint cost from split payment instead of direct ERC20 payment.",
-      "gas": 30736,
+      "gas": 30390,
       "kind": "delta",
       "source": "testBenchmark_mint_03_pncOneFixedPriceRuleSplitPayment - testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment"
     },
     "delta.three_rules_over_fixed_erc20": {
       "category": "delta",
       "description": "Incremental mint cost from sale window and label-length rules over fixed ERC20 sale.",
-      "gas": 36930,
+      "gas": 37025,
       "kind": "delta",
       "source": "testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver - testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment"
     },
@@ -93,70 +93,70 @@
     "mint.all_rules_split": {
       "category": "mint",
       "description": "Controller mint with every current rule and split payment, no resolver writes.",
-      "gas": 571297,
+      "gas": 568621,
       "kind": "exact",
       "source": "testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites"
     },
     "mint.all_rules_split_five_resolver_writes": {
       "category": "mint",
       "description": "Controller mint with every current rule, split payment, and five resolver writes.",
-      "gas": 673172,
+      "gas": 671981,
       "kind": "exact",
       "source": "testBenchmark_mint_24_pncAllRulesSplitFiveResolverWrites"
     },
     "mint.all_rules_split_three_resolver_writes": {
       "category": "mint",
       "description": "Controller mint with every current rule, split payment, and three resolver writes.",
-      "gas": 653255,
+      "gas": 652392,
       "kind": "exact",
       "source": "testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites"
     },
     "mint.fixed_erc20": {
       "category": "mint",
       "description": "Controller mint with fixed price rule and direct ERC20 payment.",
-      "gas": 223261,
+      "gas": 220769,
       "kind": "exact",
       "source": "testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment"
     },
     "mint.free_no_rules": {
       "category": "mint",
       "description": "Controller mint with no rules, no payment, no hooks.",
-      "gas": 164818,
+      "gas": 162444,
       "kind": "exact",
       "source": "testBenchmark_mint_00_pncFreeNoRules"
     },
     "mint.reservation_split": {
       "category": "mint",
       "description": "Controller mint with reservation and token discount rules plus split payment.",
-      "gas": 372106,
+      "gas": 369363,
       "kind": "exact",
       "source": "testBenchmark_mint_19_pncFiveRulesReservationDiscountSplitNoResolver"
     },
     "mint.three_rules_erc20": {
       "category": "mint",
       "description": "Controller mint with sale window, label length, fixed price, and direct ERC20 payment.",
-      "gas": 260191,
+      "gas": 257794,
       "kind": "exact",
       "source": "testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver"
     },
     "mint.three_rules_premium_split_three_resolver_writes": {
       "category": "mint",
       "description": "Controller mint with three rules, premium pricing, split payment, and three resolver writes.",
-      "gas": 381738,
+      "gas": 380808,
       "kind": "exact",
       "source": "testBenchmark_mint_13_pncThreeRulesPremiumSplitPaymentThreeResolverWrites"
     },
     "mint.three_rules_split_two_resolver_writes": {
       "category": "mint",
       "description": "Controller mint with three rules, split payment, and two resolver writes.",
-      "gas": 365174,
+      "gas": 364408,
       "kind": "exact",
       "source": "testBenchmark_mint_11_pncThreeRulesSplitPaymentTwoResolverWrites"
     },
     "mint.whitelist_erc20": {
       "category": "mint",
       "description": "Controller mint with whitelist proof and direct ERC20 payment.",
-      "gas": 318031,
+      "gas": 315634,
       "kind": "exact",
       "source": "testBenchmark_mint_14_pncFourRulesWhitelistERC20PaymentNoResolver"
     },
@@ -198,7 +198,7 @@
     "renew.three_rules_erc20": {
       "category": "renew",
       "description": "Controller renewal with three rules and direct ERC20 payment.",
-      "gas": 151488,
+      "gas": 149091,
       "kind": "exact",
       "source": "testBenchmark_renew_00_threeRulesERC20PaymentNoHook"
     }
@@ -208,7 +208,7 @@
       "activationGas": 58124,
       "category": "hook",
       "description": "BatchSetAddrToBuyerHook with one resolver write.",
-      "gas": 87634,
+      "gas": 87492,
       "kind": "profile",
       "source": "testBenchmark_profile_hook_03_batchResolverHookOneWrite_afterMint"
     },
@@ -216,7 +216,7 @@
       "activationGas": 58124,
       "category": "hook",
       "description": "BatchSetAddrToBuyerHook with three resolver writes.",
-      "gas": 107599,
+      "gas": 107129,
       "kind": "profile",
       "source": "testBenchmark_profile_hook_04_batchResolverHookThreeWrites_afterMint"
     },
@@ -224,7 +224,7 @@
       "activationGas": 58124,
       "category": "hook",
       "description": "BatchSetAddrToBuyerHook with five resolver writes.",
-      "gas": 127553,
+      "gas": 126755,
       "kind": "profile",
       "source": "testBenchmark_profile_hook_05_batchResolverHookFiveWrites_afterMint"
     },
@@ -240,7 +240,7 @@
       "activationGas": 58124,
       "category": "hook",
       "description": "SetAddrToBuyerHook using buyer address.",
-      "gas": 85082,
+      "gas": 84940,
       "kind": "profile",
       "source": "testBenchmark_profile_hook_01_setAddrToBuyerEmpty_afterMint"
     },
@@ -248,7 +248,7 @@
       "activationGas": 58124,
       "category": "hook",
       "description": "SetAddrToBuyerHook using address override.",
-      "gas": 89853,
+      "gas": 89711,
       "kind": "profile",
       "source": "testBenchmark_profile_hook_02_setAddrToBuyerOverride_afterMint"
     },
@@ -256,7 +256,7 @@
       "activationGas": 65212,
       "category": "payment",
       "description": "Direct ERC20 transferFrom payment module.",
-      "gas": 83127,
+      "gas": 83068,
       "kind": "profile",
       "source": "testBenchmark_profile_payment_00_collectMintERC20"
     },
@@ -264,21 +264,21 @@
       "activationGas": 113302,
       "category": "payment",
       "description": "ERC20 split payment to two recipients.",
-      "gas": 101987,
+      "gas": 101582,
       "kind": "profile",
       "source": "testBenchmark_profile_payment_01_collectMintSplitERC20TwoRecipients"
     },
     "payment.split_3": {
       "category": "payment",
       "description": "ERC20 split payment to three recipients.",
-      "gas": 130236,
+      "gas": 129514,
       "kind": "profile",
       "source": "testBenchmark_profile_payment_02_collectMintSplitERC20ThreeRecipients"
     },
     "payment.split_5": {
       "category": "payment",
       "description": "ERC20 split payment to five recipients.",
-      "gas": 186872,
+      "gas": 185516,
       "kind": "profile",
       "source": "testBenchmark_profile_payment_03_collectMintSplitERC20FiveRecipients"
     },
@@ -286,7 +286,7 @@
       "activationGas": 338193,
       "category": "rule",
       "description": "FixedPriceRule with twenty overrides and exact-length hit.",
-      "gas": 35094,
+      "gas": 35082,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_07_fixedPriceTwentyOverridesExact_evaluateMint"
     },
@@ -294,7 +294,7 @@
       "activationGas": 184476,
       "category": "rule",
       "description": "FixedPriceRule with five overrides and exact-length hit.",
-      "gas": 34018,
+      "gas": 34006,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_06_fixedPriceFiveOverridesExact_evaluateMint"
     },
@@ -302,7 +302,7 @@
       "activationGas": 184476,
       "category": "rule",
       "description": "FixedPriceRule with five overrides and fallback label.",
-      "gas": 34092,
+      "gas": 34081,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_05_fixedPriceFiveOverridesFallback_evaluateMint"
     },
@@ -310,7 +310,7 @@
       "activationGas": 87686,
       "category": "rule",
       "description": "FixedPriceRule with no length overrides.",
-      "gas": 40676,
+      "gas": 40598,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_04_fixedPriceNoLengthOverrides_evaluateMint"
     },
@@ -326,7 +326,7 @@
       "activationGas": 107324,
       "category": "rule",
       "description": "LabelClassRule for ASCII letter labels.",
-      "gas": 31454,
+      "gas": 31118,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_19_labelClassLetter_evaluateMint"
     },

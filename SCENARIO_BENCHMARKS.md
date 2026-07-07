@@ -49,37 +49,37 @@ Run and regenerate:
 
 | Name | Scenario | Gwei used | USD @ 1 gwei |
 | --- | --- | ---: | ---: |
-| `testBenchmark_mint_00_pncFreeNoRules()` | Free No Rules | 164818 | $0.494454 |
-| `testBenchmark_mint_01_pncOneGuardRuleFree()` | One Guard Rule Free | 183550 | $0.550650 |
-| `testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment()` | One Fixed Price Rule ERC20 Payment | 223261 | $0.669783 |
-| `testBenchmark_mint_03_pncOneFixedPriceRuleSplitPayment()` | One Fixed Price Rule Split Payment | 253997 | $0.761991 |
-| `testBenchmark_mint_04_pncTwoRulesFreeNoResolver()` | Two Rules Free No Resolver | 203682 | $0.611046 |
-| `testBenchmark_mint_05_pncTwoRulesERC20PaymentNoResolver()` | Two Rules ERC20 Payment No Resolver | 243156 | $0.729468 |
-| `testBenchmark_mint_06_pncTwoRulesSplitPaymentNoResolver()` | Two Rules Split Payment No Resolver | 273940 | $0.821820 |
-| `testBenchmark_mint_07_pncTwoEligibilityPriceRulesERC20Payment()` | Two Eligibility Price Rules ERC20 Payment | 243397 | $0.730191 |
-| `testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver()` | Three Rules ERC20 Payment No Resolver | 260191 | $0.780573 |
-| `testBenchmark_mint_09_pncThreeRulesSplitPaymentNoResolver()` | Three Rules Split Payment No Resolver | 290969 | $0.872907 |
-| `testBenchmark_mint_10_pncThreeRulesERC20PaymentRecordingHook()` | Three Rules ERC20 Payment Recording Hook | 387734 | $1.163202 |
-| `testBenchmark_mint_11_pncThreeRulesSplitPaymentTwoResolverWrites()` | Three Rules Split Payment Two Resolver Writes | 365174 | $1.095522 |
-| `testBenchmark_mint_12_pncThreeRulesPremiumERC20PaymentNoResolver()` | Three Rules Premium ERC20 Payment No Resolver | 268983 | $0.806949 |
-| `testBenchmark_mint_13_pncThreeRulesPremiumSplitPaymentThreeResolverWrites()` | Three Rules Premium Split Payment Three Resolver Writes | 381738 | $1.145214 |
-| `testBenchmark_mint_14_pncFourRulesWhitelistERC20PaymentNoResolver()` | Four Rules Whitelist ERC20 Payment No Resolver | 318031 | $0.954093 |
-| `testBenchmark_mint_15_pncFourRulesWhitelistSplitPaymentTwoResolverWrites()` | Four Rules Whitelist Split Payment Two Resolver Writes | 423040 | $1.269120 |
-| `testBenchmark_mint_16_pncFourRulesPremiumERC20PaymentNoResolver()` | Four Rules Premium ERC20 Payment No Resolver | 286012 | $0.858036 |
-| `testBenchmark_mint_17_pncFourRulesPremiumSplitPaymentThreeResolverWrites()` | Four Rules Premium Split Payment Three Resolver Writes | 398773 | $1.196319 |
-| `testBenchmark_mint_18_pncFiveRulesWhitelistPremiumSplitNoResolver()` | Five Rules Whitelist Premium Split No Resolver | 374663 | $1.123989 |
-| `testBenchmark_mint_19_pncFiveRulesReservationDiscountSplitNoResolver()` | Five Rules Reservation Discount Split No Resolver | 372106 | $1.116318 |
-| `testBenchmark_mint_20_pncSixRulesPauseWhitelistReservationSplitNoResolver()` | Six Rules Pause Whitelist Reservation Split No Resolver | 422840 | $1.268520 |
-| `testBenchmark_mint_21_pncSixRulesWhitelistReservationSplitThreeResolverWrites()` | Six Rules Whitelist Reservation Split Three Resolver Writes | 511940 | $1.535820 |
-| `testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites()` | All Rules Split No Resolver Writes | 571297 | $1.713891 |
-| `testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites()` | All Rules Split Three Resolver Writes | 653255 | $1.959765 |
-| `testBenchmark_mint_24_pncAllRulesSplitFiveResolverWrites()` | All Rules Split Five Resolver Writes | 673172 | $2.019516 |
+| `testBenchmark_mint_00_pncFreeNoRules()` | Free No Rules | 162444 | $0.487332 |
+| `testBenchmark_mint_01_pncOneGuardRuleFree()` | One Guard Rule Free | 181195 | $0.543585 |
+| `testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment()` | One Fixed Price Rule ERC20 Payment | 220769 | $0.662307 |
+| `testBenchmark_mint_03_pncOneFixedPriceRuleSplitPayment()` | One Fixed Price Rule Split Payment | 251159 | $0.753477 |
+| `testBenchmark_mint_04_pncTwoRulesFreeNoResolver()` | Two Rules Free No Resolver | 201422 | $0.604266 |
+| `testBenchmark_mint_05_pncTwoRulesERC20PaymentNoResolver()` | Two Rules ERC20 Payment No Resolver | 240759 | $0.722277 |
+| `testBenchmark_mint_06_pncTwoRulesSplitPaymentNoResolver()` | Two Rules Split Payment No Resolver | 271197 | $0.813591 |
+| `testBenchmark_mint_07_pncTwoEligibilityPriceRulesERC20Payment()` | Two Eligibility Price Rules ERC20 Payment | 241000 | $0.723000 |
+| `testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver()` | Three Rules ERC20 Payment No Resolver | 257794 | $0.773382 |
+| `testBenchmark_mint_09_pncThreeRulesSplitPaymentNoResolver()` | Three Rules Split Payment No Resolver | 288226 | $0.864678 |
+| `testBenchmark_mint_10_pncThreeRulesERC20PaymentRecordingHook()` | Three Rules ERC20 Payment Recording Hook | 387620 | $1.162860 |
+| `testBenchmark_mint_11_pncThreeRulesSplitPaymentTwoResolverWrites()` | Three Rules Split Payment Two Resolver Writes | 364408 | $1.093224 |
+| `testBenchmark_mint_12_pncThreeRulesPremiumERC20PaymentNoResolver()` | Three Rules Premium ERC20 Payment No Resolver | 266586 | $0.799758 |
+| `testBenchmark_mint_13_pncThreeRulesPremiumSplitPaymentThreeResolverWrites()` | Three Rules Premium Split Payment Three Resolver Writes | 380808 | $1.142424 |
+| `testBenchmark_mint_14_pncFourRulesWhitelistERC20PaymentNoResolver()` | Four Rules Whitelist ERC20 Payment No Resolver | 315634 | $0.946902 |
+| `testBenchmark_mint_15_pncFourRulesWhitelistSplitPaymentTwoResolverWrites()` | Four Rules Whitelist Split Payment Two Resolver Writes | 422274 | $1.266822 |
+| `testBenchmark_mint_16_pncFourRulesPremiumERC20PaymentNoResolver()` | Four Rules Premium ERC20 Payment No Resolver | 283615 | $0.850845 |
+| `testBenchmark_mint_17_pncFourRulesPremiumSplitPaymentThreeResolverWrites()` | Four Rules Premium Split Payment Three Resolver Writes | 397843 | $1.193529 |
+| `testBenchmark_mint_18_pncFiveRulesWhitelistPremiumSplitNoResolver()` | Five Rules Whitelist Premium Split No Resolver | 371920 | $1.115760 |
+| `testBenchmark_mint_19_pncFiveRulesReservationDiscountSplitNoResolver()` | Five Rules Reservation Discount Split No Resolver | 369363 | $1.108089 |
+| `testBenchmark_mint_20_pncSixRulesPauseWhitelistReservationSplitNoResolver()` | Six Rules Pause Whitelist Reservation Split No Resolver | 420097 | $1.260291 |
+| `testBenchmark_mint_21_pncSixRulesWhitelistReservationSplitThreeResolverWrites()` | Six Rules Whitelist Reservation Split Three Resolver Writes | 511010 | $1.533030 |
+| `testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites()` | All Rules Split No Resolver Writes | 568621 | $1.705863 |
+| `testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites()` | All Rules Split Three Resolver Writes | 652392 | $1.957176 |
+| `testBenchmark_mint_24_pncAllRulesSplitFiveResolverWrites()` | All Rules Split Five Resolver Writes | 671981 | $2.015943 |
 
 ## Renewal Benchmarks
 
 | Name | Scenario | Gwei used | USD @ 1 gwei |
 | --- | --- | ---: | ---: |
-| `testBenchmark_renew_00_threeRulesERC20PaymentNoHook()` | three Rules ERC20 Payment No Hook | 151488 | $0.454464 |
+| `testBenchmark_renew_00_threeRulesERC20PaymentNoHook()` | three Rules ERC20 Payment No Hook | 149091 | $0.447273 |
 
 ## Direct ENSv2 Registry Baselines
 
@@ -97,39 +97,39 @@ Run and regenerate:
 | --- | --- | ---: | --- |
 | `activation.free_no_rules` | exact | 199382 | Activation with no rules, no payment, no hooks. |
 | `activation.all_rules_split_five_resolver_writes` | exact | 1352999 | Activation with every current rule, split payment, and five resolver writes. |
-| `mint.free_no_rules` | exact | 164818 | Controller mint with no rules, no payment, no hooks. |
-| `mint.fixed_erc20` | exact | 223261 | Controller mint with fixed price rule and direct ERC20 payment. |
-| `mint.three_rules_erc20` | exact | 260191 | Controller mint with sale window, label length, fixed price, and direct ERC20 payment. |
-| `mint.three_rules_split_two_resolver_writes` | exact | 365174 | Controller mint with three rules, split payment, and two resolver writes. |
-| `mint.three_rules_premium_split_three_resolver_writes` | exact | 381738 | Controller mint with three rules, premium pricing, split payment, and three resolver writes. |
-| `mint.whitelist_erc20` | exact | 318031 | Controller mint with whitelist proof and direct ERC20 payment. |
-| `mint.reservation_split` | exact | 372106 | Controller mint with reservation and token discount rules plus split payment. |
-| `mint.all_rules_split` | exact | 571297 | Controller mint with every current rule and split payment, no resolver writes. |
-| `mint.all_rules_split_three_resolver_writes` | exact | 653255 | Controller mint with every current rule, split payment, and three resolver writes. |
-| `mint.all_rules_split_five_resolver_writes` | exact | 673172 | Controller mint with every current rule, split payment, and five resolver writes. |
-| `renew.three_rules_erc20` | exact | 151488 | Controller renewal with three rules and direct ERC20 payment. |
+| `mint.free_no_rules` | exact | 162444 | Controller mint with no rules, no payment, no hooks. |
+| `mint.fixed_erc20` | exact | 220769 | Controller mint with fixed price rule and direct ERC20 payment. |
+| `mint.three_rules_erc20` | exact | 257794 | Controller mint with sale window, label length, fixed price, and direct ERC20 payment. |
+| `mint.three_rules_split_two_resolver_writes` | exact | 364408 | Controller mint with three rules, split payment, and two resolver writes. |
+| `mint.three_rules_premium_split_three_resolver_writes` | exact | 380808 | Controller mint with three rules, premium pricing, split payment, and three resolver writes. |
+| `mint.whitelist_erc20` | exact | 315634 | Controller mint with whitelist proof and direct ERC20 payment. |
+| `mint.reservation_split` | exact | 369363 | Controller mint with reservation and token discount rules plus split payment. |
+| `mint.all_rules_split` | exact | 568621 | Controller mint with every current rule and split payment, no resolver writes. |
+| `mint.all_rules_split_three_resolver_writes` | exact | 652392 | Controller mint with every current rule, split payment, and three resolver writes. |
+| `mint.all_rules_split_five_resolver_writes` | exact | 671981 | Controller mint with every current rule, split payment, and five resolver writes. |
+| `renew.three_rules_erc20` | exact | 149091 | Controller renewal with three rules and direct ERC20 payment. |
 | `registry.register_no_roles` | floor | 76072 | Direct ENSv2 registry register with owner, no buyer roles, no resolver. |
 | `registry.register_buyer_roles` | floor | 123378 | Direct ENSv2 registry register with buyer roles and no resolver. |
 | `registry.register_buyer_roles_resolver` | floor | 127383 | Direct ENSv2 registry register with buyer roles and resolver. |
 | `registry.reserve_no_owner` | floor | 45141 | Direct ENSv2 registry reserve flow with owner set to zero. |
 | `registry.renew_registered` | floor | 27975 | Direct ENSv2 registry renewal baseline. |
-| `delta.guard_rule` | delta | 18732 | Incremental mint cost from adding one guard rule to a free mint. |
-| `delta.fixed_erc20_sale` | delta | 58443 | Incremental mint cost from fixed-price rule plus direct ERC20 payment. |
-| `delta.split_over_erc20` | delta | 30736 | Incremental mint cost from split payment instead of direct ERC20 payment. |
-| `delta.three_rules_over_fixed_erc20` | delta | 36930 | Incremental mint cost from sale window and label-length rules over fixed ERC20 sale. |
+| `delta.guard_rule` | delta | 18751 | Incremental mint cost from adding one guard rule to a free mint. |
+| `delta.fixed_erc20_sale` | delta | 58325 | Incremental mint cost from fixed-price rule plus direct ERC20 payment. |
+| `delta.split_over_erc20` | delta | 30390 | Incremental mint cost from split payment instead of direct ERC20 payment. |
+| `delta.three_rules_over_fixed_erc20` | delta | 37025 | Incremental mint cost from sale window and label-length rules over fixed ERC20 sale. |
 | `delta.whitelist_over_three_rules` | delta | 57840 | Incremental mint cost from adding whitelist proof to the common three-rule ERC20 sale. |
-| `delta.all_rules_over_split_three_rules` | delta | 280328 | Incremental mint cost from all rules over three-rule split sale. |
-| `delta.batch_resolver_three_writes` | delta | 81958 | Incremental mint cost from three resolver writes on all-rule split sale. |
-| `delta.batch_resolver_two_more_writes` | delta | 19917 | Incremental mint cost from two additional resolver writes. |
+| `delta.all_rules_over_split_three_rules` | delta | 280395 | Incremental mint cost from all rules over three-rule split sale. |
+| `delta.batch_resolver_three_writes` | delta | 83771 | Incremental mint cost from three resolver writes on all-rule split sale. |
+| `delta.batch_resolver_two_more_writes` | delta | 19589 | Incremental mint cost from two additional resolver writes. |
 | `delta.all_rules_activation` | delta | 1153617 | Incremental activation setup cost from all current rules, split payment, and five resolver writes. |
 
 ## Calculator Examples
 
 | Example | Components | Estimated gas | USD @ 1 gwei |
 | --- | --- | ---: | ---: |
-| Free mint floor | `mint.free_no_rules` | 164818 | $0.494454 |
-| Fixed ERC20 sale estimate | `mint.free_no_rules delta.fixed_erc20_sale` | 223261 | $0.669783 |
-| Common three-rule ERC20 sale | `mint.three_rules_erc20` | 260191 | $0.780573 |
-| Three-rule sale plus resolver writes | `mint.three_rules_split_two_resolver_writes` | 365174 | $1.095522 |
-| All-rule split sale | `mint.all_rules_split` | 571297 | $1.713891 |
-| All-rule split sale plus resolver writes | `mint.all_rules_split delta.batch_resolver_three_writes` | 653255 | $1.959765 |
+| Free mint floor | `mint.free_no_rules` | 162444 | $0.487332 |
+| Fixed ERC20 sale estimate | `mint.free_no_rules delta.fixed_erc20_sale` | 220769 | $0.662307 |
+| Common three-rule ERC20 sale | `mint.three_rules_erc20` | 257794 | $0.773382 |
+| Three-rule sale plus resolver writes | `mint.three_rules_split_two_resolver_writes` | 364408 | $1.093224 |
+| All-rule split sale | `mint.all_rules_split` | 568621 | $1.705863 |
+| All-rule split sale plus resolver writes | `mint.all_rules_split delta.batch_resolver_three_writes` | 652392 | $1.957176 |
