@@ -1,13 +1,13 @@
 # Namespace Contracts Overview
 
-Namespace is a sale controller for ENSv2 subnames. It does not replace ENSv2. It decides whether a subname can be minted or renewed, computes the price, collects payment, calls the official ENSv2 registry, then runs optional hooks.
+Namespace is a sale controller for ENSv2 subnames. It does not replace ENSv2. It decides whether a subname can be minted or renewed, computes the price, calls the official ENSv2 registry, collects payment atomically, then runs optional hooks.
 
 The core execution model is:
 
 ```text
 Rules decide.
-Payment settles.
 Registry mints or renews.
+Payment settles.
 Hooks react.
 ```
 
@@ -31,9 +31,9 @@ flowchart LR
     Activate --> Config["Rules + payment + hooks stored"]
     Buyer["Buyer"] --> Mint["mint(label, duration, runtimeData)"]
     Mint --> Rules["Evaluate rules"]
-    Rules --> Payment["Collect payment"]
-    Payment --> Registry["ENSv2 PermissionedRegistry"]
-    Registry --> Hooks["Post hooks"]
+    Rules --> Registry["ENSv2 PermissionedRegistry"]
+    Registry --> Payment["Collect payment"]
+    Payment --> Hooks["Post hooks"]
 ```
 
 ## Why Rules

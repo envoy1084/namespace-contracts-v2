@@ -16,7 +16,7 @@ trap 'rm -f "$tmp_output"' EXIT
 
 These benchmarks measure activation setup, end-to-end minting, renewal, and individual module function costs for the rule-based Namespace subname issuance architecture.
 
-The minting benchmarks are end to end for the Namespace mint path: buyer calls `NamespaceController.mint`, configured rules evaluate eligibility and price effects, the payment module settles funds, the official ENSv2 `PermissionedRegistry` mints the label, and post-hooks run when configured.
+The minting benchmarks are end to end for the Namespace mint path: buyer calls `NamespaceController.mint`, configured rules evaluate eligibility and price effects, the official ENSv2 `PermissionedRegistry` mints the label, the payment module settles funds, and post-hooks run when configured.
 
 Reference: [Foundry gas tracking](https://www.getfoundry.sh/forge/gas-tracking).
 

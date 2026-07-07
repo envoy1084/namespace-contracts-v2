@@ -13,7 +13,8 @@ Recommended reading order:
 7. [Example Registry And Registrar](./ensv2-example-registry.md)
 8. [Namespace Contract Architecture](./namespace-subname-minting-design.md)
 9. [Namespace Architecture V2: Claims, Rules, Effects, And Settlement](./namespace-architecture-v2-claims-rules-settlement.md)
-10. [ENSv2 Source Map](./ensv2-source-map.md)
+10. [Namespace Architecture And Gas Review](./namespace-architecture-gas-review.md)
+11. [ENSv2 Source Map](./ensv2-source-map.md)
 
 ## One-Screen Summary
 

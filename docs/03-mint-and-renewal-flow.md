@@ -53,11 +53,11 @@ sequenceDiagram
         Rule-->>Controller: RuleOutput
         Controller->>Controller: apply decision, flags, price effect
     end
+    Controller->>Registry: register(label, buyer, resolver, roles, expiry)
+    Registry-->>Controller: tokenId
     opt final price or msg.value is non-zero
         Controller->>Payment: collectMint(ctx, price, paymentData)
     end
-    Controller->>Registry: register(label, buyer, resolver, roles, expiry)
-    Registry-->>Controller: tokenId
     loop each post hook
         Controller->>Hook: afterMint(ctx, tokenId, postHookData[i])
     end
@@ -84,15 +84,17 @@ sequenceDiagram
         Rule-->>Controller: RuleOutput
         Controller->>Controller: apply decision, flags, price effect
     end
+    Controller->>Registry: renew(tokenId, newExpiry)
     opt final price or msg.value is non-zero
         Controller->>Payment: collectRenew(ctx, price, paymentData)
     end
-    Controller->>Registry: renew(tokenId, newExpiry)
     loop each post hook
         Controller->>Hook: afterRenew(ctx, postHookData[i])
     end
     Controller-->>Payer: newExpiry
 ```
+
+The current implementation writes the ENSv2 registry before collecting payment. This is atomic: if payment or a hook reverts, the whole transaction reverts, including the registry write.
 
 ## Price Composition
 
