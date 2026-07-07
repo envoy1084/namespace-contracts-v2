@@ -7,6 +7,7 @@ import {PermissionedResolver} from "@ensv2/resolver/PermissionedResolver.sol";
 import {VerifiableFactory} from "lib/contracts-v2/contracts/lib/verifiable-factory/src/VerifiableFactory.sol";
 
 import {BatchSetAddrToBuyerHook} from "src/modules/hooks/BatchSetAddrToBuyerHook.sol";
+import {SetAddrToBuyerHook} from "src/modules/hooks/SetAddrToBuyerHook.sol";
 import {ERC20SplitPaymentModule} from "src/modules/payment/ERC20SplitPaymentModule.sol";
 import {LabelClassRule} from "src/modules/rules/LabelClassRule.sol";
 import {LengthPremiumRule} from "src/modules/rules/LengthPremiumRule.sol";
@@ -28,7 +29,9 @@ abstract contract NamespaceBenchmarkModules is NamespaceSetUp {
     LabelClassRule internal labelClassRule;
     USDOracleRule internal usdOracleRule;
     ERC20SplitPaymentModule internal splitPayment;
+    SetAddrToBuyerHook internal setAddrHook;
     BatchSetAddrToBuyerHook internal batchResolverHook;
+    PermissionedResolver internal setAddrResolver;
     PermissionedResolver internal resolver;
     MockAggregatorV3 internal oracle;
 
@@ -43,7 +46,9 @@ abstract contract NamespaceBenchmarkModules is NamespaceSetUp {
         labelClassRule = LabelClassRule(_deployModule(address(new LabelClassRule())));
         usdOracleRule = USDOracleRule(_deployModule(address(new USDOracleRule())));
         splitPayment = ERC20SplitPaymentModule(_deployModule(address(new ERC20SplitPaymentModule())));
+        setAddrHook = SetAddrToBuyerHook(_deployModule(address(new SetAddrToBuyerHook())));
         batchResolverHook = BatchSetAddrToBuyerHook(_deployModule(address(new BatchSetAddrToBuyerHook())));
+        setAddrResolver = _deployResolver(address(setAddrHook), PermissionedResolverLib.ROLE_SET_ADDR);
         resolver = _deployResolver(address(batchResolverHook), PermissionedResolverLib.ROLE_SET_ADDR);
         oracle = new MockAggregatorV3(8, 2_000e8);
 
@@ -76,6 +81,7 @@ abstract contract NamespaceBenchmarkModules is NamespaceSetUp {
         controller.setModuleApproval(ruleKind, address(labelClassRule), true);
         controller.setModuleApproval(ruleKind, address(usdOracleRule), true);
         controller.setModuleApproval(paymentKind, address(splitPayment), true);
+        controller.setModuleApproval(postHookKind, address(setAddrHook), true);
         controller.setModuleApproval(postHookKind, address(batchResolverHook), true);
         vm.stopPrank();
     }

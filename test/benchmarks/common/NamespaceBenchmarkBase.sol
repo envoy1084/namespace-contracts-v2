@@ -56,6 +56,14 @@ abstract contract NamespaceBenchmarkBase is NamespaceBenchmarkCombinations {
     function _mint(MintScenario memory scenario) internal returns (uint256 tokenId) {
         vm.prank(accounts.buyer.addr);
         tokenId = controller.mint(scenario.activationId, scenario.label, 365 days, scenario.runtimeData);
+    }
+
+    function _mintAndAssert(MintScenario memory scenario) internal returns (uint256 tokenId) {
+        tokenId = _mint(scenario);
+        _assertMinted(tokenId);
+    }
+
+    function _assertMinted(uint256 tokenId) internal view {
         IPermissionedRegistry.State memory state = registry.getState(tokenId);
         assertEq(uint256(state.status), uint256(IPermissionedRegistry.Status.REGISTERED));
         assertEq(registry.ownerOf(tokenId), accounts.buyer.addr);

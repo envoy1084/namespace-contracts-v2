@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import {NamespaceBenchmarkBase} from "test/benchmarks/common/NamespaceBenchmarkBase.sol";
 
-/// @notice End-to-end mint and renewal gas through NamespaceController and ENSv2 registry.
+/// @notice Call-only mint and renewal gas through NamespaceController and ENSv2 registry.
 contract NamespaceMintGasBenchmarks is NamespaceBenchmarkBase {
     MintScenario[25] internal mintPnc;
     MintScenario internal renewThreeRulesERC20;
