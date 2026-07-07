@@ -84,6 +84,21 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
         vm.stopPrank();
     }
 
+    function test_mint_revertsWhenActivationOwnerLostRegistryAdmin() public {
+        bytes32 activationId = _activateDefault();
+        NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
+
+        registry.revokeRootRoles(ROLE_REGISTRAR_ADMIN, accounts.alice.addr);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                INamespaceController.UnauthorizedActivationOwner.selector, accounts.alice.addr, address(registry)
+            )
+        );
+        vm.prank(accounts.buyer.addr);
+        controller.mint(activationId, "pay", 365 days, runtimeData);
+    }
+
     function test_renew_revertsForZeroDuration() public {
         vm.expectRevert(abi.encodeWithSelector(INamespaceController.ZeroDuration.selector));
         controller.renew(bytes32(0), "pay", 0, _defaultRuntimeData());
@@ -122,6 +137,26 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
         assertEq(newExpiry, beforeRenew.expiry + 30 days);
         assertEq(afterRenew.expiry, newExpiry);
         assertEq(token.balanceOf(accounts.treasury.addr), 150 ether);
+    }
+
+    function test_renew_revertsWhenActivationOwnerLostRegistryAdmin() public {
+        bytes32 activationId = _activateDefault();
+        NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
+
+        vm.startPrank(accounts.buyer.addr);
+        token.approve(address(erc20Payment), 150 ether);
+        controller.mint(activationId, "pay", 365 days, runtimeData);
+        vm.stopPrank();
+
+        registry.revokeRootRoles(ROLE_REGISTRAR_ADMIN, accounts.alice.addr);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                INamespaceController.UnauthorizedActivationOwner.selector, accounts.alice.addr, address(registry)
+            )
+        );
+        vm.prank(accounts.buyer.addr);
+        controller.renew(activationId, "pay", 30 days, runtimeData);
     }
 
     function test_renew_revertsWhenNativeValueHasNoPaymentModuleAndNoPrice() public {
