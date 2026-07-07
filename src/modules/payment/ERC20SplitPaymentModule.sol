@@ -32,6 +32,7 @@ contract ERC20SplitPaymentModule is NamespaceModule, IPaymentModule {
     // slither-disable-next-line uninitialized-state
     mapping(bytes32 activationId => StoredParams params) private _params;
 
+    error InvalidPaymentToken();
     error InvalidSplitRecipient();
     error InvalidSplitBps(uint256 totalBps);
     error PaymentTokenMismatch(address expected, address actual);
@@ -40,6 +41,9 @@ contract ERC20SplitPaymentModule is NamespaceModule, IPaymentModule {
 
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         Params memory decoded = abi.decode(configData, (Params));
+        if (decoded.token == address(0)) {
+            revert InvalidPaymentToken();
+        }
         StoredParams storage stored = _params[activationId];
         delete stored.splits;
         stored.token = decoded.token;

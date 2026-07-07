@@ -120,14 +120,15 @@ The rule rejects:
 
 The controller only calls payment modules when final price or `msg.value` is non-zero.
 
-Current payment modules are ERC20-based:
+Current payment modules:
 
 | Module | Use |
 | --- | --- |
+| `NativePaymentModule` | One native ETH recipient. |
 | `ERC20PaymentModule` | One recipient. |
 | `ERC20SplitPaymentModule` | Direct split to multiple recipients. |
 
-Native ETH pricing is represented by `Price.token == address(0)`, but the current payment modules reject native value. Add a native payment module before enabling native-price activations.
+Native ETH pricing is represented by `Price.token == address(0)` and must use `NativePaymentModule`. ERC20 payment modules reject `address(0)` tokens during configuration and reject non-zero native value during collection.
 
 ## Reentrancy And External Calls
 

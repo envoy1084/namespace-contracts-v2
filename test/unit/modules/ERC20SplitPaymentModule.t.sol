@@ -80,6 +80,12 @@ contract ERC20SplitPaymentModuleTest is NamespaceSetUp {
     function test_configure_revertsForInvalidRecipientAndInvalidBps() public {
         bytes32 activationId = keccak256("activation");
         ERC20SplitPaymentModule.Split[] memory splits = new ERC20SplitPaymentModule.Split[](1);
+        splits[0] = ERC20SplitPaymentModule.Split({recipient: accounts.alice.addr, bps: 10_000});
+
+        vm.expectRevert(abi.encodeWithSelector(ERC20SplitPaymentModule.InvalidPaymentToken.selector));
+        vm.prank(address(controller));
+        payment.configure(activationId, abi.encode(ERC20SplitPaymentModule.Params({token: address(0), splits: splits})));
+
         splits[0] = ERC20SplitPaymentModule.Split({recipient: address(0), bps: 10_000});
 
         vm.expectRevert(abi.encodeWithSelector(ERC20SplitPaymentModule.InvalidSplitRecipient.selector));

@@ -23,6 +23,7 @@ contract ERC20PaymentModule is NamespaceModule, IPaymentModule {
 
     mapping(bytes32 activationId => Params params) public params;
 
+    error InvalidPaymentToken();
     error InvalidPaymentRecipient();
     error PaymentTokenMismatch(address expected, address actual);
     error NativeValueNotAccepted(uint256 value);
@@ -31,6 +32,9 @@ contract ERC20PaymentModule is NamespaceModule, IPaymentModule {
     /// @notice Store ERC20 payment parameters for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         Params memory decoded = abi.decode(configData, (Params));
+        if (address(decoded.token) == address(0)) {
+            revert InvalidPaymentToken();
+        }
         if (decoded.recipient == address(0)) {
             revert InvalidPaymentRecipient();
         }

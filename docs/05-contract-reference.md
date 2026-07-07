@@ -126,6 +126,7 @@ Base for rule modules. It inherits `NamespaceModule` and `IRuleModule`, and prov
 
 | Contract | Purpose |
 | --- | --- |
+| `NativePaymentModule` | Direct native ETH collection to one recipient. |
 | `ERC20PaymentModule` | Direct ERC20 collection to one recipient. |
 | `ERC20SplitPaymentModule` | Direct ERC20 collection to multiple recipients by bps. |
 

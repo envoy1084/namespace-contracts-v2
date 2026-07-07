@@ -7,6 +7,8 @@ import {Vm} from "forge-std/Vm.sol";
 
 import {INamespaceController} from "src/interfaces/INamespaceController.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
+import {NativePaymentModule} from "src/modules/payment/NativePaymentModule.sol";
+import {FixedPriceRule} from "src/modules/rules/FixedPriceRule.sol";
 import {ReservationRule} from "src/modules/rules/ReservationRule.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
 
@@ -52,6 +54,38 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
         assertEq(postHook.lastLabelHash(), bytes32(labelId));
         assertEq(postHook.lastTokenId(), tokenId);
         assertEq(postHook.lastRuntimeData(), hex"1234");
+    }
+
+    function test_mint_collectsNativePayment() public {
+        NativePaymentModule nativePayment = NativePaymentModule(_deployModule(address(new NativePaymentModule())));
+        bytes32 paymentKind = controller.MODULE_KIND_PAYMENT();
+        vm.prank(accounts.owner.addr);
+        controller.setModuleApproval(paymentKind, address(nativePayment), true);
+
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        config.rules[2].configData = abi.encode(
+            FixedPriceRule.Params({
+                token: address(0),
+                defaultMintAmount: 1 ether,
+                defaultRenewAmount: 0.5 ether,
+                lengthPrices: new FixedPriceRule.LengthPrice[](0)
+            })
+        );
+        config.paymentModule = NamespaceTypes.ModuleConfig({
+            module: address(nativePayment),
+            configData: abi.encode(NativePaymentModule.Params({recipient: accounts.treasury.addr}))
+        });
+
+        vm.prank(accounts.alice.addr);
+        bytes32 activationId = controller.activate(config);
+
+        NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
+        uint256 beforeBalance = accounts.treasury.addr.balance;
+        vm.prank(accounts.buyer.addr);
+        uint256 tokenId = controller.mint{value: 1 ether}(activationId, "native", 365 days, runtimeData);
+
+        assertEq(accounts.treasury.addr.balance - beforeBalance, 1 ether);
+        assertEq(registry.ownerOf(tokenId), accounts.buyer.addr);
     }
 
     function test_mint_revertsWhenPaidPriceHasNoPaymentModule() public {

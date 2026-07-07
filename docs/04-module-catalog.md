@@ -272,6 +272,18 @@ Use in `ELIGIBILITY` for allowlist-only claims, `DISCOUNT` for `discountBps`, `P
 
 ## Payment Modules
 
+### NativePaymentModule
+
+Purpose: collect native ETH directly to one recipient.
+
+```solidity
+NativePaymentModule.Params({
+    recipient: treasury
+})
+```
+
+Use this when the final `Price.token` is `address(0)`. The module requires `msg.value == Price.amount`.
+
 ### ERC20PaymentModule
 
 Purpose: collect ERC20 payment directly to one recipient.
@@ -283,7 +295,7 @@ ERC20PaymentModule.Params({
 })
 ```
 
-The payment token must match the final `Price.token`.
+The payment token must be non-zero and must match the final `Price.token`.
 
 ### ERC20SplitPaymentModule
 
@@ -295,7 +307,7 @@ splits[0] = ERC20SplitPaymentModule.Split({recipient: alice, bps: 7500});
 splits[1] = ERC20SplitPaymentModule.Split({recipient: treasury, bps: 2500});
 ```
 
-Splits must total `10_000` bps. The final recipient receives any rounding remainder.
+The payment token must be non-zero. Splits must total `10_000` bps. The final recipient receives any rounding remainder.
 
 ## Post Hooks
 

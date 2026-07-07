@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {LibClone} from "solady/utils/LibClone.sol";
+import {ERC20} from "solady/tokens/ERC20.sol";
 
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {NamespaceModule} from "src/modules/NamespaceModule.sol";
@@ -18,8 +19,15 @@ contract ERC20PaymentModuleTest is NamespaceSetUp {
         proxy.initialize(address(0), accounts.owner.addr);
     }
 
-    function test_configure_revertsForInvalidRecipient() public {
+    function test_configure_revertsForInvalidTokenAndRecipient() public {
         bytes32 activationId = keccak256("activation");
+
+        vm.expectRevert(abi.encodeWithSelector(ERC20PaymentModule.InvalidPaymentToken.selector));
+        vm.prank(address(controller));
+        erc20Payment.configure(
+            activationId,
+            abi.encode(ERC20PaymentModule.Params({token: ERC20(address(0)), recipient: accounts.treasury.addr}))
+        );
 
         vm.expectRevert(abi.encodeWithSelector(ERC20PaymentModule.InvalidPaymentRecipient.selector));
         vm.prank(address(controller));
