@@ -234,7 +234,9 @@ abstract contract NamespaceBenchmarkScenarios is NamespaceBenchmarkPricing {
             module: address(tokenBalanceRule),
             phase: NamespaceTypes.RulePhase.DISCOUNT,
             configData: abi.encode(
-                TokenBalanceRule.Params({token: ERC20(address(token)), minBalance: 100 ether, discountBps: 500})
+                TokenBalanceRule.Params({
+                    token: ERC20(address(token)), minBalance: 100 ether, discountBps: 500, minHoldTime: 1
+                })
             )
         });
     }

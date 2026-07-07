@@ -45,6 +45,10 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
 
         uint256 quotedPrice = 100 ether + 20 ether;
 
+        vm.prank(accounts.buyer.addr);
+        tokenBalanceRule.recordBalance(activationId);
+        vm.warp(block.timestamp + 1);
+
         vm.startPrank(accounts.buyer.addr);
         token.approve(address(splitPayment), quotedPrice);
         uint256 tokenId = controller.mint(activationId, label, duration, runtimeData);
@@ -115,7 +119,9 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
         rules[2] = NamespaceTypes.RuleConfig({
             module: address(tokenBalanceRule),
             phase: NamespaceTypes.RulePhase.ELIGIBILITY,
-            configData: abi.encode(TokenBalanceRule.Params({token: token, minBalance: 100 ether, discountBps: 0}))
+            configData: abi.encode(
+                TokenBalanceRule.Params({token: token, minBalance: 100 ether, discountBps: 0, minHoldTime: 1})
+            )
         });
         rules[3] = NamespaceTypes.RuleConfig({
             module: address(reservationRule),

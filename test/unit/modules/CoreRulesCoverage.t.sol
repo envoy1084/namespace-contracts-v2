@@ -155,13 +155,24 @@ contract CoreRulesCoverageTest is NamespaceSetUp {
         vm.expectRevert(abi.encodeWithSelector(TokenBalanceRule.InvalidTokenBalanceRule.selector, activationId));
         vm.prank(address(controller));
         tokenBalanceRule.configure(
-            activationId, abi.encode(TokenBalanceRule.Params({token: ERC20(address(0)), minBalance: 1, discountBps: 0}))
+            activationId,
+            abi.encode(
+                TokenBalanceRule.Params({token: ERC20(address(0)), minBalance: 1, discountBps: 0, minHoldTime: 1})
+            )
         );
 
         vm.expectRevert(abi.encodeWithSelector(TokenBalanceRule.InvalidDiscountBps.selector, uint16(10_001)));
         vm.prank(address(controller));
         tokenBalanceRule.configure(
-            activationId, abi.encode(TokenBalanceRule.Params({token: token, minBalance: 1, discountBps: 10_001}))
+            activationId,
+            abi.encode(TokenBalanceRule.Params({token: token, minBalance: 1, discountBps: 10_001, minHoldTime: 1}))
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(TokenBalanceRule.InvalidTokenBalanceHoldTime.selector, activationId));
+        vm.prank(address(controller));
+        tokenBalanceRule.configure(
+            activationId,
+            abi.encode(TokenBalanceRule.Params({token: token, minBalance: 1, discountBps: 0, minHoldTime: 0}))
         );
     }
 
@@ -170,7 +181,9 @@ contract CoreRulesCoverageTest is NamespaceSetUp {
         vm.prank(address(controller));
         tokenBalanceRule.configure(
             activationId,
-            abi.encode(TokenBalanceRule.Params({token: token, minBalance: 2_000_000 ether, discountBps: 500}))
+            abi.encode(
+                TokenBalanceRule.Params({token: token, minBalance: 2_000_000 ether, discountBps: 500, minHoldTime: 1})
+            )
         );
 
         vm.expectRevert(
@@ -187,12 +200,43 @@ contract CoreRulesCoverageTest is NamespaceSetUp {
 
         vm.prank(address(controller));
         tokenBalanceRule.configure(
-            activationId, abi.encode(TokenBalanceRule.Params({token: token, minBalance: 1 ether, discountBps: 500}))
+            activationId,
+            abi.encode(TokenBalanceRule.Params({token: token, minBalance: 1 ether, discountBps: 500, minHoldTime: 1}))
         );
+        vm.prank(accounts.buyer.addr);
+        tokenBalanceRule.recordBalance(activationId);
+        vm.warp(block.timestamp + 1);
 
         NamespaceTypes.RuleOutput memory output = tokenBalanceRule.evaluateRenew(_renewCtx(activationId, "token"), "");
         assertEq(uint256(output.priceOp), uint256(NamespaceTypes.PriceOp.DISCOUNT_BPS));
         assertEq(output.bps, 500);
+    }
+
+    function test_tokenBalance_revertsWhenHoldTimeNotMet() public {
+        bytes32 activationId = keccak256("activation");
+        address temporaryHolder = makeAddr("temporaryHolder");
+        vm.prank(address(controller));
+        tokenBalanceRule.configure(
+            activationId,
+            abi.encode(TokenBalanceRule.Params({token: token, minBalance: 100 ether, discountBps: 500, minHoldTime: 1}))
+        );
+
+        vm.prank(accounts.buyer.addr);
+        token.transfer(temporaryHolder, 100 ether);
+
+        NamespaceTypes.MintContext memory ctx = _mintCtx(activationId, "token");
+        ctx.buyer = temporaryHolder;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TokenBalanceRule.TokenBalanceHoldTimeNotMet.selector,
+                activationId,
+                temporaryHolder,
+                uint64(0),
+                uint64(1),
+                block.timestamp
+            )
+        );
+        tokenBalanceRule.evaluateMint(ctx, "");
     }
 
     function test_lengthPremium_configureRevertsForEmptyAndTooLongTables() public {

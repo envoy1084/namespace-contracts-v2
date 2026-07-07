@@ -20,6 +20,10 @@ abstract contract NamespaceBenchmarkBase is NamespaceBenchmarkCombinations {
         NamespaceTypes.RuntimeData memory runtimeData
     ) internal returns (MintScenario memory scenario) {
         scenario.activationId = _activate(config);
+        vm.prank(accounts.buyer.addr);
+        try tokenBalanceRule.recordBalance(scenario.activationId) {
+            vm.warp(block.timestamp + 1);
+        } catch {}
         scenario.label = label;
         scenario.runtimeData = runtimeData;
     }
