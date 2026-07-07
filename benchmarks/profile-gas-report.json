@@ -205,6 +205,7 @@
   },
   "profiles": {
     "hook.batch_resolver_1": {
+      "activationGas": 58124,
       "category": "hook",
       "description": "BatchSetAddrToBuyerHook with one resolver write.",
       "gas": 87634,
@@ -212,6 +213,7 @@
       "source": "testBenchmark_profile_hook_03_batchResolverHookOneWrite_afterMint"
     },
     "hook.batch_resolver_3": {
+      "activationGas": 58124,
       "category": "hook",
       "description": "BatchSetAddrToBuyerHook with three resolver writes.",
       "gas": 107599,
@@ -219,6 +221,7 @@
       "source": "testBenchmark_profile_hook_04_batchResolverHookThreeWrites_afterMint"
     },
     "hook.batch_resolver_5": {
+      "activationGas": 58124,
       "category": "hook",
       "description": "BatchSetAddrToBuyerHook with five resolver writes.",
       "gas": 127553,
@@ -226,6 +229,7 @@
       "source": "testBenchmark_profile_hook_05_batchResolverHookFiveWrites_afterMint"
     },
     "hook.recording": {
+      "activationGas": 56014,
       "category": "hook",
       "description": "Recording post-hook profile.",
       "gas": 130739,
@@ -233,6 +237,7 @@
       "source": "testBenchmark_profile_hook_00_recordingPostHook_afterMint"
     },
     "hook.set_addr_empty": {
+      "activationGas": 58124,
       "category": "hook",
       "description": "SetAddrToBuyerHook using buyer address.",
       "gas": 85082,
@@ -240,6 +245,7 @@
       "source": "testBenchmark_profile_hook_01_setAddrToBuyerEmpty_afterMint"
     },
     "hook.set_addr_override": {
+      "activationGas": 58124,
       "category": "hook",
       "description": "SetAddrToBuyerHook using address override.",
       "gas": 89853,
@@ -247,6 +253,7 @@
       "source": "testBenchmark_profile_hook_02_setAddrToBuyerOverride_afterMint"
     },
     "payment.erc20": {
+      "activationGas": 65212,
       "category": "payment",
       "description": "Direct ERC20 transferFrom payment module.",
       "gas": 83127,
@@ -254,6 +261,7 @@
       "source": "testBenchmark_profile_payment_00_collectMintERC20"
     },
     "payment.split_2": {
+      "activationGas": 113302,
       "category": "payment",
       "description": "ERC20 split payment to two recipients.",
       "gas": 101987,
@@ -275,6 +283,7 @@
       "source": "testBenchmark_profile_payment_03_collectMintSplitERC20FiveRecipients"
     },
     "rule.fixed_price_20_exact": {
+      "activationGas": 338193,
       "category": "rule",
       "description": "FixedPriceRule with twenty overrides and exact-length hit.",
       "gas": 35094,
@@ -282,6 +291,7 @@
       "source": "testBenchmark_profile_rule_07_fixedPriceTwentyOverridesExact_evaluateMint"
     },
     "rule.fixed_price_5_exact": {
+      "activationGas": 184476,
       "category": "rule",
       "description": "FixedPriceRule with five overrides and exact-length hit.",
       "gas": 34018,
@@ -289,6 +299,7 @@
       "source": "testBenchmark_profile_rule_06_fixedPriceFiveOverridesExact_evaluateMint"
     },
     "rule.fixed_price_5_fallback": {
+      "activationGas": 184476,
       "category": "rule",
       "description": "FixedPriceRule with five overrides and fallback label.",
       "gas": 34092,
@@ -296,6 +307,7 @@
       "source": "testBenchmark_profile_rule_05_fixedPriceFiveOverridesFallback_evaluateMint"
     },
     "rule.fixed_price_no_overrides": {
+      "activationGas": 87686,
       "category": "rule",
       "description": "FixedPriceRule with no length overrides.",
       "gas": 40676,
@@ -303,6 +315,7 @@
       "source": "testBenchmark_profile_rule_04_fixedPriceNoLengthOverrides_evaluateMint"
     },
     "rule.label_class_emoji": {
+      "activationGas": 107324,
       "category": "rule",
       "description": "LabelClassRule for emoji labels.",
       "gas": 30651,
@@ -310,6 +323,7 @@
       "source": "testBenchmark_profile_rule_20_labelClassEmoji_evaluateMint"
     },
     "rule.label_class_letter": {
+      "activationGas": 107324,
       "category": "rule",
       "description": "LabelClassRule for ASCII letter labels.",
       "gas": 31454,
@@ -317,6 +331,7 @@
       "source": "testBenchmark_profile_rule_19_labelClassLetter_evaluateMint"
     },
     "rule.label_class_number": {
+      "activationGas": 107324,
       "category": "rule",
       "description": "LabelClassRule for numeric labels.",
       "gas": 30146,
@@ -324,6 +339,7 @@
       "source": "testBenchmark_profile_rule_18_labelClassNumber_evaluateMint"
     },
     "rule.label_length": {
+      "activationGas": 59609,
       "category": "rule",
       "description": "LabelLengthRule evaluateMint.",
       "gas": 36201,
@@ -331,6 +347,7 @@
       "source": "testBenchmark_profile_rule_03_labelLength_evaluateMint"
     },
     "rule.length_premium_20": {
+      "activationGas": 333952,
       "category": "rule",
       "description": "LengthPremiumRule with twenty buckets.",
       "gas": 31869,
@@ -338,6 +355,7 @@
       "source": "testBenchmark_profile_rule_10_lengthPremiumTwentyBuckets_evaluateMint"
     },
     "rule.length_premium_5": {
+      "activationGas": 213530,
       "category": "rule",
       "description": "LengthPremiumRule with five buckets.",
       "gas": 31867,
@@ -345,6 +363,7 @@
       "source": "testBenchmark_profile_rule_08_lengthPremiumFiveBuckets_evaluateMint"
     },
     "rule.length_premium_5_fallback": {
+      "activationGas": 213530,
       "category": "rule",
       "description": "LengthPremiumRule with five buckets and fallback bucket.",
       "gas": 31905,
@@ -352,6 +371,7 @@
       "source": "testBenchmark_profile_rule_09_lengthPremiumFiveBucketsFallback_evaluateMint"
     },
     "rule.pause": {
+      "activationGas": 36697,
       "category": "rule",
       "description": "PauseRule evaluateMint.",
       "gas": 35729,
@@ -359,6 +379,7 @@
       "source": "testBenchmark_profile_rule_00_pause_evaluateMint"
     },
     "rule.reservation_10": {
+      "activationGas": 76681,
       "category": "rule",
       "description": "ReservationRule with Merkle set size 10.",
       "gas": 65910,
@@ -373,6 +394,7 @@
       "source": "testBenchmark_profile_rule_13_reservation100_evaluateMint"
     },
     "rule.reservation_1000": {
+      "activationGas": 84349,
       "category": "rule",
       "description": "ReservationRule with Merkle set size 1000.",
       "gas": 80795,
@@ -380,6 +402,7 @@
       "source": "testBenchmark_profile_rule_14_reservation1000_evaluateMint"
     },
     "rule.sale_window_bounded": {
+      "activationGas": 39668,
       "category": "rule",
       "description": "SaleWindowRule evaluateMint with active start/end bounds.",
       "gas": 24219,
@@ -387,6 +410,7 @@
       "source": "testBenchmark_profile_rule_02_saleWindowBounded_evaluateMint"
     },
     "rule.sale_window_open": {
+      "activationGas": 39668,
       "category": "rule",
       "description": "SaleWindowRule evaluateMint with open zero-bounds config.",
       "gas": 36007,
@@ -394,6 +418,7 @@
       "source": "testBenchmark_profile_rule_01_saleWindowOpen_evaluateMint"
     },
     "rule.token_balance_discount": {
+      "activationGas": 106012,
       "category": "rule",
       "description": "TokenBalanceRule with minimum balance and discount.",
       "gas": 45731,
@@ -401,6 +426,7 @@
       "source": "testBenchmark_profile_rule_11_tokenBalanceDiscount_evaluateMint"
     },
     "rule.usd_oracle": {
+      "activationGas": 131618,
       "category": "rule",
       "description": "USDOracleRule with Chainlink-compatible oracle.",
       "gas": 46998,
@@ -408,6 +434,7 @@
       "source": "testBenchmark_profile_rule_21_usdOracle_evaluateMint"
     },
     "rule.whitelist_10": {
+      "activationGas": 77276,
       "category": "rule",
       "description": "WhitelistRule with Merkle set size 10.",
       "gas": 67830,
@@ -422,6 +449,7 @@
       "source": "testBenchmark_profile_rule_16_whitelist100_evaluateMint"
     },
     "rule.whitelist_1000": {
+      "activationGas": 84858,
       "category": "rule",
       "description": "WhitelistRule with Merkle set size 1000.",
       "gas": 82713,

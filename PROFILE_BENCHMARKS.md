@@ -12,6 +12,12 @@ Machine-readable profile report: [`benchmarks/profile-gas-report.json`](./benchm
 
 Profile components are also included in [`benchmarks/gas-components.tsv`](./benchmarks/gas-components.tsv) for the calculator.
 
+Estimate arbitrary profile stacks:
+
+```sh
+./scripts/calculate-gas.sh estimate rule.sale_window_bounded rule.label_length rule.fixed_price_no_overrides payment.erc20
+```
+
 ## Assumptions
 
 - ETH price: `$3000`
@@ -66,39 +72,63 @@ Profile components are also included in [`benchmarks/gas-components.tsv`](./benc
 | `testBenchmark_profile_hook_04_batchResolverHookThreeWrites_afterMint()` | batch Resolver Hook Three Writes after Mint | 107599 | $0.322797 |
 | `testBenchmark_profile_hook_05_batchResolverHookFiveWrites_afterMint()` | batch Resolver Hook Five Writes after Mint | 127553 | $0.382659 |
 
+## Activation Setup Profiles
+
+| Name | Scenario | Gwei used | USD @ 1 gwei |
+| --- | --- | ---: | ---: |
+| `testBenchmark_profile_activation_hook_00_recording()` | recording | 255396 | $0.766188 |
+| `testBenchmark_profile_activation_hook_01_batchResolver()` | batch Resolver | 257506 | $0.772518 |
+| `testBenchmark_profile_activation_payment_00_erc20()` | erc20 | 264594 | $0.793782 |
+| `testBenchmark_profile_activation_payment_01_split2()` | split2 | 312684 | $0.938052 |
+| `testBenchmark_profile_activation_rule_00_pause()` | pause | 236079 | $0.708237 |
+| `testBenchmark_profile_activation_rule_01_saleWindow()` | sale Window | 239050 | $0.717150 |
+| `testBenchmark_profile_activation_rule_02_labelLength()` | label Length | 258991 | $0.776973 |
+| `testBenchmark_profile_activation_rule_03_fixedPriceNoLengthOverrides()` | fixed Price No Length Overrides | 287068 | $0.861204 |
+| `testBenchmark_profile_activation_rule_04_fixedPriceFiveOverrides()` | fixed Price Five Overrides | 383858 | $1.151574 |
+| `testBenchmark_profile_activation_rule_05_fixedPriceTwentyOverrides()` | fixed Price Twenty Overrides | 537575 | $1.612725 |
+| `testBenchmark_profile_activation_rule_06_lengthPremiumFiveBuckets()` | length Premium Five Buckets | 412912 | $1.238736 |
+| `testBenchmark_profile_activation_rule_07_lengthPremiumTwentyBuckets()` | length Premium Twenty Buckets | 533334 | $1.600002 |
+| `testBenchmark_profile_activation_rule_08_tokenBalanceDiscount()` | token Balance Discount | 305394 | $0.916182 |
+| `testBenchmark_profile_activation_rule_09_reservation10()` | reservation10 | 276063 | $0.828189 |
+| `testBenchmark_profile_activation_rule_10_reservation1000()` | reservation1000 | 283731 | $0.851193 |
+| `testBenchmark_profile_activation_rule_11_whitelist10()` | whitelist10 | 276658 | $0.829974 |
+| `testBenchmark_profile_activation_rule_12_whitelist1000()` | whitelist1000 | 284240 | $0.852720 |
+| `testBenchmark_profile_activation_rule_13_labelClassNumber()` | label Class Number | 306706 | $0.920118 |
+| `testBenchmark_profile_activation_rule_14_usdOracle()` | usd Oracle | 331000 | $0.993000 |
+
 ## Profile Component Keys
 
-| Key | Category | Gwei used | Description |
-| --- | --- | ---: | --- |
-| `rule.pause` | rule | 35729 | PauseRule evaluateMint. |
-| `rule.sale_window_open` | rule | 36007 | SaleWindowRule evaluateMint with open zero-bounds config. |
-| `rule.sale_window_bounded` | rule | 24219 | SaleWindowRule evaluateMint with active start/end bounds. |
-| `rule.label_length` | rule | 36201 | LabelLengthRule evaluateMint. |
-| `rule.fixed_price_no_overrides` | rule | 40676 | FixedPriceRule with no length overrides. |
-| `rule.fixed_price_5_fallback` | rule | 34092 | FixedPriceRule with five overrides and fallback label. |
-| `rule.fixed_price_5_exact` | rule | 34018 | FixedPriceRule with five overrides and exact-length hit. |
-| `rule.fixed_price_20_exact` | rule | 35094 | FixedPriceRule with twenty overrides and exact-length hit. |
-| `rule.length_premium_5` | rule | 31867 | LengthPremiumRule with five buckets. |
-| `rule.length_premium_5_fallback` | rule | 31905 | LengthPremiumRule with five buckets and fallback bucket. |
-| `rule.length_premium_20` | rule | 31869 | LengthPremiumRule with twenty buckets. |
-| `rule.token_balance_discount` | rule | 45731 | TokenBalanceRule with minimum balance and discount. |
-| `rule.reservation_10` | rule | 65910 | ReservationRule with Merkle set size 10. |
-| `rule.reservation_100` | rule | 73375 | ReservationRule with Merkle set size 100. |
-| `rule.reservation_1000` | rule | 80795 | ReservationRule with Merkle set size 1000. |
-| `rule.whitelist_10` | rule | 67830 | WhitelistRule with Merkle set size 10. |
-| `rule.whitelist_100` | rule | 75270 | WhitelistRule with Merkle set size 100. |
-| `rule.whitelist_1000` | rule | 82713 | WhitelistRule with Merkle set size 1000. |
-| `rule.label_class_number` | rule | 30146 | LabelClassRule for numeric labels. |
-| `rule.label_class_letter` | rule | 31454 | LabelClassRule for ASCII letter labels. |
-| `rule.label_class_emoji` | rule | 30651 | LabelClassRule for emoji labels. |
-| `rule.usd_oracle` | rule | 46998 | USDOracleRule with Chainlink-compatible oracle. |
-| `payment.erc20` | payment | 83127 | Direct ERC20 transferFrom payment module. |
-| `payment.split_2` | payment | 101987 | ERC20 split payment to two recipients. |
-| `payment.split_3` | payment | 130236 | ERC20 split payment to three recipients. |
-| `payment.split_5` | payment | 186872 | ERC20 split payment to five recipients. |
-| `hook.recording` | hook | 130739 | Recording post-hook profile. |
-| `hook.set_addr_empty` | hook | 85082 | SetAddrToBuyerHook using buyer address. |
-| `hook.set_addr_override` | hook | 89853 | SetAddrToBuyerHook using address override. |
-| `hook.batch_resolver_1` | hook | 87634 | BatchSetAddrToBuyerHook with one resolver write. |
-| `hook.batch_resolver_3` | hook | 107599 | BatchSetAddrToBuyerHook with three resolver writes. |
-| `hook.batch_resolver_5` | hook | 127553 | BatchSetAddrToBuyerHook with five resolver writes. |
+| Key | Category | Runtime gwei | Activation delta gwei | Description |
+| --- | --- | ---: | ---: | --- |
+| `rule.pause` | rule | 35729 | 36697 | PauseRule evaluateMint. |
+| `rule.sale_window_open` | rule | 36007 | 39668 | SaleWindowRule evaluateMint with open zero-bounds config. |
+| `rule.sale_window_bounded` | rule | 24219 | 39668 | SaleWindowRule evaluateMint with active start/end bounds. |
+| `rule.label_length` | rule | 36201 | 59609 | LabelLengthRule evaluateMint. |
+| `rule.fixed_price_no_overrides` | rule | 40676 | 87686 | FixedPriceRule with no length overrides. |
+| `rule.fixed_price_5_fallback` | rule | 34092 | 184476 | FixedPriceRule with five overrides and fallback label. |
+| `rule.fixed_price_5_exact` | rule | 34018 | 184476 | FixedPriceRule with five overrides and exact-length hit. |
+| `rule.fixed_price_20_exact` | rule | 35094 | 338193 | FixedPriceRule with twenty overrides and exact-length hit. |
+| `rule.length_premium_5` | rule | 31867 | 213530 | LengthPremiumRule with five buckets. |
+| `rule.length_premium_5_fallback` | rule | 31905 | 213530 | LengthPremiumRule with five buckets and fallback bucket. |
+| `rule.length_premium_20` | rule | 31869 | 333952 | LengthPremiumRule with twenty buckets. |
+| `rule.token_balance_discount` | rule | 45731 | 106012 | TokenBalanceRule with minimum balance and discount. |
+| `rule.reservation_10` | rule | 65910 | 76681 | ReservationRule with Merkle set size 10. |
+| `rule.reservation_100` | rule | 73375 | n/a | ReservationRule with Merkle set size 100. |
+| `rule.reservation_1000` | rule | 80795 | 84349 | ReservationRule with Merkle set size 1000. |
+| `rule.whitelist_10` | rule | 67830 | 77276 | WhitelistRule with Merkle set size 10. |
+| `rule.whitelist_100` | rule | 75270 | n/a | WhitelistRule with Merkle set size 100. |
+| `rule.whitelist_1000` | rule | 82713 | 84858 | WhitelistRule with Merkle set size 1000. |
+| `rule.label_class_number` | rule | 30146 | 107324 | LabelClassRule for numeric labels. |
+| `rule.label_class_letter` | rule | 31454 | 107324 | LabelClassRule for ASCII letter labels. |
+| `rule.label_class_emoji` | rule | 30651 | 107324 | LabelClassRule for emoji labels. |
+| `rule.usd_oracle` | rule | 46998 | 131618 | USDOracleRule with Chainlink-compatible oracle. |
+| `payment.erc20` | payment | 83127 | 65212 | Direct ERC20 transferFrom payment module. |
+| `payment.split_2` | payment | 101987 | 113302 | ERC20 split payment to two recipients. |
+| `payment.split_3` | payment | 130236 | n/a | ERC20 split payment to three recipients. |
+| `payment.split_5` | payment | 186872 | n/a | ERC20 split payment to five recipients. |
+| `hook.recording` | hook | 130739 | 56014 | Recording post-hook profile. |
+| `hook.set_addr_empty` | hook | 85082 | 58124 | SetAddrToBuyerHook using buyer address. |
+| `hook.set_addr_override` | hook | 89853 | 58124 | SetAddrToBuyerHook using address override. |
+| `hook.batch_resolver_1` | hook | 87634 | 58124 | BatchSetAddrToBuyerHook with one resolver write. |
+| `hook.batch_resolver_3` | hook | 107599 | 58124 | BatchSetAddrToBuyerHook with three resolver writes. |
+| `hook.batch_resolver_5` | hook | 127553 | 58124 | BatchSetAddrToBuyerHook with five resolver writes. |

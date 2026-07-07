@@ -26,6 +26,7 @@ class Component:
     source: str
     description: str
     gas: int
+    activation_gas: int | None = None
 
     @property
     def category(self) -> str:
@@ -68,8 +69,12 @@ def absolute(
     kind: str,
     source: str,
     description: str,
+    activation_source: str | None = None,
 ) -> None:
-    components.append(Component(key, kind, source, description, gas_by_name[source]))
+    activation_gas = None
+    if activation_source is not None:
+        activation_gas = gas_by_name[activation_source] - gas_by_name["testBenchmark_activation_00_pncFreeNoRules"]
+    components.append(Component(key, kind, source, description, gas_by_name[source], activation_gas))
 
 
 def delta(
@@ -226,7 +231,7 @@ def build_components(gas_by_name: dict[str, int]) -> list[Component]:
         ("rule.label_class_emoji", "testBenchmark_profile_rule_20_labelClassEmoji_evaluateMint", "LabelClassRule for emoji labels."),
         ("rule.usd_oracle", "testBenchmark_profile_rule_21_usdOracle_evaluateMint", "USDOracleRule with Chainlink-compatible oracle."),
     ]:
-        absolute(components, gas_by_name, key, "profile", source, description)
+        absolute(components, gas_by_name, key, "profile", source, description, activation_profile_source(key))
 
     for key, source, description in [
         ("payment.erc20", "testBenchmark_profile_payment_00_collectMintERC20", "Direct ERC20 transferFrom payment module."),
@@ -240,7 +245,7 @@ def build_components(gas_by_name: dict[str, int]) -> list[Component]:
         ("hook.batch_resolver_3", "testBenchmark_profile_hook_04_batchResolverHookThreeWrites_afterMint", "BatchSetAddrToBuyerHook with three resolver writes."),
         ("hook.batch_resolver_5", "testBenchmark_profile_hook_05_batchResolverHookFiveWrites_afterMint", "BatchSetAddrToBuyerHook with five resolver writes."),
     ]:
-        absolute(components, gas_by_name, key, "profile", source, description)
+        absolute(components, gas_by_name, key, "profile", source, description, activation_profile_source(key))
 
     delta(components, gas_by_name, "delta.guard_rule", "delta", "testBenchmark_mint_01_pncOneGuardRuleFree", "testBenchmark_mint_00_pncFreeNoRules", "Incremental mint cost from adding one guard rule to a free mint.")
     delta(components, gas_by_name, "delta.fixed_erc20_sale", "delta", "testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment", "testBenchmark_mint_00_pncFreeNoRules", "Incremental mint cost from fixed-price rule plus direct ERC20 payment.")
@@ -253,6 +258,40 @@ def build_components(gas_by_name: dict[str, int]) -> list[Component]:
     delta(components, gas_by_name, "delta.all_rules_activation", "delta", "testBenchmark_activation_24_pncAllRulesSplitFiveResolverWrites", "testBenchmark_activation_00_pncFreeNoRules", "Incremental activation setup cost from all current rules, split payment, and five resolver writes.")
 
     return components
+
+
+def activation_profile_source(key: str) -> str | None:
+    sources = {
+        "rule.pause": "testBenchmark_profile_activation_rule_00_pause",
+        "rule.sale_window_open": "testBenchmark_profile_activation_rule_01_saleWindow",
+        "rule.sale_window_bounded": "testBenchmark_profile_activation_rule_01_saleWindow",
+        "rule.label_length": "testBenchmark_profile_activation_rule_02_labelLength",
+        "rule.fixed_price_no_overrides": "testBenchmark_profile_activation_rule_03_fixedPriceNoLengthOverrides",
+        "rule.fixed_price_5_fallback": "testBenchmark_profile_activation_rule_04_fixedPriceFiveOverrides",
+        "rule.fixed_price_5_exact": "testBenchmark_profile_activation_rule_04_fixedPriceFiveOverrides",
+        "rule.fixed_price_20_exact": "testBenchmark_profile_activation_rule_05_fixedPriceTwentyOverrides",
+        "rule.length_premium_5": "testBenchmark_profile_activation_rule_06_lengthPremiumFiveBuckets",
+        "rule.length_premium_5_fallback": "testBenchmark_profile_activation_rule_06_lengthPremiumFiveBuckets",
+        "rule.length_premium_20": "testBenchmark_profile_activation_rule_07_lengthPremiumTwentyBuckets",
+        "rule.token_balance_discount": "testBenchmark_profile_activation_rule_08_tokenBalanceDiscount",
+        "rule.reservation_10": "testBenchmark_profile_activation_rule_09_reservation10",
+        "rule.reservation_1000": "testBenchmark_profile_activation_rule_10_reservation1000",
+        "rule.whitelist_10": "testBenchmark_profile_activation_rule_11_whitelist10",
+        "rule.whitelist_1000": "testBenchmark_profile_activation_rule_12_whitelist1000",
+        "rule.label_class_number": "testBenchmark_profile_activation_rule_13_labelClassNumber",
+        "rule.label_class_letter": "testBenchmark_profile_activation_rule_13_labelClassNumber",
+        "rule.label_class_emoji": "testBenchmark_profile_activation_rule_13_labelClassNumber",
+        "rule.usd_oracle": "testBenchmark_profile_activation_rule_14_usdOracle",
+        "payment.erc20": "testBenchmark_profile_activation_payment_00_erc20",
+        "payment.split_2": "testBenchmark_profile_activation_payment_01_split2",
+        "hook.recording": "testBenchmark_profile_activation_hook_00_recording",
+        "hook.set_addr_empty": "testBenchmark_profile_activation_hook_01_batchResolver",
+        "hook.set_addr_override": "testBenchmark_profile_activation_hook_01_batchResolver",
+        "hook.batch_resolver_1": "testBenchmark_profile_activation_hook_01_batchResolver",
+        "hook.batch_resolver_3": "testBenchmark_profile_activation_hook_01_batchResolver",
+        "hook.batch_resolver_5": "testBenchmark_profile_activation_hook_01_batchResolver",
+    }
+    return sources.get(key)
 
 
 def benchmark_rows(gas_by_name: dict[str, int], pattern: str, strip_pattern: str) -> list[str]:
@@ -281,10 +320,11 @@ def append_table(lines: list[str], title: str, rows: list[str]) -> None:
 
 def write_components_tsv(components: list[Component]) -> None:
     COMPONENTS_TSV.parent.mkdir(parents=True, exist_ok=True)
-    lines = ["key\tkind\tgas\tsource\tdescription"]
+    lines = ["key\tkind\tgas\tsource\tdescription\tactivationGas"]
     for component in components:
+        activation_gas = "n/a" if component.activation_gas is None else str(component.activation_gas)
         lines.append(
-            f"{component.key}\t{component.kind}\t{component.gas}\t{component.source}\t{component.description}"
+            f"{component.key}\t{component.kind}\t{component.gas}\t{component.source}\t{component.description}\t{activation_gas}"
         )
     COMPONENTS_TSV.write_text("\n".join(lines) + "\n")
 
@@ -316,13 +356,16 @@ def write_profile_json(components: list[Component]) -> None:
 
 
 def component_json(component: Component) -> dict[str, str | int]:
-    return {
+    data: dict[str, str | int] = {
         "category": component.category,
         "kind": component.kind,
         "gas": component.gas,
         "source": component.source,
         "description": component.description,
     }
+    if component.activation_gas is not None:
+        data["activationGas"] = component.activation_gas
+    return data
 
 
 def write_profile_report(gas_by_name: dict[str, int], components: list[Component]) -> None:
@@ -341,6 +384,12 @@ def write_profile_report(gas_by_name: dict[str, int], components: list[Component
         "",
         "Profile components are also included in [`benchmarks/gas-components.tsv`](./benchmarks/gas-components.tsv) for the calculator.",
         "",
+        "Estimate arbitrary profile stacks:",
+        "",
+        "```sh",
+        "./scripts/calculate-gas.sh estimate rule.sale_window_bounded rule.label_length rule.fixed_price_no_overrides payment.erc20",
+        "```",
+        "",
         "## Assumptions",
         "",
         f"- ETH price: `${ETH_PRICE_USD}`",
@@ -352,17 +401,21 @@ def write_profile_report(gas_by_name: dict[str, int], components: list[Component
     append_table(lines, "Rule Function Profiles", benchmark_rows(gas_by_name, r"testBenchmark_profile_rule_", r"^testBenchmark_profile_rule_[0-9]+_"))
     append_table(lines, "Payment Function Profiles", benchmark_rows(gas_by_name, r"testBenchmark_profile_payment_", r"^testBenchmark_profile_payment_[0-9]+_"))
     append_table(lines, "Hook Function Profiles", benchmark_rows(gas_by_name, r"testBenchmark_profile_hook_", r"^testBenchmark_profile_hook_[0-9]+_"))
+    append_table(lines, "Activation Setup Profiles", benchmark_rows(gas_by_name, r"testBenchmark_profile_activation_", r"^testBenchmark_profile_activation_[a-z]+_[0-9]+_"))
     lines.extend(
         [
             "## Profile Component Keys",
             "",
-            "| Key | Category | Gwei used | Description |",
-            "| --- | --- | ---: | --- |",
+            "| Key | Category | Runtime gwei | Activation delta gwei | Description |",
+            "| --- | --- | ---: | ---: | --- |",
         ]
     )
     for component in components:
         if component.kind == "profile":
-            lines.append(f"| `{component.key}` | {component.category} | {component.gas} | {component.description} |")
+            activation_gas = "n/a" if component.activation_gas is None else str(component.activation_gas)
+            lines.append(
+                f"| `{component.key}` | {component.category} | {component.gas} | {activation_gas} | {component.description} |"
+            )
     lines.append("")
     PROFILE_REPORT.write_text("\n".join(lines))
 
@@ -448,6 +501,13 @@ def write_index() -> None:
                 "",
                 "- [`benchmarks/gas-components.tsv`](./benchmarks/gas-components.tsv)",
                 "- [`benchmarks/profile-gas-report.json`](./benchmarks/profile-gas-report.json)",
+                "",
+                "Calculator examples:",
+                "",
+                "```sh",
+                "./scripts/calculate-gas.sh mint.three_rules_erc20",
+                "./scripts/calculate-gas.sh estimate rule.sale_window_bounded rule.label_length rule.fixed_price_no_overrides payment.erc20",
+                "```",
                 "",
             ]
         )
