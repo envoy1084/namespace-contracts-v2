@@ -114,7 +114,11 @@ abstract contract NamespaceControllerStorage is
         }
     }
 
-    function _canonicalRegistryNode(IRegistry registry, IRegistry root, uint256 depth) private view returns (bytes32 node) {
+    function _canonicalRegistryNode(IRegistry registry, IRegistry root, uint256 depth)
+        private
+        view
+        returns (bytes32 node)
+    {
         if (address(registry) == address(root)) {
             return bytes32(0);
         }

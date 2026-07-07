@@ -66,9 +66,8 @@ abstract contract NamespaceSetUp is Test {
 
         controller = _deployController(accounts.owner.addr);
         registryMetadata = new SimpleRegistryMetadata(IHCAFactoryBasic(address(0)));
-        rootRegistry = new PermissionedRegistry(
-            IHCAFactoryBasic(address(0)), registryMetadata, address(this), ROLE_REGISTRAR
-        );
+        rootRegistry =
+            new PermissionedRegistry(IHCAFactoryBasic(address(0)), registryMetadata, address(this), ROLE_REGISTRAR);
         ethRegistry = new PermissionedRegistry(
             IHCAFactoryBasic(address(0)), registryMetadata, address(this), ROLE_REGISTRAR | ROLE_SET_PARENT
         );

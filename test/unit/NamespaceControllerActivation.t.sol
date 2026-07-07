@@ -121,9 +121,8 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
     }
 
     function test_activate_revertsWhenRegistryChainDoesNotReachConfiguredRoot() public {
-        PermissionedRegistry fakeRoot = new PermissionedRegistry(
-            IHCAFactoryBasic(address(0)), registryMetadata, address(this), ROLE_REGISTRAR
-        );
+        PermissionedRegistry fakeRoot =
+            new PermissionedRegistry(IHCAFactoryBasic(address(0)), registryMetadata, address(this), ROLE_REGISTRAR);
         PermissionedRegistry fakeEth = new PermissionedRegistry(
             IHCAFactoryBasic(address(0)), registryMetadata, address(this), ROLE_REGISTRAR | ROLE_SET_PARENT
         );
@@ -133,9 +132,7 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
             address(this),
             ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
         );
-        fakeRoot.register(
-            "eth", accounts.owner.addr, IRegistry(address(fakeEth)), address(0), 0, type(uint64).max
-        );
+        fakeRoot.register("eth", accounts.owner.addr, IRegistry(address(fakeEth)), address(0), 0, type(uint64).max);
         fakeEth.setParent(fakeRoot, "eth");
         fakeEth.register(
             "alice", accounts.owner.addr, IRegistry(address(fakeRegistry)), address(0), 0, type(uint64).max

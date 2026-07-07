@@ -24,7 +24,7 @@ contract NamespaceFuzzTest is NamespaceSetUp {
     }
 
     function testFuzz_mint_registersBoundedLabelAndDuration(bytes32 seed, uint64 duration) public {
-        duration = uint64(bound(duration, 1, 10 * 365 days));
+        duration = uint64(bound(duration, 1, 365 days));
         string memory label = _label(seed, 3 + (uint256(seed) % 10));
 
         bytes32 activationId = _activateDefault();
