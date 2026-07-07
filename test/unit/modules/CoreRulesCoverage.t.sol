@@ -222,7 +222,7 @@ contract CoreRulesCoverageTest is NamespaceSetUp {
         );
 
         vm.prank(accounts.buyer.addr);
-        token.transfer(temporaryHolder, 100 ether);
+        assertTrue(token.transfer(temporaryHolder, 100 ether));
 
         NamespaceTypes.MintContext memory ctx = _mintCtx(activationId, "token");
         ctx.buyer = temporaryHolder;

@@ -110,6 +110,7 @@ contract TokenBalanceRule is NamespaceRule {
         if (minHoldTime == 0) return;
 
         uint64 observedAt = balanceObservedAt[activationId][account];
+        /// forge-lint: disable-next-line(block-timestamp)
         if (observedAt == 0 || block.timestamp < uint256(observedAt) + minHoldTime) {
             revert TokenBalanceHoldTimeNotMet(activationId, account, observedAt, minHoldTime, block.timestamp);
         }
