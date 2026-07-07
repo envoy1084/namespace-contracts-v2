@@ -39,6 +39,59 @@ contract ERC20SplitPaymentModuleTest is NamespaceSetUp {
 
         assertEq(token.balanceOf(accounts.alice.addr) - aliceBefore, 75);
         assertEq(token.balanceOf(accounts.treasury.addr) - treasuryBefore, 25);
+
+        assertEq(payment.token(activationId), address(token));
+        assertEq(payment.splitCount(activationId), 2);
+        ERC20SplitPaymentModule.Split memory split = payment.splitAt(activationId, 1);
+        assertEq(split.recipient, accounts.treasury.addr);
+        assertEq(split.bps, 2500);
+    }
+
+    function test_configure_revertsForInvalidRecipientAndInvalidBps() public {
+        bytes32 activationId = keccak256("activation");
+        ERC20SplitPaymentModule.Split[] memory splits = new ERC20SplitPaymentModule.Split[](1);
+        splits[0] = ERC20SplitPaymentModule.Split({recipient: address(0), bps: 10_000});
+
+        vm.expectRevert(abi.encodeWithSelector(ERC20SplitPaymentModule.InvalidSplitRecipient.selector));
+        vm.prank(address(controller));
+        payment.configure(
+            activationId, abi.encode(ERC20SplitPaymentModule.Params({token: address(token), splits: splits}))
+        );
+
+        splits[0] = ERC20SplitPaymentModule.Split({recipient: accounts.alice.addr, bps: 9999});
+        vm.expectRevert(abi.encodeWithSelector(ERC20SplitPaymentModule.InvalidSplitBps.selector, 9999));
+        vm.prank(address(controller));
+        payment.configure(
+            activationId, abi.encode(ERC20SplitPaymentModule.Params({token: address(token), splits: splits}))
+        );
+    }
+
+    function test_collectRenew_revertsForNativeValueAndTokenMismatch() public {
+        bytes32 activationId = keccak256("activation");
+        ERC20SplitPaymentModule.Split[] memory splits = new ERC20SplitPaymentModule.Split[](1);
+        splits[0] = ERC20SplitPaymentModule.Split({recipient: accounts.alice.addr, bps: 10_000});
+
+        vm.prank(address(controller));
+        payment.configure(
+            activationId, abi.encode(ERC20SplitPaymentModule.Params({token: address(token), splits: splits}))
+        );
+
+        NamespaceTypes.RenewContext memory ctx;
+        ctx.activationId = activationId;
+        ctx.payer = accounts.buyer.addr;
+
+        vm.deal(address(controller), 1 ether);
+        vm.expectRevert(abi.encodeWithSelector(ERC20SplitPaymentModule.NativeValueNotAccepted.selector, 1));
+        vm.prank(address(controller));
+        payment.collectRenew{value: 1}(ctx, NamespaceTypes.Price({token: address(token), amount: 0}), "");
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ERC20SplitPaymentModule.PaymentTokenMismatch.selector, address(token), address(0xBEEF)
+            )
+        );
+        vm.prank(address(controller));
+        payment.collectRenew(ctx, NamespaceTypes.Price({token: address(0xBEEF), amount: 0}), "");
     }
 
     function test_collectMint_revertsFromNonController() public {

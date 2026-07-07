@@ -71,6 +71,29 @@ contract BatchSetAddrToBuyerHookTest is NamespaceSetUp {
         hook.afterMint(ctx, 1, new bytes(21));
     }
 
+    function test_configureAndAfterRenewAreControllerOnlyNoOps() public {
+        vm.prank(address(controller));
+        hook.configure(keccak256("activation"), "");
+
+        NamespaceTypes.RenewContext memory ctx;
+        vm.prank(address(controller));
+        hook.afterRenew(ctx, "");
+    }
+
+    function test_afterMint_revertsWhenResolverMissing() public {
+        NamespaceTypes.MintContext memory ctx;
+        ctx.activationId = keccak256("activation");
+        ctx.buyer = accounts.buyer.addr;
+        ctx.parentNode = keccak256("alice.eth");
+        ctx.labelHash = keccak256("pay");
+
+        vm.expectRevert(
+            abi.encodeWithSelector(BatchSetAddrToBuyerHook.ResolverNotConfigured.selector, ctx.activationId)
+        );
+        vm.prank(address(controller));
+        hook.afterMint(ctx, 1, "");
+    }
+
     function _deployResolver(address admin, uint256 roles) private returns (PermissionedResolver) {
         VerifiableFactory factory = new VerifiableFactory();
         PermissionedResolver resolverImpl = new PermissionedResolver(IHCAFactoryBasic(address(0)));

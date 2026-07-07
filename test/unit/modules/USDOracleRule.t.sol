@@ -48,6 +48,63 @@ contract USDOracleRuleTest is NamespaceSetUp {
         assertEq(output.amount, 333_334);
     }
 
+    function test_configure_revertsForInvalidOracleParamsAndPriceOp() public {
+        bytes32 activationId = keccak256("activation");
+
+        vm.expectRevert(abi.encodeWithSelector(USDOracleRule.ZeroOracle.selector, activationId));
+        vm.prank(address(controller));
+        rule.configure(
+            activationId,
+            abi.encode(
+                USDOracleRule.Params({
+                    token: address(token),
+                    oracle: IAggregatorV3(address(0)),
+                    tokenDecimals: 18,
+                    maxStaleness: 1 days,
+                    mintUsdPrice: 100e18,
+                    renewUsdPrice: 25e18,
+                    priceOp: NamespaceTypes.PriceOp.SET_BASE
+                })
+            )
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(USDOracleRule.InvalidTokenDecimals.selector, uint8(37)));
+        vm.prank(address(controller));
+        rule.configure(
+            activationId,
+            abi.encode(
+                USDOracleRule.Params({
+                    token: address(token),
+                    oracle: IAggregatorV3(address(oracle)),
+                    tokenDecimals: 37,
+                    maxStaleness: 1 days,
+                    mintUsdPrice: 100e18,
+                    renewUsdPrice: 25e18,
+                    priceOp: NamespaceTypes.PriceOp.SET_BASE
+                })
+            )
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(USDOracleRule.InvalidUSDOraclePriceOp.selector, NamespaceTypes.PriceOp.DISCOUNT_BPS)
+        );
+        vm.prank(address(controller));
+        rule.configure(
+            activationId,
+            abi.encode(
+                USDOracleRule.Params({
+                    token: address(token),
+                    oracle: IAggregatorV3(address(oracle)),
+                    tokenDecimals: 18,
+                    maxStaleness: 1 days,
+                    mintUsdPrice: 100e18,
+                    renewUsdPrice: 25e18,
+                    priceOp: NamespaceTypes.PriceOp.DISCOUNT_BPS
+                })
+            )
+        );
+    }
+
     function test_evaluateMint_revertsOnStaleOraclePrice() public {
         vm.warp(10 days);
         bytes32 activationId = keccak256("activation");

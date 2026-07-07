@@ -10,6 +10,22 @@ import {ReservationRule} from "src/modules/rules/ReservationRule.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
 
 contract NamespaceControllerMintRenewTest is NamespaceSetUp {
+    function test_mint_revertsForZeroDuration() public {
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.ZeroDuration.selector));
+        controller.mint(bytes32(0), "pay", 0, _defaultRuntimeData());
+    }
+
+    function test_mint_revertsWhenActivationInactive() public {
+        bytes32 activationId = _activateDefault();
+
+        vm.prank(accounts.alice.addr);
+        controller.setActivationStatus(activationId, false);
+
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.ActivationNotActive.selector, activationId));
+        vm.prank(accounts.buyer.addr);
+        controller.mint(activationId, "pay", 365 days, _defaultRuntimeData());
+    }
+
     function test_mint_runsModulesCollectsPaymentAndRegistersLabel() public {
         bytes32 activationId = _activateDefault();
         NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
@@ -37,6 +53,20 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
         assertEq(postHook.lastRuntimeData(), hex"1234");
     }
 
+    function test_mint_revertsWhenPaidPriceHasNoPaymentModule() public {
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        config.paymentModule = NamespaceTypes.ModuleConfig({module: address(0), configData: ""});
+
+        vm.prank(accounts.alice.addr);
+        bytes32 activationId = controller.activate(config);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(INamespaceController.ZeroModule.selector, controller.MODULE_KIND_PAYMENT())
+        );
+        vm.prank(accounts.buyer.addr);
+        controller.mint(activationId, "pay", 365 days, _defaultRuntimeData());
+    }
+
     function test_mint_revertsWhenRuntimeRuleDataLengthDoesNotMatch() public {
         bytes32 activationId = _activateDefault();
         NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
@@ -51,6 +81,28 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
         );
         controller.mint(activationId, "pay", 365 days, runtimeData);
         vm.stopPrank();
+    }
+
+    function test_renew_revertsForZeroDuration() public {
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.ZeroDuration.selector));
+        controller.renew(bytes32(0), "pay", 0, _defaultRuntimeData());
+    }
+
+    function test_renew_revertsWhenActivationInactive() public {
+        bytes32 activationId = _activateDefault();
+        NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
+
+        vm.startPrank(accounts.buyer.addr);
+        token.approve(address(erc20Payment), 100 ether);
+        controller.mint(activationId, "pay", 365 days, runtimeData);
+        vm.stopPrank();
+
+        vm.prank(accounts.alice.addr);
+        controller.setActivationStatus(activationId, false);
+
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.ActivationNotActive.selector, activationId));
+        vm.prank(accounts.buyer.addr);
+        controller.renew(activationId, "pay", 30 days, runtimeData);
     }
 
     function test_renew_runsModulesCollectsPaymentAndExtendsExpiry() public {
@@ -69,6 +121,33 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
         assertEq(newExpiry, beforeRenew.expiry + 30 days);
         assertEq(afterRenew.expiry, newExpiry);
         assertEq(token.balanceOf(accounts.treasury.addr), 150 ether);
+    }
+
+    function test_renew_revertsWhenNativeValueHasNoPaymentModuleAndNoPrice() public {
+        NamespaceTypes.ActivationConfig memory config = NamespaceTypes.ActivationConfig({
+            registry: registry,
+            parentNode: keccak256("free.alice.eth"),
+            resolver: address(0),
+            buyerRoleBitmap: 0,
+            rules: new NamespaceTypes.RuleConfig[](0),
+            paymentModule: NamespaceTypes.ModuleConfig({module: address(0), configData: ""}),
+            postHooks: new NamespaceTypes.ModuleConfig[](0)
+        });
+
+        vm.prank(accounts.alice.addr);
+        bytes32 activationId = controller.activate(config);
+
+        NamespaceTypes.RuntimeData memory runtimeData;
+        runtimeData.ruleData = new bytes[](0);
+        runtimeData.postHookData = new bytes[](0);
+
+        vm.startPrank(accounts.buyer.addr);
+        controller.mint(activationId, "free", 365 days, runtimeData);
+        vm.expectRevert(
+            abi.encodeWithSelector(INamespaceController.ZeroModule.selector, controller.MODULE_KIND_PAYMENT())
+        );
+        controller.renew{value: 1}(activationId, "free", 30 days, runtimeData);
+        vm.stopPrank();
     }
 
     function test_renew_revertsWhenLabelIsAvailable() public {

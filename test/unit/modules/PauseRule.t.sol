@@ -72,6 +72,16 @@ contract PauseRuleTest is NamespaceSetUp {
         assertEq(uint256(output.decision), uint256(NamespaceTypes.Decision.PASS));
     }
 
+    function test_evaluateRenew_allowsWhenUnpaused() public {
+        bytes32 activationId = _activateWithPauseRule();
+
+        NamespaceTypes.RenewContext memory ctx;
+        ctx.activationId = activationId;
+
+        NamespaceTypes.RuleOutput memory output = pauseRule.evaluateRenew(ctx, "");
+        assertEq(uint256(output.decision), uint256(NamespaceTypes.Decision.PASS));
+    }
+
     function _activateWithPauseRule() private returns (bytes32 activationId) {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
         NamespaceTypes.RuleConfig[] memory rules = new NamespaceTypes.RuleConfig[](4);

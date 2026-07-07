@@ -89,6 +89,14 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
         controller.transferActivationOwnership(activationId, accounts.buyer.addr);
     }
 
+    function test_transferActivationOwnership_revertsForZeroNewOwner() public {
+        bytes32 activationId = _activateDefault();
+
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.ZeroActivationOwner.selector));
+        vm.prank(accounts.alice.addr);
+        controller.transferActivationOwnership(activationId, address(0));
+    }
+
     function test_transferActivationOwnership_updatesOwner() public {
         bytes32 activationId = _activateDefault();
         registry.grantRootRoles(ROLE_REGISTRAR_ADMIN, accounts.owner.addr);
