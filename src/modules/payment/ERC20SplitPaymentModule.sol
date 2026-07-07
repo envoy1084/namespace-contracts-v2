@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {ERC20} from "solady/tokens/ERC20.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 import {IPaymentModule} from "src/interfaces/IPaymentModule.sol";
@@ -35,6 +36,7 @@ contract ERC20SplitPaymentModule is NamespaceModule, IPaymentModule {
     error InvalidSplitBps(uint256 totalBps);
     error PaymentTokenMismatch(address expected, address actual);
     error NativeValueNotAccepted(uint256 value);
+    error PaymentAmountMismatch(address token, address recipient, uint256 expected, uint256 actual);
 
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
         Params memory decoded = abi.decode(configData, (Params));
@@ -106,11 +108,20 @@ contract ERC20SplitPaymentModule is NamespaceModule, IPaymentModule {
             Split storage split = splits[i];
             uint256 amount = (total * split.bps) / BPS_DENOMINATOR;
             remaining -= amount;
-            SafeTransferLib.safeTransferFrom(token_, payer, split.recipient, amount);
+            _transferExact(token_, payer, split.recipient, amount);
             unchecked {
                 ++i;
             }
         }
-        SafeTransferLib.safeTransferFrom(token_, payer, splits[last].recipient, remaining);
+        _transferExact(token_, payer, splits[last].recipient, remaining);
+    }
+
+    function _transferExact(address token_, address payer, address recipient, uint256 amount) private {
+        uint256 beforeBalance = ERC20(token_).balanceOf(recipient);
+        SafeTransferLib.safeTransferFrom(token_, payer, recipient, amount);
+        uint256 received = ERC20(token_).balanceOf(recipient) - beforeBalance;
+        if (received != amount) {
+            revert PaymentAmountMismatch(token_, recipient, amount, received);
+        }
     }
 }

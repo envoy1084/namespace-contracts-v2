@@ -26,6 +26,7 @@ contract ERC20PaymentModule is NamespaceModule, IPaymentModule {
     error InvalidPaymentRecipient();
     error PaymentTokenMismatch(address expected, address actual);
     error NativeValueNotAccepted(uint256 value);
+    error PaymentAmountMismatch(address token, address recipient, uint256 expected, uint256 actual);
 
     /// @notice Store ERC20 payment parameters for an activation.
     function configure(bytes32 activationId, bytes calldata configData) external onlyController {
@@ -65,7 +66,12 @@ contract ERC20PaymentModule is NamespaceModule, IPaymentModule {
             revert PaymentTokenMismatch(token_, price.token);
         }
         if (price.amount != 0) {
+            uint256 beforeBalance = stored.token.balanceOf(stored.recipient);
             SafeTransferLib.safeTransferFrom(token_, payer, stored.recipient, price.amount);
+            uint256 received = stored.token.balanceOf(stored.recipient) - beforeBalance;
+            if (received != price.amount) {
+                revert PaymentAmountMismatch(token_, stored.recipient, price.amount, received);
+            }
         }
     }
 }

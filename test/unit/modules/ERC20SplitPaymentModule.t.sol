@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {ERC20SplitPaymentModule} from "src/modules/payment/ERC20SplitPaymentModule.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
+import {FeeOnTransferERC20} from "test/mocks/FeeOnTransferERC20.sol";
 
 contract ERC20SplitPaymentModuleTest is NamespaceSetUp {
     ERC20SplitPaymentModule internal payment;
@@ -45,6 +46,35 @@ contract ERC20SplitPaymentModuleTest is NamespaceSetUp {
         ERC20SplitPaymentModule.Split memory split = payment.splitAt(activationId, 1);
         assertEq(split.recipient, accounts.treasury.addr);
         assertEq(split.bps, 2500);
+    }
+
+    function test_collectMint_revertsWhenFeeOnTransferTokenUnderpaysRecipients() public {
+        FeeOnTransferERC20 feeToken = new FeeOnTransferERC20(accounts.owner.addr);
+        feeToken.mint(accounts.buyer.addr, 1_000);
+        bytes32 activationId = keccak256("activation");
+        ERC20SplitPaymentModule.Split[] memory splits = new ERC20SplitPaymentModule.Split[](2);
+        splits[0] = ERC20SplitPaymentModule.Split({recipient: accounts.alice.addr, bps: 5000});
+        splits[1] = ERC20SplitPaymentModule.Split({recipient: accounts.treasury.addr, bps: 5000});
+
+        vm.prank(address(controller));
+        payment.configure(
+            activationId, abi.encode(ERC20SplitPaymentModule.Params({token: address(feeToken), splits: splits}))
+        );
+
+        NamespaceTypes.MintContext memory ctx;
+        ctx.activationId = activationId;
+        ctx.payer = accounts.buyer.addr;
+
+        vm.prank(accounts.buyer.addr);
+        feeToken.approve(address(payment), 100);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ERC20SplitPaymentModule.PaymentAmountMismatch.selector, address(feeToken), accounts.alice.addr, 50, 45
+            )
+        );
+        vm.prank(address(controller));
+        payment.collectMint(ctx, NamespaceTypes.Price({token: address(feeToken), amount: 100}), "");
     }
 
     function test_configure_revertsForInvalidRecipientAndInvalidBps() public {

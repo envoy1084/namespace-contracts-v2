@@ -7,6 +7,7 @@ import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {NamespaceModule} from "src/modules/NamespaceModule.sol";
 import {ERC20PaymentModule} from "src/modules/payment/ERC20PaymentModule.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
+import {FeeOnTransferERC20} from "test/mocks/FeeOnTransferERC20.sol";
 
 contract ERC20PaymentModuleTest is NamespaceSetUp {
     function test_initialize_revertsForZeroController() public {
@@ -45,6 +46,32 @@ contract ERC20PaymentModuleTest is NamespaceSetUp {
         erc20Payment.collectMint(ctx, NamespaceTypes.Price({token: address(token), amount: 100}), "");
 
         assertEq(token.balanceOf(accounts.treasury.addr), 100);
+    }
+
+    function test_collectMint_revertsWhenFeeOnTransferTokenUnderpaysRecipient() public {
+        FeeOnTransferERC20 feeToken = new FeeOnTransferERC20(accounts.owner.addr);
+        feeToken.mint(accounts.buyer.addr, 1_000);
+        bytes32 activationId = keccak256("activation");
+
+        vm.prank(address(controller));
+        erc20Payment.configure(
+            activationId, abi.encode(ERC20PaymentModule.Params({token: feeToken, recipient: accounts.treasury.addr}))
+        );
+
+        NamespaceTypes.MintContext memory ctx;
+        ctx.activationId = activationId;
+        ctx.payer = accounts.buyer.addr;
+
+        vm.prank(accounts.buyer.addr);
+        feeToken.approve(address(erc20Payment), 100);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ERC20PaymentModule.PaymentAmountMismatch.selector, address(feeToken), accounts.treasury.addr, 100, 90
+            )
+        );
+        vm.prank(address(controller));
+        erc20Payment.collectMint(ctx, NamespaceTypes.Price({token: address(feeToken), amount: 100}), "");
     }
 
     function test_collectRenew_revertsForNativeValueAndTokenMismatch() public {
