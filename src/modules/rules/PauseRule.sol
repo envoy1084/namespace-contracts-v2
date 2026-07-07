@@ -28,7 +28,8 @@ contract PauseRule is NamespaceRule {
         if (msg.sender != activation.owner) {
             revert NotActivationOwner(activationId, msg.sender, activation.owner);
         }
-        if (!activation.registry.hasRootRoles(RegistryRolesLib.ROLE_REGISTRAR_ADMIN, msg.sender)) {
+        uint256 requiredRoles = RegistryRolesLib.ROLE_REGISTRAR_ADMIN | RegistryRolesLib.ROLE_RENEW_ADMIN;
+        if (!activation.registry.hasRootRoles(requiredRoles, msg.sender)) {
             revert INamespaceController.UnauthorizedActivationOwner(msg.sender, address(activation.registry));
         }
         paused[activationId] = paused_;

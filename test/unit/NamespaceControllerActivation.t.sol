@@ -87,6 +87,20 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
         assertEq(activation.owner, accounts.alice.addr);
     }
 
+    function test_activate_revertsWhenCallerLacksRenewAdmin() public {
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        registry.revokeRootRoles(ROLE_RENEW_ADMIN, accounts.alice.addr);
+        assertFalse(registry.hasRootRoles(ROLE_RENEW_ADMIN, accounts.alice.addr));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                INamespaceController.UnauthorizedActivationOwner.selector, accounts.alice.addr, address(registry)
+            )
+        );
+        vm.prank(accounts.alice.addr);
+        controller.activate(config);
+    }
+
     function test_setActivationStatus_revertsWhenOwnerLostRegistryAdmin() public {
         bytes32 activationId = _activateDefault();
         registry.revokeRootRoles(ROLE_REGISTRAR_ADMIN, accounts.alice.addr);
@@ -122,7 +136,7 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
 
     function test_transferActivationOwnership_updatesOwner() public {
         bytes32 activationId = _activateDefault();
-        registry.grantRootRoles(ROLE_REGISTRAR_ADMIN, accounts.owner.addr);
+        registry.grantRootRoles(ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN, accounts.owner.addr);
 
         vm.expectEmit(true, true, true, true, address(controller));
         emit ActivationOwnershipTransferred(activationId, accounts.alice.addr, accounts.owner.addr);

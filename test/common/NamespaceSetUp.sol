@@ -23,6 +23,7 @@ abstract contract NamespaceSetUp is Test {
     uint256 internal constant ROLE_REGISTRAR = RegistryRolesLib.ROLE_REGISTRAR;
     uint256 internal constant ROLE_REGISTRAR_ADMIN = RegistryRolesLib.ROLE_REGISTRAR_ADMIN;
     uint256 internal constant ROLE_RENEW = RegistryRolesLib.ROLE_RENEW;
+    uint256 internal constant ROLE_RENEW_ADMIN = RegistryRolesLib.ROLE_RENEW_ADMIN;
     uint256 internal constant ROLE_SET_RESOLVER = RegistryRolesLib.ROLE_SET_RESOLVER;
     uint256 internal constant ROLE_SET_RESOLVER_ADMIN = RegistryRolesLib.ROLE_SET_RESOLVER_ADMIN;
     uint256 internal constant ROLE_CAN_TRANSFER_ADMIN = RegistryRolesLib.ROLE_CAN_TRANSFER_ADMIN;
@@ -73,7 +74,7 @@ abstract contract NamespaceSetUp is Test {
         labelLengthRule = LabelLengthRule(_deployModule(address(new LabelLengthRule())));
         fixedPriceRule = FixedPriceRule(_deployModule(address(new FixedPriceRule())));
 
-        registry.grantRootRoles(ROLE_REGISTRAR_ADMIN, accounts.alice.addr);
+        registry.grantRootRoles(ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN, accounts.alice.addr);
         registry.grantRootRoles(ROLE_REGISTRAR | ROLE_RENEW, address(controller));
         token.mint(accounts.buyer.addr, 1_000_000 ether);
 

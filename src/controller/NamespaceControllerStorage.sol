@@ -30,6 +30,7 @@ abstract contract NamespaceControllerStorage is
     uint256 internal constant ROLE_REGISTRAR = 1 << 0;
     uint256 internal constant ROLE_REGISTRAR_ADMIN = ROLE_REGISTRAR << 128;
     uint256 internal constant ROLE_RENEW = 1 << 16;
+    uint256 internal constant ROLE_RENEW_ADMIN = ROLE_RENEW << 128;
 
     struct ActivationData {
         address owner;
@@ -84,7 +85,7 @@ abstract contract NamespaceControllerStorage is
     }
 
     function _checkRegistryAdminAuthority(address account, IPermissionedRegistry registry) internal view {
-        if (!registry.hasRootRoles(ROLE_REGISTRAR_ADMIN, account)) {
+        if (!registry.hasRootRoles(ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN, account)) {
             revert UnauthorizedActivationOwner(account, address(registry));
         }
     }
