@@ -152,6 +152,69 @@ contract NamespaceControllerStrictRulesTest is NamespaceSetUp {
         assertEq(registry.ownerOf(tokenId), accounts.buyer.addr);
     }
 
+    function test_mint_roundsPercentageDiscountUpForSmallNonzeroPrice() public {
+        OutputRule baseRule = _deployOutputRule();
+        OutputRule discountRule = _deployOutputRule();
+        NamespaceTypes.RuleConfig[] memory rules = new NamespaceTypes.RuleConfig[](2);
+        rules[0] = _ruleConfig(
+            baseRule, NamespaceTypes.RulePhase.BASE_PRICE, _priceOutput(NamespaceTypes.PriceOp.SET_BASE, 1)
+        );
+        rules[1] = _ruleConfig(
+            discountRule, NamespaceTypes.RulePhase.DISCOUNT, _bpsOutput(NamespaceTypes.PriceOp.DISCOUNT_BPS, 1)
+        );
+
+        bytes32 activationId = _activateRules(rules, _erc20PaymentModule());
+
+        vm.startPrank(accounts.buyer.addr);
+        token.approve(address(erc20Payment), 1);
+        uint256 tokenId = controller.mint(activationId, "tiny", 365 days, _runtimeData(2));
+        vm.stopPrank();
+
+        assertEq(token.balanceOf(accounts.treasury.addr), 1);
+        assertEq(registry.ownerOf(tokenId), accounts.buyer.addr);
+    }
+
+    function test_mint_roundsPercentageMarkupUpForSmallPrice() public {
+        OutputRule baseRule = _deployOutputRule();
+        OutputRule markupRule = _deployOutputRule();
+        NamespaceTypes.RuleConfig[] memory rules = new NamespaceTypes.RuleConfig[](2);
+        rules[0] = _ruleConfig(
+            baseRule, NamespaceTypes.RulePhase.BASE_PRICE, _priceOutput(NamespaceTypes.PriceOp.SET_BASE, 1)
+        );
+        rules[1] =
+            _ruleConfig(markupRule, NamespaceTypes.RulePhase.PREMIUM, _bpsOutput(NamespaceTypes.PriceOp.MARKUP_BPS, 1));
+
+        bytes32 activationId = _activateRules(rules, _erc20PaymentModule());
+
+        vm.startPrank(accounts.buyer.addr);
+        token.approve(address(erc20Payment), 2);
+        uint256 tokenId = controller.mint(activationId, "small", 365 days, _runtimeData(2));
+        vm.stopPrank();
+
+        assertEq(token.balanceOf(accounts.treasury.addr), 2);
+        assertEq(registry.ownerOf(tokenId), accounts.buyer.addr);
+    }
+
+    function test_mint_allowsFullPercentageDiscountToZeroPrice() public {
+        OutputRule baseRule = _deployOutputRule();
+        OutputRule discountRule = _deployOutputRule();
+        NamespaceTypes.RuleConfig[] memory rules = new NamespaceTypes.RuleConfig[](2);
+        rules[0] = _ruleConfig(
+            baseRule, NamespaceTypes.RulePhase.BASE_PRICE, _priceOutput(NamespaceTypes.PriceOp.SET_BASE, 1)
+        );
+        rules[1] = _ruleConfig(
+            discountRule, NamespaceTypes.RulePhase.DISCOUNT, _bpsOutput(NamespaceTypes.PriceOp.DISCOUNT_BPS, 10_000)
+        );
+
+        bytes32 activationId = _activateRules(rules, _erc20PaymentModule());
+
+        vm.prank(accounts.buyer.addr);
+        uint256 tokenId = controller.mint(activationId, "free", 365 days, _runtimeData(2));
+
+        assertEq(token.balanceOf(accounts.treasury.addr), 0);
+        assertEq(registry.ownerOf(tokenId), accounts.buyer.addr);
+    }
+
     function test_mint_revertsWhenRuleChangesPaymentToken() public {
         OutputRule baseRule = _deployOutputRule();
         OutputRule premiumRule = _deployOutputRule();

@@ -132,6 +132,8 @@ Current payment modules:
 
 Native ETH pricing is represented by `Price.token == address(0)` and must use `NativePaymentModule`. ERC20 payment modules reject `address(0)` tokens during configuration and reject non-zero native value during collection.
 
+`ERC20SplitPaymentModule` uses basis-point splits and sends any integer rounding remainder to the final configured recipient. Order split recipients deliberately when amounts can be small.
+
 ## Reentrancy And External Calls
 
 `NamespaceController.mint` and `renew` are `nonReentrant`.

@@ -48,6 +48,34 @@ contract ERC20SplitPaymentModuleTest is NamespaceSetUp {
         assertEq(split.bps, 2500);
     }
 
+    function test_collectMint_sendsRoundingRemainderToFinalRecipient() public {
+        bytes32 activationId = keccak256("activation");
+        ERC20SplitPaymentModule.Split[] memory splits = new ERC20SplitPaymentModule.Split[](2);
+        splits[0] = ERC20SplitPaymentModule.Split({recipient: accounts.alice.addr, bps: 5000});
+        splits[1] = ERC20SplitPaymentModule.Split({recipient: accounts.treasury.addr, bps: 5000});
+
+        vm.prank(address(controller));
+        payment.configure(
+            activationId, abi.encode(ERC20SplitPaymentModule.Params({token: address(token), splits: splits}))
+        );
+
+        NamespaceTypes.MintContext memory ctx;
+        ctx.activationId = activationId;
+        ctx.payer = accounts.buyer.addr;
+
+        vm.prank(accounts.buyer.addr);
+        token.approve(address(payment), 101);
+
+        uint256 aliceBefore = token.balanceOf(accounts.alice.addr);
+        uint256 treasuryBefore = token.balanceOf(accounts.treasury.addr);
+
+        vm.prank(address(controller));
+        payment.collectMint(ctx, NamespaceTypes.Price({token: address(token), amount: 101}), "");
+
+        assertEq(token.balanceOf(accounts.alice.addr) - aliceBefore, 50);
+        assertEq(token.balanceOf(accounts.treasury.addr) - treasuryBefore, 51);
+    }
+
     function test_collectMint_revertsWhenFeeOnTransferTokenUnderpaysRecipients() public {
         FeeOnTransferERC20 feeToken = new FeeOnTransferERC20(accounts.owner.addr);
         feeToken.mint(accounts.buyer.addr, 1_000);

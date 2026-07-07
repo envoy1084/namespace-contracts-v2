@@ -313,7 +313,7 @@ splits[0] = ERC20SplitPaymentModule.Split({recipient: alice, bps: 7500});
 splits[1] = ERC20SplitPaymentModule.Split({recipient: treasury, bps: 2500});
 ```
 
-The payment token must be non-zero. Splits must total `10_000` bps. The final recipient receives any rounding remainder.
+The payment token must be non-zero. Splits must total `10_000` bps. The final recipient intentionally receives any rounding remainder.
 
 ## Post Hooks
 

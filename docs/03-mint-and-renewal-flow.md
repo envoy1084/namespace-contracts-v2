@@ -112,8 +112,8 @@ Each rule can return a `PriceOp`.
 | `SET_BASE` | Sets amount to `output.amount`. |
 | `ADD` | Adds `output.amount`. |
 | `SUBTRACT` | Subtracts with a floor at zero. |
-| `DISCOUNT_BPS` | Applies basis point discount to current amount. |
-| `MARKUP_BPS` | Applies basis point markup to current amount. |
+| `DISCOUNT_BPS` | Applies basis point discount to current amount, rounding the remaining non-zero amount up. |
+| `MARKUP_BPS` | Applies basis point markup to current amount, rounding up. |
 | `MIN` | Raises amount to a minimum. |
 | `MAX` | Caps amount at a maximum. |
 | `OVERRIDE` | Replaces amount with `output.amount`. |

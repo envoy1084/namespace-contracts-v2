@@ -164,11 +164,11 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
             state.status |= STATUS_PRICE_MUTATED | STATUS_DISCOUNTED;
         } else if (op == NamespaceTypes.PriceOp.DISCOUNT_BPS) {
             _checkBps(rule, output.bps);
-            state.amount = (state.amount * (BPS_DENOMINATOR - output.bps)) / BPS_DENOMINATOR;
+            state.amount = _mulDivUp(state.amount, BPS_DENOMINATOR - output.bps, BPS_DENOMINATOR);
             state.status |= STATUS_PRICE_MUTATED | STATUS_DISCOUNTED;
         } else if (op == NamespaceTypes.PriceOp.MARKUP_BPS) {
             _checkBps(rule, output.bps);
-            state.amount = (state.amount * (BPS_DENOMINATOR + output.bps)) / BPS_DENOMINATOR;
+            state.amount = _mulDivUp(state.amount, BPS_DENOMINATOR + output.bps, BPS_DENOMINATOR);
             state.status |= STATUS_PRICE_MUTATED;
         } else if (op == NamespaceTypes.PriceOp.MIN) {
             if (state.amount < output.amount) state.amount = output.amount;
@@ -251,5 +251,10 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
 
     function _checkBps(address rule, uint16 bps) private pure {
         if (bps > BPS_DENOMINATOR) revert InvalidRuleBps(rule, bps);
+    }
+
+    function _mulDivUp(uint256 x, uint256 y, uint256 denominator) private pure returns (uint256) {
+        if (x == 0 || y == 0) return 0;
+        return ((x * y) - 1) / denominator + 1;
     }
 }
