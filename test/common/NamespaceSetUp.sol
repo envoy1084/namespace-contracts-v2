@@ -19,7 +19,7 @@ import {SaleWindowRule} from "src/modules/rules/SaleWindowRule.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 import {RecordingPostHook} from "test/mocks/RecordingPostHook.sol";
 
-contract NamespaceSetUp is Test {
+abstract contract NamespaceSetUp is Test {
     uint256 internal constant ROLE_REGISTRAR = RegistryRolesLib.ROLE_REGISTRAR;
     uint256 internal constant ROLE_REGISTRAR_ADMIN = RegistryRolesLib.ROLE_REGISTRAR_ADMIN;
     uint256 internal constant ROLE_RENEW = RegistryRolesLib.ROLE_RENEW;

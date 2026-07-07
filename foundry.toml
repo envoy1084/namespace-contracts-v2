@@ -9,16 +9,8 @@ src = "src"
 out = "out"
 dynamic_test_linking = true
 gas_reports = ["*"]
-ignored_warnings_from = ["lib/"]
-ignored_error_codes = [
-    "license",
-    "code-size",
-    "init-code-size",
-    "transient-storage",
-    "transfer-deprecated",
-    "natspec-memory-safe-assembly-deprecated",
-    "too-many-warnings",
-]
+ignored_warnings_from = ["lib", "test"]
+no_match_coverage = "test/.*"
 
 # Fuzz testing
 [fuzz]
@@ -31,4 +23,3 @@ runs = 200
 # Linting
 [lint]
 severity = ["high", "med", "low", "info", "gas", "code-size"]
-ignore = ["lib"]
