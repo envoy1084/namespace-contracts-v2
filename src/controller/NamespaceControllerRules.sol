@@ -26,6 +26,7 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
         EvaluationState memory state = EvaluationState({amount: 0, flags: 0, token: address(0), status: 0});
         if (length == 1) {
             address rule = activation.rules;
+            _checkModule(rule, MODULE_KIND_RULE);
             _applyRuleOutput(
                 ctx.activationId,
                 rule,
@@ -39,6 +40,7 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
         bytes memory rules = SSTORE2.read(activation.rules);
         for (uint256 i; i < length;) {
             RuleRef memory ref = _ruleAt(rules, i);
+            _checkModule(ref.module, MODULE_KIND_RULE);
             _applyRuleOutput(
                 ctx.activationId,
                 ref.module,
@@ -64,6 +66,7 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
         EvaluationState memory state = EvaluationState({amount: 0, flags: 0, token: address(0), status: 0});
         if (length == 1) {
             address rule = activation.rules;
+            _checkModule(rule, MODULE_KIND_RULE);
             _applyRuleOutput(
                 ctx.activationId,
                 rule,
@@ -77,6 +80,7 @@ abstract contract NamespaceControllerRules is NamespaceControllerLifecycle {
         bytes memory rules = SSTORE2.read(activation.rules);
         for (uint256 i; i < length;) {
             RuleRef memory ref = _ruleAt(rules, i);
+            _checkModule(ref.module, MODULE_KIND_RULE);
             _applyRuleOutput(
                 ctx.activationId,
                 ref.module,

@@ -106,7 +106,7 @@ contract NamespaceController is NamespaceControllerRules {
         bytes calldata paymentData
     ) private {
         if (price.amount == 0 && msg.value == 0) return;
-        if (activation.paymentModule == address(0)) revert ZeroModule(MODULE_KIND_PAYMENT);
+        _checkModule(activation.paymentModule, MODULE_KIND_PAYMENT);
         IPaymentModule(activation.paymentModule).collectMint{value: msg.value}(ctx, price, paymentData);
     }
 
@@ -117,7 +117,7 @@ contract NamespaceController is NamespaceControllerRules {
         bytes calldata paymentData
     ) private {
         if (price.amount == 0 && msg.value == 0) return;
-        if (activation.paymentModule == address(0)) revert ZeroModule(MODULE_KIND_PAYMENT);
+        _checkModule(activation.paymentModule, MODULE_KIND_PAYMENT);
         IPaymentModule(activation.paymentModule).collectRenew{value: msg.value}(ctx, price, paymentData);
     }
 
@@ -130,12 +130,16 @@ contract NamespaceController is NamespaceControllerRules {
         uint256 length = activation.postHookCount;
         if (length == 0) return;
         if (length == 1) {
-            IPostHookModule(activation.postHooks).afterMint(ctx, tokenId, postHookData[0]);
+            address hook = activation.postHooks;
+            _checkModule(hook, MODULE_KIND_POST_HOOK);
+            IPostHookModule(hook).afterMint(ctx, tokenId, postHookData[0]);
             return;
         }
         bytes memory postHooks = _readModuleList(activation.postHooks, length);
         for (uint256 i; i < length;) {
-            IPostHookModule(_moduleAt(postHooks, i)).afterMint(ctx, tokenId, postHookData[i]);
+            address hook = _moduleAt(postHooks, i);
+            _checkModule(hook, MODULE_KIND_POST_HOOK);
+            IPostHookModule(hook).afterMint(ctx, tokenId, postHookData[i]);
             unchecked {
                 ++i;
             }
@@ -150,12 +154,16 @@ contract NamespaceController is NamespaceControllerRules {
         uint256 length = activation.postHookCount;
         if (length == 0) return;
         if (length == 1) {
-            IPostHookModule(activation.postHooks).afterRenew(ctx, postHookData[0]);
+            address hook = activation.postHooks;
+            _checkModule(hook, MODULE_KIND_POST_HOOK);
+            IPostHookModule(hook).afterRenew(ctx, postHookData[0]);
             return;
         }
         bytes memory postHooks = _readModuleList(activation.postHooks, length);
         for (uint256 i; i < length;) {
-            IPostHookModule(_moduleAt(postHooks, i)).afterRenew(ctx, postHookData[i]);
+            address hook = _moduleAt(postHooks, i);
+            _checkModule(hook, MODULE_KIND_POST_HOOK);
+            IPostHookModule(hook).afterRenew(ctx, postHookData[i]);
             unchecked {
                 ++i;
             }

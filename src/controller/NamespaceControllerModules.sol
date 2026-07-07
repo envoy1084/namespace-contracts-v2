@@ -20,6 +20,7 @@ abstract contract NamespaceControllerModules is NamespaceControllerStorage {
         _checkRegistryAdminAuthority(activation.owner, activation.registry);
 
         address module = _moduleAt(activation, activationId, kind, index);
+        _checkModule(module, kind);
         emit ModuleConfigUpdated(activationId, module, kind, index);
         IConfigurableModule(module).configure(activationId, configData);
     }

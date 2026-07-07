@@ -63,6 +63,76 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
         assertEq(endTime, uint64(block.timestamp + 2));
     }
 
+    function test_updateModuleConfig_revertsWhenRuleModuleRevoked() public {
+        bytes32 activationId = _activateDefault();
+        bytes32 ruleKind = controller.MODULE_KIND_RULE();
+
+        vm.prank(accounts.owner.addr);
+        controller.setModuleApproval(ruleKind, address(saleWindowRule), false);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(INamespaceController.UnapprovedModule.selector, address(saleWindowRule), ruleKind)
+        );
+        vm.prank(accounts.alice.addr);
+        controller.updateModuleConfig(
+            activationId,
+            ruleKind,
+            0,
+            abi.encode(
+                SaleWindowRule.Params({startTime: uint64(block.timestamp + 1), endTime: uint64(block.timestamp + 2)})
+            )
+        );
+    }
+
+    function test_mint_revertsWhenRuleModuleRevoked() public {
+        bytes32 activationId = _activateDefault();
+        bytes32 ruleKind = controller.MODULE_KIND_RULE();
+
+        vm.prank(accounts.owner.addr);
+        controller.setModuleApproval(ruleKind, address(fixedPriceRule), false);
+
+        NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
+        vm.expectRevert(
+            abi.encodeWithSelector(INamespaceController.UnapprovedModule.selector, address(fixedPriceRule), ruleKind)
+        );
+        vm.prank(accounts.buyer.addr);
+        controller.mint(activationId, "pay", 365 days, runtimeData);
+    }
+
+    function test_mint_revertsWhenPaymentModuleRevoked() public {
+        bytes32 activationId = _activateDefault();
+        bytes32 paymentKind = controller.MODULE_KIND_PAYMENT();
+
+        vm.prank(accounts.owner.addr);
+        controller.setModuleApproval(paymentKind, address(erc20Payment), false);
+
+        NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
+        vm.startPrank(accounts.buyer.addr);
+        token.approve(address(erc20Payment), 100 ether);
+        vm.expectRevert(
+            abi.encodeWithSelector(INamespaceController.UnapprovedModule.selector, address(erc20Payment), paymentKind)
+        );
+        controller.mint(activationId, "pay", 365 days, runtimeData);
+        vm.stopPrank();
+    }
+
+    function test_mint_revertsWhenPostHookModuleRevoked() public {
+        bytes32 activationId = _activateDefault();
+        bytes32 postHookKind = controller.MODULE_KIND_POST_HOOK();
+
+        vm.prank(accounts.owner.addr);
+        controller.setModuleApproval(postHookKind, address(postHook), false);
+
+        NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
+        vm.startPrank(accounts.buyer.addr);
+        token.approve(address(erc20Payment), 100 ether);
+        vm.expectRevert(
+            abi.encodeWithSelector(INamespaceController.UnapprovedModule.selector, address(postHook), postHookKind)
+        );
+        controller.mint(activationId, "pay", 365 days, runtimeData);
+        vm.stopPrank();
+    }
+
     function test_updateModuleConfig_allowsSingleRuleFastPath() public {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
         bytes32 ruleKind = controller.MODULE_KIND_RULE();
