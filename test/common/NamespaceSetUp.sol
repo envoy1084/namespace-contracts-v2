@@ -6,11 +6,11 @@ import {Vm} from "forge-std/Vm.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 
 import {NameCoder} from "@ens/contracts/utils/NameCoder.sol";
-import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
 import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
 import {RegistryRolesLib} from "@ensv2/registry/libraries/RegistryRolesLib.sol";
 import {PermissionedRegistry} from "@ensv2/registry/PermissionedRegistry.sol";
-import {SimpleRegistryMetadata} from "@ensv2/registry/SimpleRegistryMetadata.sol";
+import {IContractNamer} from "@ensv2/reverse-registrar/interfaces/IContractNamer.sol";
+import {LabelStore} from "@ensv2/utils/LabelStore.sol";
 import {NamespaceController} from "src/NamespaceController.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {ERC20PaymentModule} from "src/modules/payment/ERC20PaymentModule.sol";
@@ -43,7 +43,7 @@ abstract contract NamespaceSetUp is Test {
 
     Accounts internal accounts;
     NamespaceController internal controller;
-    SimpleRegistryMetadata internal registryMetadata;
+    LabelStore internal labelStore;
     PermissionedRegistry internal rootRegistry;
     PermissionedRegistry internal ethRegistry;
     PermissionedRegistry internal registry;
@@ -68,15 +68,11 @@ abstract contract NamespaceSetUp is Test {
         vm.deal(accounts.owner.addr, 100 ether);
 
         controller = _deployController(accounts.owner.addr);
-        registryMetadata = new SimpleRegistryMetadata(IHCAFactoryBasic(address(0)));
-        rootRegistry =
-            new PermissionedRegistry(IHCAFactoryBasic(address(0)), registryMetadata, address(this), ROLE_REGISTRAR);
-        ethRegistry = new PermissionedRegistry(
-            IHCAFactoryBasic(address(0)), registryMetadata, address(this), ROLE_REGISTRAR | ROLE_SET_PARENT
-        );
+        labelStore = new LabelStore(IContractNamer(address(0)));
+        rootRegistry = new PermissionedRegistry(labelStore, address(this), ROLE_REGISTRAR);
+        ethRegistry = new PermissionedRegistry(labelStore, address(this), ROLE_REGISTRAR | ROLE_SET_PARENT);
         registry = new PermissionedRegistry(
-            IHCAFactoryBasic(address(0)),
-            registryMetadata,
+            labelStore,
             address(this),
             ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN | RegistryRolesLib.ROLE_REGISTER_RESERVED_ADMIN
         );
@@ -171,8 +167,7 @@ abstract contract NamespaceSetUp is Test {
 
     function _registerNamespace(string memory label) internal returns (PermissionedRegistry namespaceRegistry) {
         namespaceRegistry = new PermissionedRegistry(
-            IHCAFactoryBasic(address(0)),
-            registryMetadata,
+            labelStore,
             address(this),
             ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN | RegistryRolesLib.ROLE_REGISTER_RESERVED_ADMIN
         );

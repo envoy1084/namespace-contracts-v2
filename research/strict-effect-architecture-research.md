@@ -35,7 +35,7 @@ Relevant current pieces:
 | Effects | `src/libraries/NamespaceTypes.sol` | `Decision`, `PriceOp`, `addFlags`, `requireFlags` |
 | Engine | `src/controller/NamespaceControllerRules.sol` | loops rules, applies one compact output per rule |
 | Activation | `src/controller/NamespaceControllerLifecycle.sol` | stores rules, payment module, hooks |
-| Gas evidence | `BENCHMARKS.md` | call-only mint benchmarks and module profiles |
+| Gas evidence | `benchmarks/BENCHMARKS.md` | call-only mint benchmarks and module profiles |
 
 Current `RuleOutput`:
 
@@ -717,4 +717,4 @@ Do not build a dynamic effect-array engine unless benchmarks prove it is accepta
 - [Ethereum Attestation Service](https://attest.org/)
 - [EAS schemas documentation](https://docs.attest.org/docs/core--concepts/schemas)
 - [Human Passport Stamps API access](https://docs.passport.human.tech/building-with-passport/stamps/passport-api/getting-access)
-- [Namespace gas benchmarks](../BENCHMARKS.md)
+- [Namespace gas benchmarks](../benchmarks/BENCHMARKS.md)

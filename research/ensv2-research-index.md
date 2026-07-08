@@ -16,7 +16,8 @@ Recommended reading order:
 10. [Architecture Decision History](./architecture-decision-history.md)
 11. [Namespace Architecture And Gas Review](./namespace-architecture-gas-review.md)
 12. [Strict Effect Architecture Research](./strict-effect-architecture-research.md)
-13. [ENSv2 Source Map](./ensv2-source-map.md)
+13. [ENSv2 Update Notes: 5677359 -> 48b3e2d](./ensv2-update-48b3e2d.md)
+14. [ENSv2 Source Map](./ensv2-source-map.md)
 
 ## One-Screen Summary
 
@@ -54,9 +55,11 @@ The same registry primitive is used for top-level names, `.eth` names, user subn
 | Pricing | `StandardRentPriceOracle` | Label length pricing, duration discounts, expiry premium, ERC20 payment ratios. |
 | Resolver | `PermissionedResolver` | Stores address, text, contenthash, ABI, pubkey, interface, reverse name, data records. |
 | Resolution | `UniversalResolverV2`, `LibRegistry` | Traverses the registry tree and finds the deepest resolver. |
-| Metadata | `MetadataMixin`, `SimpleRegistryMetadata`, `BaseUriRegistryMetadata` | Token URI support for registry tokens. |
+| Labels and token URI | `LabelStore`, `IRegistryURIRenderer`, built-in `PermissionedRegistry` URI fields | Shared label text lookup and optional registry URI rendering. |
 | Deployment helpers | deploy scripts, `VerifiableFactory` | Deploys registries, resolvers, and upgradeable user registry/resolver proxies. |
-| Account abstraction support | `HCAContext`, `HCAEquivalence` | Resolves Hidden Contract Account callers to their real owner for permission checks. |
+| Contract naming | `ContractNamer`, `DelegatedContractNamer`, `IContractNamer` | Gives deployed contracts reverse-name metadata hooks. |
+
+The updated ENSv2 snapshot removed the previous `src/hca/*` support contracts and the old external registry metadata provider contracts. The current registry constructor path uses `LabelStore`.
 
 ## Namespace Takeaway
 

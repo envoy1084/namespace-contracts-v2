@@ -185,6 +185,6 @@ Benchmark reports:
 
 | File | Purpose |
 | --- | --- |
-| `BENCHMARKS.md` | Index and benchmark command. |
-| `PROFILE_BENCHMARKS.md` | Profile gas. |
-| `SCENARIO_BENCHMARKS.md` | End-to-end scenario gas. |
+| `benchmarks/BENCHMARKS.md` | Index and benchmark command. |
+| `benchmarks/PROFILE_BENCHMARKS.md` | Profile gas. |
+| `benchmarks/SCENARIO_BENCHMARKS.md` | End-to-end scenario gas. |

@@ -4,13 +4,13 @@ pragma solidity ^0.8.26;
 import {NameCoder} from "@ens/contracts/utils/NameCoder.sol";
 import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
+import {IUniversalResolverV2} from "@ensv2/universalResolver/interfaces/IUniversalResolverV2.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {Initializable} from "solady/utils/Initializable.sol";
 import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
 
 import {INamespaceController} from "src/interfaces/INamespaceController.sol";
-import {IUniversalResolverV2} from "src/interfaces/IUniversalResolverV2.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 
 /// @title NamespaceControllerStorage
@@ -39,9 +39,7 @@ abstract contract NamespaceControllerStorage is
         address owner;
         IPermissionedRegistry registry;
         IPermissionedRegistry parentRegistry;
-        bytes32 namespaceKey;
         bytes32 parentNode;
-        bytes32 namespaceLabelHash;
         uint256 namespaceResource;
         string namespaceLabel;
         address resolver;
@@ -78,9 +76,6 @@ abstract contract NamespaceControllerStorage is
         uint256 resource;
         string label;
     }
-
-    /// @notice Total number of activations created by this controller.
-    uint256 public activationNonce;
 
     /// @notice Whether activation modules must be approved by the controller owner.
     bool public moduleApprovalRequired;
@@ -125,18 +120,15 @@ abstract contract NamespaceControllerStorage is
         if (address(resolver) == address(0)) revert UniversalResolverNotConfigured();
         if (NameCoder.countLabels(name, 0) == 0) revert InvalidNamespaceName(name);
 
-        IRegistry registry = resolver.findCanonicalRegistry(name);
+        IRegistry registry = resolver.findExactRegistry(name);
         if (address(registry) == address(0)) revert NamespaceRegistryNotFound(name);
 
-        IRegistry[] memory registries = resolver.findRegistries(name);
-        if (registries.length < 2 || address(registries[1]) == address(0)) {
-            revert NamespaceParentRegistryNotFound(name);
-        }
-        if (address(registries[0]) != address(registry)) revert NamespaceRegistryNotFound(name);
+        IRegistry parent = resolver.findParentRegistry(name);
+        if (address(parent) == address(0)) revert NamespaceParentRegistryNotFound(name);
 
         string memory label = NameCoder.firstLabel(name);
         bytes32 labelHash = _labelHash(label);
-        IPermissionedRegistry parentRegistry = IPermissionedRegistry(address(registries[1]));
+        IPermissionedRegistry parentRegistry = IPermissionedRegistry(address(parent));
         IPermissionedRegistry.State memory state = parentRegistry.getState(uint256(labelHash));
         if (state.status != IPermissionedRegistry.Status.REGISTERED) {
             revert NamespaceNotRegistered(name, state.status);
@@ -162,7 +154,7 @@ abstract contract NamespaceControllerStorage is
 
     function _checkNamespaceCurrent(bytes32 activationId, ActivationData storage activation) internal view {
         IPermissionedRegistry.State memory state =
-            activation.parentRegistry.getState(uint256(activation.namespaceLabelHash));
+            activation.parentRegistry.getState(uint256(_labelHash(activation.namespaceLabel)));
         if (state.status != IPermissionedRegistry.Status.REGISTERED) {
             revert NamespaceActivationUnavailable(activationId, state.status);
         }

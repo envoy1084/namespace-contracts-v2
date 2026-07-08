@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {Resolver} from "@ens/contracts/resolvers/Resolver.sol";
 import {EfficientHashLib} from "solady/utils/EfficientHashLib.sol";
 
-import {IAddrResolver} from "src/interfaces/IAddrResolver.sol";
 import {IPostHookModule} from "src/interfaces/IPostHookModule.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {NamespaceModule} from "src/modules/NamespaceModule.sol";
@@ -35,14 +35,14 @@ contract BatchSetAddrToBuyerHook is NamespaceModule, IPostHookModule {
         address buyer = ctx.buyer;
         uint256 length = runtimeData.length;
         if (length == 0) {
-            IAddrResolver(resolver).setAddr(node, buyer);
+            Resolver(resolver).setAddr(node, buyer);
             return;
         }
         if (length % 20 != 0) {
             revert InvalidRuntimeDataLength(length);
         }
 
-        IAddrResolver addrResolver = IAddrResolver(resolver);
+        Resolver addrResolver = Resolver(resolver);
         for (uint256 offset; offset < length;) {
             address addr_;
             assembly ("memory-safe") {

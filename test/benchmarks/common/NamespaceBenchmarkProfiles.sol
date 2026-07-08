@@ -3,6 +3,8 @@ pragma solidity ^0.8.26;
 
 import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 
+import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
+
 import {IAggregatorV3} from "src/interfaces/IAggregatorV3.sol";
 import {ERC20SplitPaymentModule} from "src/modules/payment/ERC20SplitPaymentModule.sol";
 import {LabelClassRule} from "src/modules/rules/LabelClassRule.sol";
@@ -48,6 +50,9 @@ abstract contract NamespaceBenchmarkProfiles is NamespaceBenchmarkBase {
     NamespaceTypes.MintContext internal profileDefaultMintCtx;
     NamespaceTypes.MintContext internal profileFullStackMintCtx;
     NamespaceTypes.MintContext internal profileSetAddrMintCtx;
+    NamespaceTypes.RenewContext internal profileDefaultRenewCtx;
+    NamespaceTypes.RenewContext internal profileFullStackRenewCtx;
+    NamespaceTypes.RenewContext internal profileSetAddrRenewCtx;
     NamespaceTypes.Price internal profileTokenPrice;
 
     function setUp() public virtual override {
@@ -77,7 +82,30 @@ abstract contract NamespaceBenchmarkProfiles is NamespaceBenchmarkBase {
         profileFullStackMintCtx = _mintCtx(fullStackScenario.activationId, "12345");
         profileSetAddrMintCtx = _mintCtx(fullStackScenario.activationId, "12345");
         profileSetAddrMintCtx.resolver = address(setAddrResolver);
+        profileDefaultRenewCtx = _renewCtx(defaultScenario.activationId, "default");
+        profileFullStackRenewCtx = _renewCtx(fullStackScenario.activationId, "12345");
+        profileSetAddrRenewCtx = _renewCtx(fullStackScenario.activationId, "12345");
         profileTokenPrice = NamespaceTypes.Price({token: address(token), amount: 100 ether});
+    }
+
+    function _renewCtx(bytes32 activationId, string memory label)
+        internal
+        view
+        returns (NamespaceTypes.RenewContext memory ctx)
+    {
+        bytes32 labelHash = keccak256(bytes(label));
+        ctx = NamespaceTypes.RenewContext({
+            activationId: activationId,
+            payer: accounts.buyer.addr,
+            registry: IPermissionedRegistry(address(registry)),
+            parentNode: _aliceNode(),
+            label: label,
+            labelHash: labelHash,
+            tokenId: uint256(labelHash),
+            duration: 365 days,
+            currentExpiry: uint64(block.timestamp + 365 days),
+            newExpiry: uint64(block.timestamp + 730 days)
+        });
     }
 
     function _configureProfileRules() private {

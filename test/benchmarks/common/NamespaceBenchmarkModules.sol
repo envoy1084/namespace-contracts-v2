@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
 import {PermissionedResolverLib} from "@ensv2/resolver/libraries/PermissionedResolverLib.sol";
 import {PermissionedResolver} from "@ensv2/resolver/PermissionedResolver.sol";
 import {VerifiableFactory} from "lib/contracts-v2/contracts/lib/verifiable-factory/src/VerifiableFactory.sol";
@@ -62,8 +61,9 @@ abstract contract NamespaceBenchmarkModules is NamespaceSetUp {
 
     function _deployResolver(address admin, uint256 roles) internal returns (PermissionedResolver) {
         VerifiableFactory factory = new VerifiableFactory();
-        PermissionedResolver resolverImpl = new PermissionedResolver(IHCAFactoryBasic(address(0)));
-        bytes memory initData = abi.encodeCall(PermissionedResolver.initialize, (admin, roles));
+        PermissionedResolver resolverImpl = new PermissionedResolver(admin);
+        bytes[] memory setters = new bytes[](0);
+        bytes memory initData = abi.encodeCall(PermissionedResolver.initialize, (admin, roles, setters));
         return PermissionedResolver(factory.deployProxy(address(resolverImpl), uint256(keccak256(initData)), initData));
     }
 

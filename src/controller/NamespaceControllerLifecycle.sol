@@ -2,9 +2,9 @@
 pragma solidity ^0.8.26;
 
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
+import {IUniversalResolverV2} from "@ensv2/universalResolver/interfaces/IUniversalResolverV2.sol";
 
 import {INamespaceController} from "src/interfaces/INamespaceController.sol";
-import {IUniversalResolverV2} from "src/interfaces/IUniversalResolverV2.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {NamespaceControllerModules} from "src/controller/NamespaceControllerModules.sol";
 
@@ -24,7 +24,7 @@ abstract contract NamespaceControllerLifecycle is NamespaceControllerModules {
     function setUniversalResolver(IUniversalResolverV2 universalResolver_) external onlyOwner {
         if (address(universalResolver_) == address(0)) revert ZeroUniversalResolver();
         universalResolver = universalResolver_;
-        rootRegistry = universalResolver_.ROOT_REGISTRY();
+        rootRegistry = universalResolver_.findExactRegistry(hex"00");
         emit UniversalResolverSet(address(universalResolver_));
         emit RootRegistrySet(address(rootRegistry));
     }
@@ -42,7 +42,6 @@ abstract contract NamespaceControllerLifecycle is NamespaceControllerModules {
         if (activations[activationId].owner != address(0)) {
             revert NamespaceAlreadyActivated(resolved.namespaceKey, activationId);
         }
-        ++activationNonce;
 
         (address rules, uint8 ruleCount, uint8 firstRulePhase) = _storeRuleList(config.rules);
         (address postHooks, uint8 postHookCount) = _storeModuleList(MODULE_KIND_POST_HOOK, config.postHooks);
@@ -89,7 +88,7 @@ abstract contract NamespaceControllerLifecycle is NamespaceControllerModules {
             owner: stored.owner,
             registry: stored.registry,
             parentRegistry: stored.parentRegistry,
-            namespaceKey: stored.namespaceKey,
+            namespaceKey: activationId,
             parentNode: stored.parentNode,
             namespaceResource: stored.namespaceResource,
             resolver: stored.resolver,
@@ -115,9 +114,7 @@ abstract contract NamespaceControllerLifecycle is NamespaceControllerModules {
         activation.owner = msg.sender;
         activation.registry = resolved.registry;
         activation.parentRegistry = resolved.parentRegistry;
-        activation.namespaceKey = resolved.namespaceKey;
         activation.parentNode = resolved.parentNode;
-        activation.namespaceLabelHash = resolved.labelHash;
         activation.namespaceResource = resolved.resource;
         activation.namespaceLabel = resolved.label;
         activation.resolver = config.resolver;

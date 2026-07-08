@@ -1,60 +1,166 @@
 key	kind	gas	source	description	activationGas
-activation.free_no_rules	exact	199382	testBenchmark_activation_00_pncFreeNoRules	Activation with no rules, no payment, no hooks.	n/a
-activation.all_rules_split_five_resolver_writes	exact	1352999	testBenchmark_activation_24_pncAllRulesSplitFiveResolverWrites	Activation with every current rule, split payment, and five resolver writes.	n/a
-mint.free_no_rules	exact	162444	testBenchmark_mint_00_pncFreeNoRules	Controller mint with no rules, no payment, no hooks.	n/a
-mint.fixed_erc20	exact	220761	testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment	Controller mint with fixed price rule and direct ERC20 payment.	n/a
-mint.three_rules_erc20	exact	257786	testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver	Controller mint with sale window, label length, fixed price, and direct ERC20 payment.	n/a
-mint.three_rules_split_two_resolver_writes	exact	364400	testBenchmark_mint_11_pncThreeRulesSplitPaymentTwoResolverWrites	Controller mint with three rules, split payment, and two resolver writes.	n/a
-mint.three_rules_premium_split_three_resolver_writes	exact	380800	testBenchmark_mint_13_pncThreeRulesPremiumSplitPaymentThreeResolverWrites	Controller mint with three rules, premium pricing, split payment, and three resolver writes.	n/a
-mint.whitelist_erc20	exact	315626	testBenchmark_mint_14_pncFourRulesWhitelistERC20PaymentNoResolver	Controller mint with whitelist proof and direct ERC20 payment.	n/a
-mint.reservation_split	exact	369355	testBenchmark_mint_19_pncFiveRulesReservationDiscountSplitNoResolver	Controller mint with reservation and token discount rules plus split payment.	n/a
-mint.all_rules_split	exact	568613	testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites	Controller mint with every current rule and split payment, no resolver writes.	n/a
-mint.all_rules_split_three_resolver_writes	exact	652384	testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites	Controller mint with every current rule, split payment, and three resolver writes.	n/a
-mint.all_rules_split_five_resolver_writes	exact	671973	testBenchmark_mint_24_pncAllRulesSplitFiveResolverWrites	Controller mint with every current rule, split payment, and five resolver writes.	n/a
-renew.three_rules_erc20	exact	149083	testBenchmark_renew_00_threeRulesERC20PaymentNoHook	Controller renewal with three rules and direct ERC20 payment.	n/a
-registry.register_no_roles	floor	76072	testBenchmark_registry_00_registerNoRolesNoResolver	Direct ENSv2 registry register with owner, no buyer roles, no resolver.	n/a
-registry.register_buyer_roles	floor	123378	testBenchmark_registry_01_registerBuyerRolesNoResolver	Direct ENSv2 registry register with buyer roles and no resolver.	n/a
-registry.register_buyer_roles_resolver	floor	127383	testBenchmark_registry_02_registerBuyerRolesWithResolver	Direct ENSv2 registry register with buyer roles and resolver.	n/a
-registry.reserve_no_owner	floor	45141	testBenchmark_registry_03_reserveLabelNoOwner	Direct ENSv2 registry reserve flow with owner set to zero.	n/a
-registry.renew_registered	floor	27975	testBenchmark_registry_04_renewRegistered	Direct ENSv2 registry renewal baseline.	n/a
-rule.pause	profile	35729	testBenchmark_profile_rule_00_pause_evaluateMint	PauseRule evaluateMint.	36697
-rule.sale_window_open	profile	36007	testBenchmark_profile_rule_01_saleWindowOpen_evaluateMint	SaleWindowRule evaluateMint with open zero-bounds config.	39668
-rule.sale_window_bounded	profile	24219	testBenchmark_profile_rule_02_saleWindowBounded_evaluateMint	SaleWindowRule evaluateMint with active start/end bounds.	39668
-rule.label_length	profile	36201	testBenchmark_profile_rule_03_labelLength_evaluateMint	LabelLengthRule evaluateMint.	59609
-rule.fixed_price_no_overrides	profile	40598	testBenchmark_profile_rule_04_fixedPriceNoLengthOverrides_evaluateMint	FixedPriceRule with no length overrides.	87686
-rule.fixed_price_5_fallback	profile	34081	testBenchmark_profile_rule_05_fixedPriceFiveOverridesFallback_evaluateMint	FixedPriceRule with five overrides and fallback label.	184476
-rule.fixed_price_5_exact	profile	34006	testBenchmark_profile_rule_06_fixedPriceFiveOverridesExact_evaluateMint	FixedPriceRule with five overrides and exact-length hit.	184476
-rule.fixed_price_20_exact	profile	35082	testBenchmark_profile_rule_07_fixedPriceTwentyOverridesExact_evaluateMint	FixedPriceRule with twenty overrides and exact-length hit.	338193
-rule.length_premium_5	profile	31867	testBenchmark_profile_rule_08_lengthPremiumFiveBuckets_evaluateMint	LengthPremiumRule with five buckets.	213530
-rule.length_premium_5_fallback	profile	31905	testBenchmark_profile_rule_09_lengthPremiumFiveBucketsFallback_evaluateMint	LengthPremiumRule with five buckets and fallback bucket.	213530
-rule.length_premium_20	profile	31869	testBenchmark_profile_rule_10_lengthPremiumTwentyBuckets_evaluateMint	LengthPremiumRule with twenty buckets.	333952
-rule.token_balance_discount	profile	45731	testBenchmark_profile_rule_11_tokenBalanceDiscount_evaluateMint	TokenBalanceRule with minimum balance and discount.	106012
-rule.reservation_10	profile	65910	testBenchmark_profile_rule_12_reservation10_evaluateMint	ReservationRule with Merkle set size 10.	76681
-rule.reservation_100	profile	73375	testBenchmark_profile_rule_13_reservation100_evaluateMint	ReservationRule with Merkle set size 100.	n/a
-rule.reservation_1000	profile	80795	testBenchmark_profile_rule_14_reservation1000_evaluateMint	ReservationRule with Merkle set size 1000.	84349
-rule.whitelist_10	profile	67830	testBenchmark_profile_rule_15_whitelist10_evaluateMint	WhitelistRule with Merkle set size 10.	77276
-rule.whitelist_100	profile	75270	testBenchmark_profile_rule_16_whitelist100_evaluateMint	WhitelistRule with Merkle set size 100.	n/a
-rule.whitelist_1000	profile	82713	testBenchmark_profile_rule_17_whitelist1000_evaluateMint	WhitelistRule with Merkle set size 1000.	84858
-rule.label_class_number	profile	30146	testBenchmark_profile_rule_18_labelClassNumber_evaluateMint	LabelClassRule for numeric labels.	107324
-rule.label_class_letter	profile	31118	testBenchmark_profile_rule_19_labelClassLetter_evaluateMint	LabelClassRule for ASCII letter labels.	107324
-rule.label_class_emoji	profile	30651	testBenchmark_profile_rule_20_labelClassEmoji_evaluateMint	LabelClassRule for emoji labels.	107324
-rule.usd_oracle	profile	46998	testBenchmark_profile_rule_21_usdOracle_evaluateMint	USDOracleRule with Chainlink-compatible oracle.	131618
-payment.erc20	profile	83068	testBenchmark_profile_payment_00_collectMintERC20	Direct ERC20 transferFrom payment module.	65212
-payment.split_2	profile	101582	testBenchmark_profile_payment_01_collectMintSplitERC20TwoRecipients	ERC20 split payment to two recipients.	113302
-payment.split_3	profile	129514	testBenchmark_profile_payment_02_collectMintSplitERC20ThreeRecipients	ERC20 split payment to three recipients.	n/a
-payment.split_5	profile	185516	testBenchmark_profile_payment_03_collectMintSplitERC20FiveRecipients	ERC20 split payment to five recipients.	n/a
-hook.recording	profile	130739	testBenchmark_profile_hook_00_recordingPostHook_afterMint	Recording post-hook profile.	56014
-hook.set_addr_empty	profile	84940	testBenchmark_profile_hook_01_setAddrToBuyerEmpty_afterMint	SetAddrToBuyerHook using buyer address.	58124
-hook.set_addr_override	profile	89711	testBenchmark_profile_hook_02_setAddrToBuyerOverride_afterMint	SetAddrToBuyerHook using address override.	58124
-hook.batch_resolver_1	profile	87492	testBenchmark_profile_hook_03_batchResolverHookOneWrite_afterMint	BatchSetAddrToBuyerHook with one resolver write.	58124
-hook.batch_resolver_3	profile	107129	testBenchmark_profile_hook_04_batchResolverHookThreeWrites_afterMint	BatchSetAddrToBuyerHook with three resolver writes.	58124
-hook.batch_resolver_5	profile	126755	testBenchmark_profile_hook_05_batchResolverHookFiveWrites_afterMint	BatchSetAddrToBuyerHook with five resolver writes.	58124
-delta.guard_rule	delta	18743	testBenchmark_mint_01_pncOneGuardRuleFree - testBenchmark_mint_00_pncFreeNoRules	Incremental mint cost from adding one guard rule to a free mint.	n/a
-delta.fixed_erc20_sale	delta	58317	testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment - testBenchmark_mint_00_pncFreeNoRules	Incremental mint cost from fixed-price rule plus direct ERC20 payment.	n/a
-delta.split_over_erc20	delta	30390	testBenchmark_mint_03_pncOneFixedPriceRuleSplitPayment - testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment	Incremental mint cost from split payment instead of direct ERC20 payment.	n/a
-delta.three_rules_over_fixed_erc20	delta	37025	testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver - testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment	Incremental mint cost from sale window and label-length rules over fixed ERC20 sale.	n/a
-delta.whitelist_over_three_rules	delta	57840	testBenchmark_mint_14_pncFourRulesWhitelistERC20PaymentNoResolver - testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver	Incremental mint cost from adding whitelist proof to the common three-rule ERC20 sale.	n/a
-delta.all_rules_over_split_three_rules	delta	280395	testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites - testBenchmark_mint_09_pncThreeRulesSplitPaymentNoResolver	Incremental mint cost from all rules over three-rule split sale.	n/a
-delta.batch_resolver_three_writes	delta	83771	testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites - testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites	Incremental mint cost from three resolver writes on all-rule split sale.	n/a
-delta.batch_resolver_two_more_writes	delta	19589	testBenchmark_mint_24_pncAllRulesSplitFiveResolverWrites - testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites	Incremental mint cost from two additional resolver writes.	n/a
-delta.all_rules_activation	delta	1153617	testBenchmark_activation_24_pncAllRulesSplitFiveResolverWrites - testBenchmark_activation_00_pncFreeNoRules	Incremental activation setup cost from all current rules, split payment, and five resolver writes.	n/a
+activation.free_no_rules	exact	282939	testBenchmark_activation_00_pncFreeNoRules	Activation with no rules, no payment, no hooks.	n/a
+activation.all_rules_split_five_resolver_writes	exact	1345674	testBenchmark_activation_01_pncAllRulesSplitFiveResolverWrites	Activation with every current rule, split payment, and five resolver writes.	n/a
+mint.free_no_rules	exact	224324	testBenchmark_mint_00_pncFreeNoRules	Controller mint with no rules, no payment, no hooks.	n/a
+mint.all_rules_split_five_resolver_writes	exact	598700	testBenchmark_mint_01_pncAllRulesSplitFiveResolverWrites	Controller mint with every current rule, split payment, and five resolver writes.	n/a
+renew.free_no_rules	exact	85500	testBenchmark_renew_00_pncFreeNoRules	Controller renewal with no rules, no payment, no hooks.	n/a
+renew.all_rules_split_five_resolver_writes	exact	399412	testBenchmark_renew_01_pncAllRulesSplitFiveResolverWrites	Controller renewal with every current rule, split payment, and five resolver writes.	n/a
+registry.register_no_roles	floor	103061	testBenchmark_registry_00_registerNoRolesNoResolver	Direct ENSv2 registry register with owner, no buyer roles, no resolver.	n/a
+registry.register_buyer_roles	floor	150364	testBenchmark_registry_01_registerBuyerRolesNoResolver	Direct ENSv2 registry register with buyer roles and no resolver.	n/a
+registry.register_buyer_roles_resolver	floor	154349	testBenchmark_registry_02_registerBuyerRolesWithResolver	Direct ENSv2 registry register with buyer roles and resolver.	n/a
+registry.reserve_no_owner	floor	72316	testBenchmark_registry_03_reserveLabelNoOwner	Direct ENSv2 registry reserve flow with owner set to zero.	n/a
+registry.renew_registered	floor	31132	testBenchmark_registry_04_renewRegistered	Direct ENSv2 registry renewal baseline.	n/a
+rule.pause	profile	15935	testBenchmark_profile_rule_00_pause_evaluateMint	PauseRule evaluateMint.	36406
+rule.sale_window_open	profile	16146	testBenchmark_profile_rule_01_saleWindowOpen_evaluateMint	SaleWindowRule evaluateMint with open zero-bounds config.	39236
+rule.sale_window_bounded	profile	16170	testBenchmark_profile_rule_02_saleWindowBounded_evaluateMint	SaleWindowRule evaluateMint with active start/end bounds.	39236
+rule.label_length	profile	16362	testBenchmark_profile_rule_03_labelLength_evaluateMint	LabelLengthRule evaluateMint.	59176
+rule.fixed_price_no_overrides	profile	20715	testBenchmark_profile_rule_04_fixedPriceNoLengthOverrides_evaluateMint	FixedPriceRule with no length overrides.	84612
+rule.fixed_price_5_fallback	profile	26010	testBenchmark_profile_rule_05_fixedPriceFiveOverridesFallback_evaluateMint	FixedPriceRule with five overrides and fallback label.	177439
+rule.fixed_price_5_exact	profile	26024	testBenchmark_profile_rule_06_fixedPriceFiveOverridesExact_evaluateMint	FixedPriceRule with five overrides and exact-length hit.	177439
+rule.fixed_price_20_exact	profile	27055	testBenchmark_profile_rule_07_fixedPriceTwentyOverridesExact_evaluateMint	FixedPriceRule with twenty overrides and exact-length hit.	319255
+rule.length_premium_5	profile	23840	testBenchmark_profile_rule_08_lengthPremiumFiveBuckets_evaluateMint	LengthPremiumRule with five buckets.	206504
+rule.length_premium_5_fallback	profile	23967	testBenchmark_profile_rule_09_lengthPremiumFiveBucketsFallback_evaluateMint	LengthPremiumRule with five buckets and fallback bucket.	206504
+rule.length_premium_20	profile	23820	testBenchmark_profile_rule_10_lengthPremiumTwentyBuckets_evaluateMint	LengthPremiumRule with twenty buckets.	315913
+rule.token_balance_discount	profile	28477	testBenchmark_profile_rule_11_tokenBalanceDiscount_evaluateMint	TokenBalanceRule with minimum balance and discount.	103708
+rule.reservation_10	profile	20600	testBenchmark_profile_rule_12_reservation10_evaluateMint	ReservationRule with Merkle set size 10.	51758
+rule.reservation_100	profile	21472	testBenchmark_profile_rule_13_reservation100_evaluateMint	ReservationRule with Merkle set size 100.	51758
+rule.reservation_1000	profile	22345	testBenchmark_profile_rule_14_reservation1000_evaluateMint	ReservationRule with Merkle set size 1000.	51829
+rule.whitelist_10	profile	20337	testBenchmark_profile_rule_15_whitelist10_evaluateMint	WhitelistRule with Merkle set size 10.	54079
+rule.whitelist_100	profile	21185	testBenchmark_profile_rule_16_whitelist100_evaluateMint	WhitelistRule with Merkle set size 100.	54079
+rule.whitelist_1000	profile	22079	testBenchmark_profile_rule_17_whitelist1000_evaluateMint	WhitelistRule with Merkle set size 1000.	54063
+rule.label_class_number	profile	22119	testBenchmark_profile_rule_18_labelClassNumber_evaluateMint	LabelClassRule for numeric labels.	104462
+rule.label_class_letter	profile	23069	testBenchmark_profile_rule_19_labelClassLetter_evaluateMint	LabelClassRule for ASCII letter labels.	104462
+rule.label_class_emoji	profile	23135	testBenchmark_profile_rule_20_labelClassEmoji_evaluateMint	LabelClassRule for emoji labels.	104462
+rule.usd_oracle	profile	39154	testBenchmark_profile_rule_21_usdOracle_evaluateMint	USDOracleRule with Chainlink-compatible oracle.	131901
+rule_renew.pause	profile	15930	testBenchmark_profile_rule_22_pause_evaluateRenew	PauseRule evaluateRenew.	36406
+rule_renew.sale_window_open	profile	16097	testBenchmark_profile_rule_23_saleWindowOpen_evaluateRenew	SaleWindowRule evaluateRenew with open zero-bounds config.	39236
+rule_renew.sale_window_bounded	profile	16121	testBenchmark_profile_rule_24_saleWindowBounded_evaluateRenew	SaleWindowRule evaluateRenew with active start/end bounds.	39236
+rule_renew.label_length	profile	16309	testBenchmark_profile_rule_25_labelLength_evaluateRenew	LabelLengthRule evaluateRenew.	59176
+rule_renew.fixed_price_no_overrides	profile	20674	testBenchmark_profile_rule_26_fixedPriceNoLengthOverrides_evaluateRenew	FixedPriceRule renewal with no length overrides.	84612
+rule_renew.fixed_price_5_fallback	profile	26013	testBenchmark_profile_rule_27_fixedPriceFiveOverridesFallback_evaluateRenew	FixedPriceRule renewal with five overrides and fallback label.	177439
+rule_renew.fixed_price_5_exact	profile	25939	testBenchmark_profile_rule_28_fixedPriceFiveOverridesExact_evaluateRenew	FixedPriceRule renewal with five overrides and exact-length hit.	177439
+rule_renew.fixed_price_20_exact	profile	27017	testBenchmark_profile_rule_29_fixedPriceTwentyOverridesExact_evaluateRenew	FixedPriceRule renewal with twenty overrides and exact-length hit.	319255
+rule_renew.length_premium_5	profile	23773	testBenchmark_profile_rule_30_lengthPremiumFiveBuckets_evaluateRenew	LengthPremiumRule renewal with five buckets.	206504
+rule_renew.length_premium_5_fallback	profile	23895	testBenchmark_profile_rule_31_lengthPremiumFiveBucketsFallback_evaluateRenew	LengthPremiumRule renewal with five buckets and fallback bucket.	206504
+rule_renew.length_premium_20	profile	23793	testBenchmark_profile_rule_32_lengthPremiumTwentyBuckets_evaluateRenew	LengthPremiumRule renewal with twenty buckets.	315913
+rule_renew.token_balance_discount	profile	28427	testBenchmark_profile_rule_33_tokenBalanceDiscount_evaluateRenew	TokenBalanceRule renewal with minimum balance and discount.	103708
+rule_renew.reservation_10	profile	20583	testBenchmark_profile_rule_34_reservation10_evaluateRenew	ReservationRule renewal with Merkle set size 10.	51758
+rule_renew.reservation_100	profile	21542	testBenchmark_profile_rule_35_reservation100_evaluateRenew	ReservationRule renewal with Merkle set size 100.	51758
+rule_renew.reservation_1000	profile	22367	testBenchmark_profile_rule_36_reservation1000_evaluateRenew	ReservationRule renewal with Merkle set size 1000.	51829
+rule_renew.whitelist_10	profile	16890	testBenchmark_profile_rule_37_whitelist10_evaluateRenew	WhitelistRule renewal with renew checks disabled.	54079
+rule_renew.whitelist_100	profile	16891	testBenchmark_profile_rule_38_whitelist100_evaluateRenew	WhitelistRule renewal with renew checks disabled.	54079
+rule_renew.whitelist_1000	profile	16912	testBenchmark_profile_rule_39_whitelist1000_evaluateRenew	WhitelistRule renewal with renew checks disabled.	54063
+rule_renew.label_class_number	profile	22079	testBenchmark_profile_rule_40_labelClassNumber_evaluateRenew	LabelClassRule renewal for numeric labels.	104462
+rule_renew.label_class_letter	profile	23053	testBenchmark_profile_rule_41_labelClassLetter_evaluateRenew	LabelClassRule renewal for ASCII letter labels.	104462
+rule_renew.label_class_emoji	profile	23091	testBenchmark_profile_rule_42_labelClassEmoji_evaluateRenew	LabelClassRule renewal for emoji labels.	104462
+rule_renew.usd_oracle	profile	39105	testBenchmark_profile_rule_43_usdOracle_evaluateRenew	USDOracleRule renewal with Chainlink-compatible oracle.	131901
+payment.erc20	profile	56567	testBenchmark_profile_payment_00_collectMintERC20	Direct ERC20 transferFrom payment module.	80967
+payment.split_2	profile	88629	testBenchmark_profile_payment_01_collectMintSplitERC20TwoRecipients	ERC20 split payment to two recipients.	127960
+payment.split_3	profile	118538	testBenchmark_profile_payment_02_collectMintSplitERC20ThreeRecipients	ERC20 split payment to three recipients.	n/a
+payment.split_5	profile	178449	testBenchmark_profile_payment_03_collectMintSplitERC20FiveRecipients	ERC20 split payment to five recipients.	n/a
+payment_renew.erc20	profile	56565	testBenchmark_profile_payment_04_collectRenewERC20	Direct ERC20 transferFrom renewal payment.	80967
+payment_renew.split_2	profile	88494	testBenchmark_profile_payment_05_collectRenewSplitERC20TwoRecipients	ERC20 renewal split payment to two recipients.	127960
+payment_renew.split_3	profile	118428	testBenchmark_profile_payment_06_collectRenewSplitERC20ThreeRecipients	ERC20 renewal split payment to three recipients.	n/a
+payment_renew.split_5	profile	178382	testBenchmark_profile_payment_07_collectRenewSplitERC20FiveRecipients	ERC20 renewal split payment to five recipients.	n/a
+hook.recording	profile	105976	testBenchmark_profile_hook_00_recordingPostHook_afterMint	Recording post-hook profile.	55996
+hook.set_addr_empty	profile	60126	testBenchmark_profile_hook_01_setAddrToBuyerEmpty_afterMint	SetAddrToBuyerHook using buyer address.	55997
+hook.set_addr_override	profile	60290	testBenchmark_profile_hook_02_setAddrToBuyerOverride_afterMint	SetAddrToBuyerHook using address override.	55997
+hook.batch_resolver_1	profile	60295	testBenchmark_profile_hook_03_batchResolverHookOneWrite_afterMint	BatchSetAddrToBuyerHook with one resolver write.	55997
+hook.batch_resolver_3	profile	75247	testBenchmark_profile_hook_04_batchResolverHookThreeWrites_afterMint	BatchSetAddrToBuyerHook with three resolver writes.	55997
+hook.batch_resolver_5	profile	90230	testBenchmark_profile_hook_05_batchResolverHookFiveWrites_afterMint	BatchSetAddrToBuyerHook with five resolver writes.	55997
+hook_renew.recording	profile	105830	testBenchmark_profile_hook_06_recordingPostHook_afterRenew	Recording post-hook afterRenew profile.	55996
+hook_renew.set_addr	profile	14662	testBenchmark_profile_hook_07_setAddrToBuyer_afterRenew	SetAddrToBuyerHook afterRenew no-op profile.	n/a
+hook_renew.batch_resolver	profile	14706	testBenchmark_profile_hook_08_batchResolverHook_afterRenew	BatchSetAddrToBuyerHook afterRenew no-op profile.	n/a
+slice.activation.free.load_resolver_and_validate_name	slice	3212	activation.free.loadResolverAndValidateName	No-rules path: Load the configured Universal Resolver and reject empty ENS names.	n/a
+slice.activation.free.find_exact_registry	slice	25072	activation.free.findExactRegistry	No-rules path: Universal Resolver lookup for the namespace registry.	n/a
+slice.activation.free.find_parent_registry	slice	5010	activation.free.findParentRegistry	No-rules path: Universal Resolver lookup for the parent registry.	n/a
+slice.activation.free.universal_resolver_discovery	slice	30082	activation.free.universalResolverDiscovery	No-rules path: Combined Universal Resolver registry discovery cost.	n/a
+slice.activation.free.label_hash_and_parent_state	slice	5689	activation.free.labelHashAndParentState	No-rules path: Hash the namespace label and read its parent-registry state.	n/a
+slice.activation.free.parent_subregistry_check	slice	1877	activation.free.parentSubregistryCheck	No-rules path: Verify the parent registry points to the resolved namespace registry.	n/a
+slice.activation.free.namehash_and_activation_key	slice	1831	activation.free.namehashAndActivationKey	No-rules path: Compute the ENS node and activation id.	n/a
+slice.activation.free.duration_and_payment_checks	slice	797	activation.free.durationAndPaymentChecks	No-rules path: Validate duration bounds and payment module approval.	n/a
+slice.activation.free.owner_admin_check	slice	5814	activation.free.ownerAdminCheck	No-rules path: Confirm the name owner still has admin authority on the registry.	n/a
+slice.activation.free.controller_registry_roles_check	slice	3265	activation.free.controllerRegistryRolesCheck	No-rules path: Confirm the controller can register and renew subnames.	n/a
+slice.activation.free.activation_id_check	slice	2227	activation.free.activationIdCheck	No-rules path: Check that the activation id is unused.	n/a
+slice.activation.free.store_module_lists	slice	647	activation.free.storeModuleLists	No-rules path: Store configured rule and hook module lists.	n/a
+slice.activation.free.store_activation	slice	186180	activation.free.storeActivation	No-rules path: Write the activation record to controller storage.	n/a
+slice.activation.free.store_owner_and_registries	slice	64417	activation.free.store.ownerAndRegistries	No-rules path: Activation storage sub-slice for owner, registry, and parent registry.	n/a
+slice.activation.free.store_namespace_identity	slice	44249	activation.free.store.namespaceIdentity	No-rules path: Activation storage sub-slice for parent node and namespace resource id.	n/a
+slice.activation.free.store_namespace_label	slice	22512	activation.free.store.namespaceLabel	No-rules path: Activation storage sub-slice for the namespace label string.	n/a
+slice.activation.free.store_mint_config	slice	47257	activation.free.store.mintConfig	No-rules path: Activation storage sub-slice for resolver, roles, duration bounds, and active flag.	n/a
+slice.activation.free.store_module_refs	slice	7167	activation.free.store.moduleRefs	No-rules path: Activation storage sub-slice for module list references and counters.	n/a
+slice.activation.free.configure_modules	slice	793	activation.free.configureModules	No-rules path: Call configured modules so they store activation-scoped parameters.	n/a
+slice.activation.free.emit_activation_events	slice	3667	activation.free.emitActivationEvents	No-rules path: Emit activation-created and activation-status events.	n/a
+slice.activation.free.measured_body_total	slice	247615	activation.free.measuredBodyTotal	No-rules path: Measured body total for the profiled controller function.	n/a
+slice.activation.high.load_resolver_and_validate_name	slice	3212	activation.high.loadResolverAndValidateName	All-rules, split-payment, five-resolver-write path: Load the configured Universal Resolver and reject empty ENS names.	n/a
+slice.activation.high.find_exact_registry	slice	25072	activation.high.findExactRegistry	All-rules, split-payment, five-resolver-write path: Universal Resolver lookup for the namespace registry.	n/a
+slice.activation.high.find_parent_registry	slice	5010	activation.high.findParentRegistry	All-rules, split-payment, five-resolver-write path: Universal Resolver lookup for the parent registry.	n/a
+slice.activation.high.universal_resolver_discovery	slice	30082	activation.high.universalResolverDiscovery	All-rules, split-payment, five-resolver-write path: Combined Universal Resolver registry discovery cost.	n/a
+slice.activation.high.label_hash_and_parent_state	slice	5689	activation.high.labelHashAndParentState	All-rules, split-payment, five-resolver-write path: Hash the namespace label and read its parent-registry state.	n/a
+slice.activation.high.parent_subregistry_check	slice	1877	activation.high.parentSubregistryCheck	All-rules, split-payment, five-resolver-write path: Verify the parent registry points to the resolved namespace registry.	n/a
+slice.activation.high.namehash_and_activation_key	slice	1831	activation.high.namehashAndActivationKey	All-rules, split-payment, five-resolver-write path: Compute the ENS node and activation id.	n/a
+slice.activation.high.duration_and_payment_checks	slice	5501	activation.high.durationAndPaymentChecks	All-rules, split-payment, five-resolver-write path: Validate duration bounds and payment module approval.	n/a
+slice.activation.high.owner_admin_check	slice	5814	activation.high.ownerAdminCheck	All-rules, split-payment, five-resolver-write path: Confirm the name owner still has admin authority on the registry.	n/a
+slice.activation.high.controller_registry_roles_check	slice	3265	activation.high.controllerRegistryRolesCheck	All-rules, split-payment, five-resolver-write path: Confirm the controller can register and renew subnames.	n/a
+slice.activation.high.activation_id_check	slice	2227	activation.high.activationIdCheck	All-rules, split-payment, five-resolver-write path: Check that the activation id is unused.	n/a
+slice.activation.high.store_module_lists	slice	115093	activation.high.storeModuleLists	All-rules, split-payment, five-resolver-write path: Store configured rule and hook module lists.	n/a
+slice.activation.high.store_activation	slice	225980	activation.high.storeActivation	All-rules, split-payment, five-resolver-write path: Write the activation record to controller storage.	n/a
+slice.activation.high.store_owner_and_registries	slice	64417	activation.high.store.ownerAndRegistries	All-rules, split-payment, five-resolver-write path: Activation storage sub-slice for owner, registry, and parent registry.	n/a
+slice.activation.high.store_namespace_identity	slice	44249	activation.high.store.namespaceIdentity	All-rules, split-payment, five-resolver-write path: Activation storage sub-slice for parent node and namespace resource id.	n/a
+slice.activation.high.store_namespace_label	slice	22512	activation.high.store.namespaceLabel	All-rules, split-payment, five-resolver-write path: Activation storage sub-slice for the namespace label string.	n/a
+slice.activation.high.store_mint_config	slice	67157	activation.high.store.mintConfig	All-rules, split-payment, five-resolver-write path: Activation storage sub-slice for resolver, roles, duration bounds, and active flag.	n/a
+slice.activation.high.store_module_refs	slice	27067	activation.high.store.moduleRefs	All-rules, split-payment, five-resolver-write path: Activation storage sub-slice for module list references and counters.	n/a
+slice.activation.high.configure_modules	slice	859107	activation.high.configureModules	All-rules, split-payment, five-resolver-write path: Call configured modules so they store activation-scoped parameters.	n/a
+slice.activation.high.emit_activation_events	slice	3670	activation.high.emitActivationEvents	All-rules, split-payment, five-resolver-write path: Emit activation-created and activation-status events.	n/a
+slice.activation.high.measured_body_total	slice	1264882	activation.high.measuredBodyTotal	All-rules, split-payment, five-resolver-write path: Measured body total for the profiled controller function.	n/a
+slice.mint.free.activation_load_and_active	slice	4383	mint.free.activationLoadAndActive	No-rules path: Load activation state and reject inactive activations.	n/a
+slice.mint.free.namespace_current	slice	22619	mint.free.namespaceCurrent	No-rules path: Read parent registry state to ensure the namespace is still registered.	n/a
+slice.mint.free.owner_admin_check	slice	6027	mint.free.ownerAdminCheck	No-rules path: Confirm the name owner still has admin authority on the registry.	n/a
+slice.mint.free.duration_and_runtime_checks	slice	1067	mint.free.durationAndRuntimeChecks	No-rules path: Validate requested duration and runtime data array lengths.	n/a
+slice.mint.free.label_hash_and_context	slice	7415	mint.free.labelHashAndContext	No-rules path: Hash the subname label and construct the mint context.	n/a
+slice.mint.free.label_activation_store	slice	22368	mint.free.labelActivationStore	No-rules path: Map the minted label to the activation id for future renewals.	n/a
+slice.mint.free.evaluate_rules	slice	515	mint.free.evaluateRules	No-rules path: Run the configured rule modules.	n/a
+slice.mint.free.registry_write	slice	138340	mint.free.registryWrite	No-rules path: Call the official ENSv2 PermissionedRegistry.	n/a
+slice.mint.free.collect_payment	slice	287	mint.free.collectPayment	No-rules path: Run payment collection if rules produced a non-zero price.	n/a
+slice.mint.free.post_hooks	slice	401	mint.free.postHooks	No-rules path: Run configured post hooks.	n/a
+slice.mint.free.emit_event	slice	3817	mint.free.emitEvent	No-rules path: Emit the mint or renewal event.	n/a
+slice.mint.free.measured_body_total	slice	208249	mint.free.measuredBodyTotal	No-rules path: Measured body total for the profiled controller function.	n/a
+slice.mint.high.activation_load_and_active	slice	4383	mint.high.activationLoadAndActive	All-rules, split-payment, five-resolver-write path: Load activation state and reject inactive activations.	n/a
+slice.mint.high.namespace_current	slice	22619	mint.high.namespaceCurrent	All-rules, split-payment, five-resolver-write path: Read parent registry state to ensure the namespace is still registered.	n/a
+slice.mint.high.owner_admin_check	slice	6027	mint.high.ownerAdminCheck	All-rules, split-payment, five-resolver-write path: Confirm the name owner still has admin authority on the registry.	n/a
+slice.mint.high.duration_and_runtime_checks	slice	1067	mint.high.durationAndRuntimeChecks	All-rules, split-payment, five-resolver-write path: Validate requested duration and runtime data array lengths.	n/a
+slice.mint.high.label_hash_and_context	slice	7415	mint.high.labelHashAndContext	All-rules, split-payment, five-resolver-write path: Hash the subname label and construct the mint context.	n/a
+slice.mint.high.label_activation_store	slice	22368	mint.high.labelActivationStore	All-rules, split-payment, five-resolver-write path: Map the minted label to the activation id for future renewals.	n/a
+slice.mint.high.evaluate_rules	slice	249536	mint.high.evaluateRules	All-rules, split-payment, five-resolver-write path: Run the configured rule modules.	n/a
+slice.mint.high.registry_write	slice	117593	mint.high.registryWrite	All-rules, split-payment, five-resolver-write path: Call the official ENSv2 PermissionedRegistry.	n/a
+slice.mint.high.collect_payment	slice	51362	mint.high.collectPayment	All-rules, split-payment, five-resolver-write path: Run payment collection if rules produced a non-zero price.	n/a
+slice.mint.high.post_hooks	slice	91936	mint.high.postHooks	All-rules, split-payment, five-resolver-write path: Run configured post hooks.	n/a
+slice.mint.high.emit_event	slice	3817	mint.high.emitEvent	All-rules, split-payment, five-resolver-write path: Emit the mint or renewal event.	n/a
+slice.mint.high.measured_body_total	slice	579133	mint.high.measuredBodyTotal	All-rules, split-payment, five-resolver-write path: Measured body total for the profiled controller function.	n/a
+slice.renew.free.activation_load_and_active	slice	4383	renew.free.activationLoadAndActive	No-rules path: Load activation state and reject inactive activations.	n/a
+slice.renew.free.namespace_current	slice	22619	renew.free.namespaceCurrent	No-rules path: Read parent registry state to ensure the namespace is still registered.	n/a
+slice.renew.free.owner_admin_check	slice	6027	renew.free.ownerAdminCheck	No-rules path: Confirm the name owner still has admin authority on the registry.	n/a
+slice.renew.free.duration_and_runtime_checks	slice	1067	renew.free.durationAndRuntimeChecks	No-rules path: Validate requested duration and runtime data array lengths.	n/a
+slice.renew.free.label_state_and_activation_check	slice	11387	renew.free.labelStateAndActivationCheck	No-rules path: Read label state and verify the label belongs to this activation.	n/a
+slice.renew.free.expiry_and_context	slice	2792	renew.free.expiryAndContext	No-rules path: Compute renewal expiry and construct the renewal context.	n/a
+slice.renew.free.evaluate_rules	slice	515	renew.free.evaluateRules	No-rules path: Run the configured rule modules.	n/a
+slice.renew.free.registry_write	slice	15163	renew.free.registryWrite	No-rules path: Call the official ENSv2 PermissionedRegistry.	n/a
+slice.renew.free.collect_payment	slice	287	renew.free.collectPayment	No-rules path: Run payment collection if rules produced a non-zero price.	n/a
+slice.renew.free.post_hooks	slice	396	renew.free.postHooks	No-rules path: Run configured post hooks.	n/a
+slice.renew.free.emit_event	slice	3750	renew.free.emitEvent	No-rules path: Emit the mint or renewal event.	n/a
+slice.renew.free.measured_body_total	slice	69724	renew.free.measuredBodyTotal	No-rules path: Measured body total for the profiled controller function.	n/a
+slice.renew.high.activation_load_and_active	slice	4383	renew.high.activationLoadAndActive	All-rules, split-payment, five-resolver-write path: Load activation state and reject inactive activations.	n/a
+slice.renew.high.namespace_current	slice	22619	renew.high.namespaceCurrent	All-rules, split-payment, five-resolver-write path: Read parent registry state to ensure the namespace is still registered.	n/a
+slice.renew.high.owner_admin_check	slice	6027	renew.high.ownerAdminCheck	All-rules, split-payment, five-resolver-write path: Confirm the name owner still has admin authority on the registry.	n/a
+slice.renew.high.duration_and_runtime_checks	slice	1067	renew.high.durationAndRuntimeChecks	All-rules, split-payment, five-resolver-write path: Validate requested duration and runtime data array lengths.	n/a
+slice.renew.high.label_state_and_activation_check	slice	11387	renew.high.labelStateAndActivationCheck	All-rules, split-payment, five-resolver-write path: Read label state and verify the label belongs to this activation.	n/a
+slice.renew.high.expiry_and_context	slice	2792	renew.high.expiryAndContext	All-rules, split-payment, five-resolver-write path: Compute renewal expiry and construct the renewal context.	n/a
+slice.renew.high.evaluate_rules	slice	244010	renew.high.evaluateRules	All-rules, split-payment, five-resolver-write path: Run the configured rule modules.	n/a
+slice.renew.high.registry_write	slice	15154	renew.high.registryWrite	All-rules, split-payment, five-resolver-write path: Call the official ENSv2 PermissionedRegistry.	n/a
+slice.renew.high.collect_payment	slice	51254	renew.high.collectPayment	All-rules, split-payment, five-resolver-write path: Run payment collection if rules produced a non-zero price.	n/a
+slice.renew.high.post_hooks	slice	16456	renew.high.postHooks	All-rules, split-payment, five-resolver-write path: Run configured post hooks.	n/a
+slice.renew.high.emit_event	slice	3733	renew.high.emitEvent	All-rules, split-payment, five-resolver-write path: Emit the mint or renewal event.	n/a
+slice.renew.high.measured_body_total	slice	380220	renew.high.measuredBodyTotal	All-rules, split-payment, five-resolver-write path: Measured body total for the profiled controller function.	n/a
+delta.activation_all_rules_high	delta	1062735	testBenchmark_activation_01_pncAllRulesSplitFiveResolverWrites - testBenchmark_activation_00_pncFreeNoRules	Incremental activation setup cost from every current rule, split payment, and five resolver writes.	n/a
+delta.mint_all_rules_high	delta	374376	testBenchmark_mint_01_pncAllRulesSplitFiveResolverWrites - testBenchmark_mint_00_pncFreeNoRules	Incremental mint cost from every current rule, split payment, and five resolver writes.	n/a
+delta.renew_all_rules_high	delta	313912	testBenchmark_renew_01_pncAllRulesSplitFiveResolverWrites - testBenchmark_renew_00_pncFreeNoRules	Incremental renewal cost from every current rule, split payment, and five resolver writes.	n/a

@@ -97,9 +97,7 @@ The controller stores:
 owner = msg.sender
 registry = resolved namespace registry
 parentRegistry = resolved parent registry
-namespaceKey = deterministic activation key
 parentNode = namehash(name)
-namespaceLabelHash = labelhash(first label)
 namespaceResource = parent registry resource for the namespace label
 namespaceLabel = first label
 resolver = config.resolver
@@ -111,6 +109,8 @@ rules = compact rule list
 paymentModule = config.paymentModule.module
 postHooks = compact hook list
 ```
+
+`namespaceKey` is not stored separately because `activationId` is the deterministic namespace key. The namespace label hash is recomputed from `namespaceLabel` during runtime currentness checks instead of being stored.
 
 Then it emits:
 

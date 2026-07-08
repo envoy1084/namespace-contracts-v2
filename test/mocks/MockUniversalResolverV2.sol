@@ -2,17 +2,14 @@
 pragma solidity ^0.8.26;
 
 import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
+import {IUniversalResolverV2} from "@ensv2/universalResolver/interfaces/IUniversalResolverV2.sol";
 import {LibRegistry} from "@ensv2/universalResolver/libraries/LibRegistry.sol";
-
-import {IUniversalResolverV2} from "src/interfaces/IUniversalResolverV2.sol";
 
 /// @notice Test-only UniversalResolverV2 stand-in that reuses ENSv2 registry traversal logic.
 contract MockUniversalResolverV2 is IUniversalResolverV2 {
     IRegistry public immutable ROOT_REGISTRY;
-    IRegistry private canonicalRegistryOverride;
-    bool private useCanonicalRegistryOverride;
-    IRegistry[] private registriesOverride;
-    bool private useRegistriesOverride;
+    IRegistry private exactRegistryOverride;
+    bool private useExactRegistryOverride;
 
     constructor(IRegistry rootRegistry) {
         ROOT_REGISTRY = rootRegistry;
@@ -22,21 +19,26 @@ contract MockUniversalResolverV2 is IUniversalResolverV2 {
         return LibRegistry.findCanonicalName(ROOT_REGISTRY, registry);
     }
 
+    function findOwner(bytes calldata name) external view returns (address owner) {
+        return LibRegistry.findOwner(ROOT_REGISTRY, name, 0);
+    }
+
     function findCanonicalRegistry(bytes calldata name) external view returns (IRegistry registry) {
-        if (useCanonicalRegistryOverride) {
-            return canonicalRegistryOverride;
-        }
         return LibRegistry.findCanonicalRegistry(ROOT_REGISTRY, name);
     }
 
     function findExactRegistry(bytes calldata name) external view returns (IRegistry registry) {
+        if (useExactRegistryOverride) {
+            return exactRegistryOverride;
+        }
         return LibRegistry.findExactRegistry(ROOT_REGISTRY, name, 0);
     }
 
+    function findParentRegistry(bytes calldata name) external view returns (IRegistry registry) {
+        return LibRegistry.findParentRegistry(ROOT_REGISTRY, name, 0);
+    }
+
     function findRegistries(bytes calldata name) external view returns (IRegistry[] memory registries) {
-        if (useRegistriesOverride) {
-            return registriesOverride;
-        }
         return LibRegistry.findRegistries(ROOT_REGISTRY, name, 0);
     }
 
@@ -44,27 +46,13 @@ contract MockUniversalResolverV2 is IUniversalResolverV2 {
         (, resolver, node, offset) = LibRegistry.findResolver(ROOT_REGISTRY, name, 0);
     }
 
-    function setCanonicalRegistryOverride(IRegistry registry) external {
-        canonicalRegistryOverride = registry;
-        useCanonicalRegistryOverride = true;
-    }
-
-    function setRegistriesOverride(IRegistry[] memory registries) external {
-        delete registriesOverride;
-        uint256 length = registries.length;
-        for (uint256 i; i < length;) {
-            registriesOverride.push(registries[i]);
-            unchecked {
-                ++i;
-            }
-        }
-        useRegistriesOverride = true;
+    function setExactRegistryOverride(IRegistry registry) external {
+        exactRegistryOverride = registry;
+        useExactRegistryOverride = true;
     }
 
     function clearOverrides() external {
-        canonicalRegistryOverride = IRegistry(address(0));
-        useCanonicalRegistryOverride = false;
-        delete registriesOverride;
-        useRegistriesOverride = false;
+        exactRegistryOverride = IRegistry(address(0));
+        useExactRegistryOverride = false;
     }
 }

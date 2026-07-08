@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {Resolver} from "@ens/contracts/resolvers/Resolver.sol";
 import {EfficientHashLib} from "solady/utils/EfficientHashLib.sol";
 
-import {IAddrResolver} from "src/interfaces/IAddrResolver.sol";
 import {IPostHookModule} from "src/interfaces/IPostHookModule.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {NamespaceModule} from "src/modules/NamespaceModule.sol";
@@ -38,7 +38,7 @@ contract SetAddrToBuyerHook is NamespaceModule, IPostHookModule {
             addr_ = abi.decode(runtimeData, (address));
         }
 
-        IAddrResolver(resolver).setAddr(_childNode(ctx.parentNode, ctx.labelHash), addr_);
+        Resolver(resolver).setAddr(_childNode(ctx.parentNode, ctx.labelHash), addr_);
     }
 
     /// @inheritdoc IPostHookModule

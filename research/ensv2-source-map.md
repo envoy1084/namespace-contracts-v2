@@ -10,12 +10,15 @@ Use this as a quick reference from concept to source file.
 | `lib/contracts-v2/contracts/src/registry/interfaces/IStandardRegistry.sol` | Standard registry mutations: `register`, `renew`, `unregister`, `setSubregistry`, `setResolver`, `setParent`. |
 | `lib/contracts-v2/contracts/src/registry/interfaces/IPermissionedRegistry.sol` | Status, state, resource id, token id helpers. |
 | `lib/contracts-v2/contracts/src/registry/interfaces/IRegistryEvents.sol` | Registry events. |
+| `lib/contracts-v2/contracts/src/registry/interfaces/IOwnedRegistry.sol` | Owner lookup surface used by UniversalResolverV2. |
+| `lib/contracts-v2/contracts/src/registry/interfaces/ITemporalRegistry.sol` | Expiry/renewal-oriented registry surface. |
+| `lib/contracts-v2/contracts/src/registry/interfaces/ITokenizedRegistry.sol` | Tokenized registry ownership surface. |
+| `lib/contracts-v2/contracts/src/registry/interfaces/IRegistryURIRenderer.sol` | Optional registry URI rendering hook. |
 | `lib/contracts-v2/contracts/src/registry/PermissionedRegistry.sol` | Main registry implementation. Start here. |
 | `lib/contracts-v2/contracts/src/registry/UserRegistry.sol` | UUPS upgradeable registry for user-owned namespaces. |
 | `lib/contracts-v2/contracts/src/registry/libraries/RegistryRolesLib.sol` | Registry role constants. |
-| `lib/contracts-v2/contracts/src/registry/MetadataMixin.sol` | Delegates token URI to metadata provider. |
-| `lib/contracts-v2/contracts/src/registry/SimpleRegistryMetadata.sol` | Per-token metadata URI provider. |
-| `lib/contracts-v2/contracts/src/registry/BaseUriRegistryMetadata.sol` | Shared base URI metadata provider. |
+| `lib/contracts-v2/contracts/src/utils/LabelStore.sol` | Shared label database used by registries for label text lookup. |
+| `lib/contracts-v2/contracts/src/utils/interfaces/ILabelStore.sol` | Label store interface. |
 
 ## Token And Access Control
 
@@ -46,6 +49,7 @@ Use this as a quick reference from concept to source file.
 | `lib/contracts-v2/contracts/src/universalResolver/UniversalResolverV2.sol` | ENSv2 universal resolver. |
 | `lib/contracts-v2/contracts/src/universalResolver/libraries/LibRegistry.sol` | Registry tree traversal and canonical registry helpers. |
 | `lib/contracts-v2/contracts/src/resolver/PermissionedResolver.sol` | Upgradeable permissioned resolver supporting common records. |
+| `lib/contracts-v2/contracts/src/resolver/PublicResolverV2.sol` | Public resolver variant added in the updated snapshot. |
 | `lib/contracts-v2/contracts/src/resolver/interfaces/IPermissionedResolver.sol` | Permissioned resolver interface. |
 | `lib/contracts-v2/contracts/src/resolver/libraries/PermissionedResolverLib.sol` | Resolver role constants and resource helpers. |
 | `lib/contracts-v2/contracts/src/resolver/libraries/ResolverProfileRewriterLib.sol` | Rewrites resolver calldata during alias resolution. |
@@ -65,12 +69,16 @@ Use this as a quick reference from concept to source file.
 | `lib/contracts-v2/contracts/test/unit/registrar/ETHRegistrar.t.sol` | Registrar behavior tests. |
 | `lib/contracts-v2/contracts/test/unit/resolver/PermissionedResolver.t.sol` | Resolver behavior tests. |
 
-## HCA Support
+## Removed In Current Snapshot
 
-| File | Purpose |
-| --- | --- |
-| `lib/contracts-v2/contracts/src/hca/HCAEquivalence.sol` | Resolves Hidden Contract Account caller to owner. |
-| `lib/contracts-v2/contracts/src/hca/HCAContext.sol` | Non-upgradeable HCA-aware `_msgSender()`. |
-| `lib/contracts-v2/contracts/src/hca/HCAContextUpgradeable.sol` | Upgradeable HCA-aware `_msgSender()`. |
-| `lib/contracts-v2/contracts/src/hca/interfaces/IHCAFactoryBasic.sol` | Minimal HCA factory interface. |
+The updated ENSv2 submodule removed the old `src/hca/*` contracts and the old registry metadata provider contracts:
 
+- `src/hca/HCAEquivalence.sol`
+- `src/hca/HCAContext.sol`
+- `src/hca/HCAContextUpgradeable.sol`
+- `src/hca/interfaces/IHCAFactoryBasic.sol`
+- `src/registry/MetadataMixin.sol`
+- `src/registry/SimpleRegistryMetadata.sol`
+- `src/registry/BaseUriRegistryMetadata.sol`
+
+Tests and fixtures should now construct `PermissionedRegistry` with a shared `LabelStore` instead of an HCA factory plus metadata provider.

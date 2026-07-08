@@ -1,67 +1,25 @@
 {
   "deltas": {
-    "delta.all_rules_activation": {
+    "delta.activation_all_rules_high": {
       "category": "delta",
-      "description": "Incremental activation setup cost from all current rules, split payment, and five resolver writes.",
-      "gas": 1153617,
+      "description": "Incremental activation setup cost from every current rule, split payment, and five resolver writes.",
+      "gas": 1062735,
       "kind": "delta",
-      "source": "testBenchmark_activation_24_pncAllRulesSplitFiveResolverWrites - testBenchmark_activation_00_pncFreeNoRules"
+      "source": "testBenchmark_activation_01_pncAllRulesSplitFiveResolverWrites - testBenchmark_activation_00_pncFreeNoRules"
     },
-    "delta.all_rules_over_split_three_rules": {
+    "delta.mint_all_rules_high": {
       "category": "delta",
-      "description": "Incremental mint cost from all rules over three-rule split sale.",
-      "gas": 280395,
+      "description": "Incremental mint cost from every current rule, split payment, and five resolver writes.",
+      "gas": 374376,
       "kind": "delta",
-      "source": "testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites - testBenchmark_mint_09_pncThreeRulesSplitPaymentNoResolver"
+      "source": "testBenchmark_mint_01_pncAllRulesSplitFiveResolverWrites - testBenchmark_mint_00_pncFreeNoRules"
     },
-    "delta.batch_resolver_three_writes": {
+    "delta.renew_all_rules_high": {
       "category": "delta",
-      "description": "Incremental mint cost from three resolver writes on all-rule split sale.",
-      "gas": 83771,
+      "description": "Incremental renewal cost from every current rule, split payment, and five resolver writes.",
+      "gas": 313912,
       "kind": "delta",
-      "source": "testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites - testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites"
-    },
-    "delta.batch_resolver_two_more_writes": {
-      "category": "delta",
-      "description": "Incremental mint cost from two additional resolver writes.",
-      "gas": 19589,
-      "kind": "delta",
-      "source": "testBenchmark_mint_24_pncAllRulesSplitFiveResolverWrites - testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites"
-    },
-    "delta.fixed_erc20_sale": {
-      "category": "delta",
-      "description": "Incremental mint cost from fixed-price rule plus direct ERC20 payment.",
-      "gas": 58317,
-      "kind": "delta",
-      "source": "testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment - testBenchmark_mint_00_pncFreeNoRules"
-    },
-    "delta.guard_rule": {
-      "category": "delta",
-      "description": "Incremental mint cost from adding one guard rule to a free mint.",
-      "gas": 18743,
-      "kind": "delta",
-      "source": "testBenchmark_mint_01_pncOneGuardRuleFree - testBenchmark_mint_00_pncFreeNoRules"
-    },
-    "delta.split_over_erc20": {
-      "category": "delta",
-      "description": "Incremental mint cost from split payment instead of direct ERC20 payment.",
-      "gas": 30390,
-      "kind": "delta",
-      "source": "testBenchmark_mint_03_pncOneFixedPriceRuleSplitPayment - testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment"
-    },
-    "delta.three_rules_over_fixed_erc20": {
-      "category": "delta",
-      "description": "Incremental mint cost from sale window and label-length rules over fixed ERC20 sale.",
-      "gas": 37025,
-      "kind": "delta",
-      "source": "testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver - testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment"
-    },
-    "delta.whitelist_over_three_rules": {
-      "category": "delta",
-      "description": "Incremental mint cost from adding whitelist proof to the common three-rule ERC20 sale.",
-      "gas": 57840,
-      "kind": "delta",
-      "source": "testBenchmark_mint_14_pncFourRulesWhitelistERC20PaymentNoResolver - testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver"
+      "source": "testBenchmark_renew_01_pncAllRulesSplitFiveResolverWrites - testBenchmark_renew_00_pncFreeNoRules"
     }
   },
   "estimator": {
@@ -71,392 +29,1276 @@
     "notes": [
       "Profile entries are standalone module-call measurements.",
       "Use exact scenario keys when they match a production configuration.",
-      "Use profile keys for rough planning when combining arbitrary rules, payment modules, and hooks."
-    ]
+      "Use slice profile tests with forge -vv for per-slice logs."
+    ],
+    "renewBaseKey": "renew.free_no_rules"
   },
   "ethPriceUsd": 3000,
   "exact": {
     "activation.all_rules_split_five_resolver_writes": {
       "category": "activation",
       "description": "Activation with every current rule, split payment, and five resolver writes.",
-      "gas": 1352999,
+      "gas": 1345674,
       "kind": "exact",
-      "source": "testBenchmark_activation_24_pncAllRulesSplitFiveResolverWrites"
+      "source": "testBenchmark_activation_01_pncAllRulesSplitFiveResolverWrites"
     },
     "activation.free_no_rules": {
       "category": "activation",
       "description": "Activation with no rules, no payment, no hooks.",
-      "gas": 199382,
+      "gas": 282939,
       "kind": "exact",
       "source": "testBenchmark_activation_00_pncFreeNoRules"
-    },
-    "mint.all_rules_split": {
-      "category": "mint",
-      "description": "Controller mint with every current rule and split payment, no resolver writes.",
-      "gas": 568613,
-      "kind": "exact",
-      "source": "testBenchmark_mint_22_pncAllRulesSplitNoResolverWrites"
     },
     "mint.all_rules_split_five_resolver_writes": {
       "category": "mint",
       "description": "Controller mint with every current rule, split payment, and five resolver writes.",
-      "gas": 671973,
+      "gas": 598700,
       "kind": "exact",
-      "source": "testBenchmark_mint_24_pncAllRulesSplitFiveResolverWrites"
-    },
-    "mint.all_rules_split_three_resolver_writes": {
-      "category": "mint",
-      "description": "Controller mint with every current rule, split payment, and three resolver writes.",
-      "gas": 652384,
-      "kind": "exact",
-      "source": "testBenchmark_mint_23_pncAllRulesSplitThreeResolverWrites"
-    },
-    "mint.fixed_erc20": {
-      "category": "mint",
-      "description": "Controller mint with fixed price rule and direct ERC20 payment.",
-      "gas": 220761,
-      "kind": "exact",
-      "source": "testBenchmark_mint_02_pncOneFixedPriceRuleERC20Payment"
+      "source": "testBenchmark_mint_01_pncAllRulesSplitFiveResolverWrites"
     },
     "mint.free_no_rules": {
       "category": "mint",
       "description": "Controller mint with no rules, no payment, no hooks.",
-      "gas": 162444,
+      "gas": 224324,
       "kind": "exact",
       "source": "testBenchmark_mint_00_pncFreeNoRules"
-    },
-    "mint.reservation_split": {
-      "category": "mint",
-      "description": "Controller mint with reservation and token discount rules plus split payment.",
-      "gas": 369355,
-      "kind": "exact",
-      "source": "testBenchmark_mint_19_pncFiveRulesReservationDiscountSplitNoResolver"
-    },
-    "mint.three_rules_erc20": {
-      "category": "mint",
-      "description": "Controller mint with sale window, label length, fixed price, and direct ERC20 payment.",
-      "gas": 257786,
-      "kind": "exact",
-      "source": "testBenchmark_mint_08_pncThreeRulesERC20PaymentNoResolver"
-    },
-    "mint.three_rules_premium_split_three_resolver_writes": {
-      "category": "mint",
-      "description": "Controller mint with three rules, premium pricing, split payment, and three resolver writes.",
-      "gas": 380800,
-      "kind": "exact",
-      "source": "testBenchmark_mint_13_pncThreeRulesPremiumSplitPaymentThreeResolverWrites"
-    },
-    "mint.three_rules_split_two_resolver_writes": {
-      "category": "mint",
-      "description": "Controller mint with three rules, split payment, and two resolver writes.",
-      "gas": 364400,
-      "kind": "exact",
-      "source": "testBenchmark_mint_11_pncThreeRulesSplitPaymentTwoResolverWrites"
-    },
-    "mint.whitelist_erc20": {
-      "category": "mint",
-      "description": "Controller mint with whitelist proof and direct ERC20 payment.",
-      "gas": 315626,
-      "kind": "exact",
-      "source": "testBenchmark_mint_14_pncFourRulesWhitelistERC20PaymentNoResolver"
     },
     "registry.register_buyer_roles": {
       "category": "registry",
       "description": "Direct ENSv2 registry register with buyer roles and no resolver.",
-      "gas": 123378,
+      "gas": 150364,
       "kind": "floor",
       "source": "testBenchmark_registry_01_registerBuyerRolesNoResolver"
     },
     "registry.register_buyer_roles_resolver": {
       "category": "registry",
       "description": "Direct ENSv2 registry register with buyer roles and resolver.",
-      "gas": 127383,
+      "gas": 154349,
       "kind": "floor",
       "source": "testBenchmark_registry_02_registerBuyerRolesWithResolver"
     },
     "registry.register_no_roles": {
       "category": "registry",
       "description": "Direct ENSv2 registry register with owner, no buyer roles, no resolver.",
-      "gas": 76072,
+      "gas": 103061,
       "kind": "floor",
       "source": "testBenchmark_registry_00_registerNoRolesNoResolver"
     },
     "registry.renew_registered": {
       "category": "registry",
       "description": "Direct ENSv2 registry renewal baseline.",
-      "gas": 27975,
+      "gas": 31132,
       "kind": "floor",
       "source": "testBenchmark_registry_04_renewRegistered"
     },
     "registry.reserve_no_owner": {
       "category": "registry",
       "description": "Direct ENSv2 registry reserve flow with owner set to zero.",
-      "gas": 45141,
+      "gas": 72316,
       "kind": "floor",
       "source": "testBenchmark_registry_03_reserveLabelNoOwner"
     },
-    "renew.three_rules_erc20": {
+    "renew.all_rules_split_five_resolver_writes": {
       "category": "renew",
-      "description": "Controller renewal with three rules and direct ERC20 payment.",
-      "gas": 149083,
+      "description": "Controller renewal with every current rule, split payment, and five resolver writes.",
+      "gas": 399412,
       "kind": "exact",
-      "source": "testBenchmark_renew_00_threeRulesERC20PaymentNoHook"
+      "source": "testBenchmark_renew_01_pncAllRulesSplitFiveResolverWrites"
+    },
+    "renew.free_no_rules": {
+      "category": "renew",
+      "description": "Controller renewal with no rules, no payment, no hooks.",
+      "gas": 85500,
+      "kind": "exact",
+      "source": "testBenchmark_renew_00_pncFreeNoRules"
+    }
+  },
+  "logicalSlices": {
+    "slice.activation.configure_modules": {
+      "description": "Call modules so they store activation-scoped params.",
+      "formula": "~0.8k + sum(`configure(rule_i)`) + `configure(payment_module)` if set + sum(`configure(hook_i)`)."
+    },
+    "slice.activation.namespace_discovery": {
+      "description": "Resolve and prove the ENSv2 namespace registry for the activated name.",
+      "formula": "~42.7k fixed for `alice.eth`; varies with name depth and Universal Resolver implementation."
+    },
+    "slice.activation.precondition_checks": {
+      "description": "Validate duration bounds, payment module approval, owner admin, controller roles, and unused activation id.",
+      "formula": "~12.1k + ~4.7k * `has_payment_module`."
+    },
+    "slice.activation.store_activation_record": {
+      "description": "Write activation owner, registries, namespace identity, label, resolver, bounds, payment, and module refs.",
+      "formula": "~186k + ~19.9k * `has_resolver` + ~19.9k * `has_payment_or_module_refs`."
+    },
+    "slice.activation.store_module_lists": {
+      "description": "Persist configured rule and post-hook module references.",
+      "formula": "~0.6k if empty; if `rule_count > 1`, about ~0.6k + ~11.4k * `rule_count`; if `post_hook_count > 1`, add the packed hook-list SSTORE2 write."
+    },
+    "slice.mint.activation_and_namespace_checks": {
+      "description": "Load activation, check active status, prove namespace currentness, owner admin, duration, and runtime data lengths.",
+      "formula": "~34.1k fixed per mint."
+    },
+    "slice.mint.label_context_and_tracking": {
+      "description": "Hash label, construct MintContext, and store label -> activation id for renewal checks.",
+      "formula": "~29.8k fixed per newly minted label."
+    },
+    "slice.mint.payment_collection": {
+      "description": "Collect payment if the final rule price is nonzero.",
+      "formula": "~0.3k if free; direct ERC20 ~85k; split ERC20 ~= ~45.8k + ~30k * `payment_recipients`."
+    },
+    "slice.mint.post_hooks": {
+      "description": "Run configured post-mint hooks.",
+      "formula": "~0.4k if `post_hook_count = 0`; otherwise sum(`afterMint(hook_i)`). Batch resolver hook ~= ~77.7k + ~9.7k * `resolver_writes`."
+    },
+    "slice.mint.registry_register": {
+      "description": "Call official ENSv2 PermissionedRegistry.register.",
+      "formula": "~105k-156k per mint depending buyer roles and resolver write path."
+    },
+    "slice.mint.rule_engine": {
+      "description": "Evaluate configured rule modules and apply price effects in phase order.",
+      "formula": "~0.5k if `rule_count = 0`; otherwise SSTORE2 read when `rule_count > 1` + sum(`evaluateMint(rule_i, runtimeData_i)`) + output checks. Merkle rules add roughly ~2.5k * `proof_depth` inside that rule."
+    },
+    "slice.renew.activation_and_namespace_checks": {
+      "description": "Load activation, check active status, prove namespace currentness, owner admin, duration, and runtime data lengths.",
+      "formula": "~34.1k fixed per renewal."
+    },
+    "slice.renew.label_state_and_context": {
+      "description": "Read label state, verify activation ownership, compute new expiry, and construct RenewContext.",
+      "formula": "~14.2k fixed per renewal."
+    },
+    "slice.renew.payment_collection": {
+      "description": "Collect renewal payment if the final rule price is nonzero.",
+      "formula": "~0.3k if free; direct ERC20 ~81k; split ERC20 ~= ~43.5k + ~30k * `payment_recipients`."
+    },
+    "slice.renew.post_hooks": {
+      "description": "Run configured post-renew hooks.",
+      "formula": "~0.4k if `post_hook_count = 0`; otherwise sum(`afterRenew(hook_i)`). Current resolver hooks are no-op on renew, so most cost is hook dispatch."
+    },
+    "slice.renew.registry_renew": {
+      "description": "Call official ENSv2 PermissionedRegistry.renew.",
+      "formula": "~15.2k fixed when the registry state is warm in the controller flow."
+    },
+    "slice.renew.rule_engine": {
+      "description": "Evaluate configured renewal rule modules and apply price effects in phase order.",
+      "formula": "~0.5k if `rule_count = 0`; otherwise SSTORE2 read when `rule_count > 1` + sum(`evaluateRenew(rule_i, runtimeData_i)`) + output checks. Merkle renewal rules add roughly ~2.5k * `proof_depth` when enabled."
     }
   },
   "profiles": {
     "hook.batch_resolver_1": {
-      "activationGas": 58124,
+      "activationGas": 55997,
       "category": "hook",
       "description": "BatchSetAddrToBuyerHook with one resolver write.",
-      "gas": 87492,
+      "gas": 60295,
       "kind": "profile",
       "source": "testBenchmark_profile_hook_03_batchResolverHookOneWrite_afterMint"
     },
     "hook.batch_resolver_3": {
-      "activationGas": 58124,
+      "activationGas": 55997,
       "category": "hook",
       "description": "BatchSetAddrToBuyerHook with three resolver writes.",
-      "gas": 107129,
+      "gas": 75247,
       "kind": "profile",
       "source": "testBenchmark_profile_hook_04_batchResolverHookThreeWrites_afterMint"
     },
     "hook.batch_resolver_5": {
-      "activationGas": 58124,
+      "activationGas": 55997,
       "category": "hook",
       "description": "BatchSetAddrToBuyerHook with five resolver writes.",
-      "gas": 126755,
+      "gas": 90230,
       "kind": "profile",
       "source": "testBenchmark_profile_hook_05_batchResolverHookFiveWrites_afterMint"
     },
     "hook.recording": {
-      "activationGas": 56014,
+      "activationGas": 55996,
       "category": "hook",
       "description": "Recording post-hook profile.",
-      "gas": 130739,
+      "gas": 105976,
       "kind": "profile",
       "source": "testBenchmark_profile_hook_00_recordingPostHook_afterMint"
     },
     "hook.set_addr_empty": {
-      "activationGas": 58124,
+      "activationGas": 55997,
       "category": "hook",
       "description": "SetAddrToBuyerHook using buyer address.",
-      "gas": 84940,
+      "gas": 60126,
       "kind": "profile",
       "source": "testBenchmark_profile_hook_01_setAddrToBuyerEmpty_afterMint"
     },
     "hook.set_addr_override": {
-      "activationGas": 58124,
+      "activationGas": 55997,
       "category": "hook",
       "description": "SetAddrToBuyerHook using address override.",
-      "gas": 89711,
+      "gas": 60290,
       "kind": "profile",
       "source": "testBenchmark_profile_hook_02_setAddrToBuyerOverride_afterMint"
     },
+    "hook_renew.batch_resolver": {
+      "category": "hook_renew",
+      "description": "BatchSetAddrToBuyerHook afterRenew no-op profile.",
+      "gas": 14706,
+      "kind": "profile",
+      "source": "testBenchmark_profile_hook_08_batchResolverHook_afterRenew"
+    },
+    "hook_renew.recording": {
+      "activationGas": 55996,
+      "category": "hook_renew",
+      "description": "Recording post-hook afterRenew profile.",
+      "gas": 105830,
+      "kind": "profile",
+      "source": "testBenchmark_profile_hook_06_recordingPostHook_afterRenew"
+    },
+    "hook_renew.set_addr": {
+      "category": "hook_renew",
+      "description": "SetAddrToBuyerHook afterRenew no-op profile.",
+      "gas": 14662,
+      "kind": "profile",
+      "source": "testBenchmark_profile_hook_07_setAddrToBuyer_afterRenew"
+    },
     "payment.erc20": {
-      "activationGas": 65212,
+      "activationGas": 80967,
       "category": "payment",
       "description": "Direct ERC20 transferFrom payment module.",
-      "gas": 83068,
+      "gas": 56567,
       "kind": "profile",
       "source": "testBenchmark_profile_payment_00_collectMintERC20"
     },
     "payment.split_2": {
-      "activationGas": 113302,
+      "activationGas": 127960,
       "category": "payment",
       "description": "ERC20 split payment to two recipients.",
-      "gas": 101582,
+      "gas": 88629,
       "kind": "profile",
       "source": "testBenchmark_profile_payment_01_collectMintSplitERC20TwoRecipients"
     },
     "payment.split_3": {
       "category": "payment",
       "description": "ERC20 split payment to three recipients.",
-      "gas": 129514,
+      "gas": 118538,
       "kind": "profile",
       "source": "testBenchmark_profile_payment_02_collectMintSplitERC20ThreeRecipients"
     },
     "payment.split_5": {
       "category": "payment",
       "description": "ERC20 split payment to five recipients.",
-      "gas": 185516,
+      "gas": 178449,
       "kind": "profile",
       "source": "testBenchmark_profile_payment_03_collectMintSplitERC20FiveRecipients"
     },
+    "payment_renew.erc20": {
+      "activationGas": 80967,
+      "category": "payment_renew",
+      "description": "Direct ERC20 transferFrom renewal payment.",
+      "gas": 56565,
+      "kind": "profile",
+      "source": "testBenchmark_profile_payment_04_collectRenewERC20"
+    },
+    "payment_renew.split_2": {
+      "activationGas": 127960,
+      "category": "payment_renew",
+      "description": "ERC20 renewal split payment to two recipients.",
+      "gas": 88494,
+      "kind": "profile",
+      "source": "testBenchmark_profile_payment_05_collectRenewSplitERC20TwoRecipients"
+    },
+    "payment_renew.split_3": {
+      "category": "payment_renew",
+      "description": "ERC20 renewal split payment to three recipients.",
+      "gas": 118428,
+      "kind": "profile",
+      "source": "testBenchmark_profile_payment_06_collectRenewSplitERC20ThreeRecipients"
+    },
+    "payment_renew.split_5": {
+      "category": "payment_renew",
+      "description": "ERC20 renewal split payment to five recipients.",
+      "gas": 178382,
+      "kind": "profile",
+      "source": "testBenchmark_profile_payment_07_collectRenewSplitERC20FiveRecipients"
+    },
     "rule.fixed_price_20_exact": {
-      "activationGas": 338193,
+      "activationGas": 319255,
       "category": "rule",
       "description": "FixedPriceRule with twenty overrides and exact-length hit.",
-      "gas": 35082,
+      "gas": 27055,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_07_fixedPriceTwentyOverridesExact_evaluateMint"
     },
     "rule.fixed_price_5_exact": {
-      "activationGas": 184476,
+      "activationGas": 177439,
       "category": "rule",
       "description": "FixedPriceRule with five overrides and exact-length hit.",
-      "gas": 34006,
+      "gas": 26024,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_06_fixedPriceFiveOverridesExact_evaluateMint"
     },
     "rule.fixed_price_5_fallback": {
-      "activationGas": 184476,
+      "activationGas": 177439,
       "category": "rule",
       "description": "FixedPriceRule with five overrides and fallback label.",
-      "gas": 34081,
+      "gas": 26010,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_05_fixedPriceFiveOverridesFallback_evaluateMint"
     },
     "rule.fixed_price_no_overrides": {
-      "activationGas": 87686,
+      "activationGas": 84612,
       "category": "rule",
       "description": "FixedPriceRule with no length overrides.",
-      "gas": 40598,
+      "gas": 20715,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_04_fixedPriceNoLengthOverrides_evaluateMint"
     },
     "rule.label_class_emoji": {
-      "activationGas": 107324,
+      "activationGas": 104462,
       "category": "rule",
       "description": "LabelClassRule for emoji labels.",
-      "gas": 30651,
+      "gas": 23135,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_20_labelClassEmoji_evaluateMint"
     },
     "rule.label_class_letter": {
-      "activationGas": 107324,
+      "activationGas": 104462,
       "category": "rule",
       "description": "LabelClassRule for ASCII letter labels.",
-      "gas": 31118,
+      "gas": 23069,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_19_labelClassLetter_evaluateMint"
     },
     "rule.label_class_number": {
-      "activationGas": 107324,
+      "activationGas": 104462,
       "category": "rule",
       "description": "LabelClassRule for numeric labels.",
-      "gas": 30146,
+      "gas": 22119,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_18_labelClassNumber_evaluateMint"
     },
     "rule.label_length": {
-      "activationGas": 59609,
+      "activationGas": 59176,
       "category": "rule",
       "description": "LabelLengthRule evaluateMint.",
-      "gas": 36201,
+      "gas": 16362,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_03_labelLength_evaluateMint"
     },
     "rule.length_premium_20": {
-      "activationGas": 333952,
+      "activationGas": 315913,
       "category": "rule",
       "description": "LengthPremiumRule with twenty buckets.",
-      "gas": 31869,
+      "gas": 23820,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_10_lengthPremiumTwentyBuckets_evaluateMint"
     },
     "rule.length_premium_5": {
-      "activationGas": 213530,
+      "activationGas": 206504,
       "category": "rule",
       "description": "LengthPremiumRule with five buckets.",
-      "gas": 31867,
+      "gas": 23840,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_08_lengthPremiumFiveBuckets_evaluateMint"
     },
     "rule.length_premium_5_fallback": {
-      "activationGas": 213530,
+      "activationGas": 206504,
       "category": "rule",
       "description": "LengthPremiumRule with five buckets and fallback bucket.",
-      "gas": 31905,
+      "gas": 23967,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_09_lengthPremiumFiveBucketsFallback_evaluateMint"
     },
     "rule.pause": {
-      "activationGas": 36697,
+      "activationGas": 36406,
       "category": "rule",
       "description": "PauseRule evaluateMint.",
-      "gas": 35729,
+      "gas": 15935,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_00_pause_evaluateMint"
     },
     "rule.reservation_10": {
-      "activationGas": 76681,
+      "activationGas": 51758,
       "category": "rule",
       "description": "ReservationRule with Merkle set size 10.",
-      "gas": 65910,
+      "gas": 20600,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_12_reservation10_evaluateMint"
     },
     "rule.reservation_100": {
+      "activationGas": 51758,
       "category": "rule",
       "description": "ReservationRule with Merkle set size 100.",
-      "gas": 73375,
+      "gas": 21472,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_13_reservation100_evaluateMint"
     },
     "rule.reservation_1000": {
-      "activationGas": 84349,
+      "activationGas": 51829,
       "category": "rule",
       "description": "ReservationRule with Merkle set size 1000.",
-      "gas": 80795,
+      "gas": 22345,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_14_reservation1000_evaluateMint"
     },
     "rule.sale_window_bounded": {
-      "activationGas": 39668,
+      "activationGas": 39236,
       "category": "rule",
       "description": "SaleWindowRule evaluateMint with active start/end bounds.",
-      "gas": 24219,
+      "gas": 16170,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_02_saleWindowBounded_evaluateMint"
     },
     "rule.sale_window_open": {
-      "activationGas": 39668,
+      "activationGas": 39236,
       "category": "rule",
       "description": "SaleWindowRule evaluateMint with open zero-bounds config.",
-      "gas": 36007,
+      "gas": 16146,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_01_saleWindowOpen_evaluateMint"
     },
     "rule.token_balance_discount": {
-      "activationGas": 106012,
+      "activationGas": 103708,
       "category": "rule",
       "description": "TokenBalanceRule with minimum balance and discount.",
-      "gas": 45731,
+      "gas": 28477,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_11_tokenBalanceDiscount_evaluateMint"
     },
     "rule.usd_oracle": {
-      "activationGas": 131618,
+      "activationGas": 131901,
       "category": "rule",
       "description": "USDOracleRule with Chainlink-compatible oracle.",
-      "gas": 46998,
+      "gas": 39154,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_21_usdOracle_evaluateMint"
     },
     "rule.whitelist_10": {
-      "activationGas": 77276,
+      "activationGas": 54079,
       "category": "rule",
       "description": "WhitelistRule with Merkle set size 10.",
-      "gas": 67830,
+      "gas": 20337,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_15_whitelist10_evaluateMint"
     },
     "rule.whitelist_100": {
+      "activationGas": 54079,
       "category": "rule",
       "description": "WhitelistRule with Merkle set size 100.",
-      "gas": 75270,
+      "gas": 21185,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_16_whitelist100_evaluateMint"
     },
     "rule.whitelist_1000": {
-      "activationGas": 84858,
+      "activationGas": 54063,
       "category": "rule",
       "description": "WhitelistRule with Merkle set size 1000.",
-      "gas": 82713,
+      "gas": 22079,
       "kind": "profile",
       "source": "testBenchmark_profile_rule_17_whitelist1000_evaluateMint"
+    },
+    "rule_renew.fixed_price_20_exact": {
+      "activationGas": 319255,
+      "category": "rule_renew",
+      "description": "FixedPriceRule renewal with twenty overrides and exact-length hit.",
+      "gas": 27017,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_29_fixedPriceTwentyOverridesExact_evaluateRenew"
+    },
+    "rule_renew.fixed_price_5_exact": {
+      "activationGas": 177439,
+      "category": "rule_renew",
+      "description": "FixedPriceRule renewal with five overrides and exact-length hit.",
+      "gas": 25939,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_28_fixedPriceFiveOverridesExact_evaluateRenew"
+    },
+    "rule_renew.fixed_price_5_fallback": {
+      "activationGas": 177439,
+      "category": "rule_renew",
+      "description": "FixedPriceRule renewal with five overrides and fallback label.",
+      "gas": 26013,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_27_fixedPriceFiveOverridesFallback_evaluateRenew"
+    },
+    "rule_renew.fixed_price_no_overrides": {
+      "activationGas": 84612,
+      "category": "rule_renew",
+      "description": "FixedPriceRule renewal with no length overrides.",
+      "gas": 20674,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_26_fixedPriceNoLengthOverrides_evaluateRenew"
+    },
+    "rule_renew.label_class_emoji": {
+      "activationGas": 104462,
+      "category": "rule_renew",
+      "description": "LabelClassRule renewal for emoji labels.",
+      "gas": 23091,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_42_labelClassEmoji_evaluateRenew"
+    },
+    "rule_renew.label_class_letter": {
+      "activationGas": 104462,
+      "category": "rule_renew",
+      "description": "LabelClassRule renewal for ASCII letter labels.",
+      "gas": 23053,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_41_labelClassLetter_evaluateRenew"
+    },
+    "rule_renew.label_class_number": {
+      "activationGas": 104462,
+      "category": "rule_renew",
+      "description": "LabelClassRule renewal for numeric labels.",
+      "gas": 22079,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_40_labelClassNumber_evaluateRenew"
+    },
+    "rule_renew.label_length": {
+      "activationGas": 59176,
+      "category": "rule_renew",
+      "description": "LabelLengthRule evaluateRenew.",
+      "gas": 16309,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_25_labelLength_evaluateRenew"
+    },
+    "rule_renew.length_premium_20": {
+      "activationGas": 315913,
+      "category": "rule_renew",
+      "description": "LengthPremiumRule renewal with twenty buckets.",
+      "gas": 23793,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_32_lengthPremiumTwentyBuckets_evaluateRenew"
+    },
+    "rule_renew.length_premium_5": {
+      "activationGas": 206504,
+      "category": "rule_renew",
+      "description": "LengthPremiumRule renewal with five buckets.",
+      "gas": 23773,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_30_lengthPremiumFiveBuckets_evaluateRenew"
+    },
+    "rule_renew.length_premium_5_fallback": {
+      "activationGas": 206504,
+      "category": "rule_renew",
+      "description": "LengthPremiumRule renewal with five buckets and fallback bucket.",
+      "gas": 23895,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_31_lengthPremiumFiveBucketsFallback_evaluateRenew"
+    },
+    "rule_renew.pause": {
+      "activationGas": 36406,
+      "category": "rule_renew",
+      "description": "PauseRule evaluateRenew.",
+      "gas": 15930,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_22_pause_evaluateRenew"
+    },
+    "rule_renew.reservation_10": {
+      "activationGas": 51758,
+      "category": "rule_renew",
+      "description": "ReservationRule renewal with Merkle set size 10.",
+      "gas": 20583,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_34_reservation10_evaluateRenew"
+    },
+    "rule_renew.reservation_100": {
+      "activationGas": 51758,
+      "category": "rule_renew",
+      "description": "ReservationRule renewal with Merkle set size 100.",
+      "gas": 21542,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_35_reservation100_evaluateRenew"
+    },
+    "rule_renew.reservation_1000": {
+      "activationGas": 51829,
+      "category": "rule_renew",
+      "description": "ReservationRule renewal with Merkle set size 1000.",
+      "gas": 22367,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_36_reservation1000_evaluateRenew"
+    },
+    "rule_renew.sale_window_bounded": {
+      "activationGas": 39236,
+      "category": "rule_renew",
+      "description": "SaleWindowRule evaluateRenew with active start/end bounds.",
+      "gas": 16121,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_24_saleWindowBounded_evaluateRenew"
+    },
+    "rule_renew.sale_window_open": {
+      "activationGas": 39236,
+      "category": "rule_renew",
+      "description": "SaleWindowRule evaluateRenew with open zero-bounds config.",
+      "gas": 16097,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_23_saleWindowOpen_evaluateRenew"
+    },
+    "rule_renew.token_balance_discount": {
+      "activationGas": 103708,
+      "category": "rule_renew",
+      "description": "TokenBalanceRule renewal with minimum balance and discount.",
+      "gas": 28427,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_33_tokenBalanceDiscount_evaluateRenew"
+    },
+    "rule_renew.usd_oracle": {
+      "activationGas": 131901,
+      "category": "rule_renew",
+      "description": "USDOracleRule renewal with Chainlink-compatible oracle.",
+      "gas": 39105,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_43_usdOracle_evaluateRenew"
+    },
+    "rule_renew.whitelist_10": {
+      "activationGas": 54079,
+      "category": "rule_renew",
+      "description": "WhitelistRule renewal with renew checks disabled.",
+      "gas": 16890,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_37_whitelist10_evaluateRenew"
+    },
+    "rule_renew.whitelist_100": {
+      "activationGas": 54079,
+      "category": "rule_renew",
+      "description": "WhitelistRule renewal with renew checks disabled.",
+      "gas": 16891,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_38_whitelist100_evaluateRenew"
+    },
+    "rule_renew.whitelist_1000": {
+      "activationGas": 54063,
+      "category": "rule_renew",
+      "description": "WhitelistRule renewal with renew checks disabled.",
+      "gas": 16912,
+      "kind": "profile",
+      "source": "testBenchmark_profile_rule_39_whitelist1000_evaluateRenew"
     }
   },
-  "schemaVersion": 1,
-  "source": "test/benchmarks/.gas-snapshot"
+  "schemaVersion": 2,
+  "slices": {
+    "slice.activation.free.activation_id_check": {
+      "category": "slice",
+      "description": "No-rules path: Check that the activation id is unused.",
+      "gas": 2227,
+      "kind": "slice",
+      "source": "activation.free.activationIdCheck"
+    },
+    "slice.activation.free.configure_modules": {
+      "category": "slice",
+      "description": "No-rules path: Call configured modules so they store activation-scoped parameters.",
+      "gas": 793,
+      "kind": "slice",
+      "source": "activation.free.configureModules"
+    },
+    "slice.activation.free.controller_registry_roles_check": {
+      "category": "slice",
+      "description": "No-rules path: Confirm the controller can register and renew subnames.",
+      "gas": 3265,
+      "kind": "slice",
+      "source": "activation.free.controllerRegistryRolesCheck"
+    },
+    "slice.activation.free.duration_and_payment_checks": {
+      "category": "slice",
+      "description": "No-rules path: Validate duration bounds and payment module approval.",
+      "gas": 797,
+      "kind": "slice",
+      "source": "activation.free.durationAndPaymentChecks"
+    },
+    "slice.activation.free.emit_activation_events": {
+      "category": "slice",
+      "description": "No-rules path: Emit activation-created and activation-status events.",
+      "gas": 3667,
+      "kind": "slice",
+      "source": "activation.free.emitActivationEvents"
+    },
+    "slice.activation.free.find_exact_registry": {
+      "category": "slice",
+      "description": "No-rules path: Universal Resolver lookup for the namespace registry.",
+      "gas": 25072,
+      "kind": "slice",
+      "source": "activation.free.findExactRegistry"
+    },
+    "slice.activation.free.find_parent_registry": {
+      "category": "slice",
+      "description": "No-rules path: Universal Resolver lookup for the parent registry.",
+      "gas": 5010,
+      "kind": "slice",
+      "source": "activation.free.findParentRegistry"
+    },
+    "slice.activation.free.label_hash_and_parent_state": {
+      "category": "slice",
+      "description": "No-rules path: Hash the namespace label and read its parent-registry state.",
+      "gas": 5689,
+      "kind": "slice",
+      "source": "activation.free.labelHashAndParentState"
+    },
+    "slice.activation.free.load_resolver_and_validate_name": {
+      "category": "slice",
+      "description": "No-rules path: Load the configured Universal Resolver and reject empty ENS names.",
+      "gas": 3212,
+      "kind": "slice",
+      "source": "activation.free.loadResolverAndValidateName"
+    },
+    "slice.activation.free.measured_body_total": {
+      "category": "slice",
+      "description": "No-rules path: Measured body total for the profiled controller function.",
+      "gas": 247615,
+      "kind": "slice",
+      "source": "activation.free.measuredBodyTotal"
+    },
+    "slice.activation.free.namehash_and_activation_key": {
+      "category": "slice",
+      "description": "No-rules path: Compute the ENS node and activation id.",
+      "gas": 1831,
+      "kind": "slice",
+      "source": "activation.free.namehashAndActivationKey"
+    },
+    "slice.activation.free.owner_admin_check": {
+      "category": "slice",
+      "description": "No-rules path: Confirm the name owner still has admin authority on the registry.",
+      "gas": 5814,
+      "kind": "slice",
+      "source": "activation.free.ownerAdminCheck"
+    },
+    "slice.activation.free.parent_subregistry_check": {
+      "category": "slice",
+      "description": "No-rules path: Verify the parent registry points to the resolved namespace registry.",
+      "gas": 1877,
+      "kind": "slice",
+      "source": "activation.free.parentSubregistryCheck"
+    },
+    "slice.activation.free.store_activation": {
+      "category": "slice",
+      "description": "No-rules path: Write the activation record to controller storage.",
+      "gas": 186180,
+      "kind": "slice",
+      "source": "activation.free.storeActivation"
+    },
+    "slice.activation.free.store_mint_config": {
+      "category": "slice",
+      "description": "No-rules path: Activation storage sub-slice for resolver, roles, duration bounds, and active flag.",
+      "gas": 47257,
+      "kind": "slice",
+      "source": "activation.free.store.mintConfig"
+    },
+    "slice.activation.free.store_module_lists": {
+      "category": "slice",
+      "description": "No-rules path: Store configured rule and hook module lists.",
+      "gas": 647,
+      "kind": "slice",
+      "source": "activation.free.storeModuleLists"
+    },
+    "slice.activation.free.store_module_refs": {
+      "category": "slice",
+      "description": "No-rules path: Activation storage sub-slice for module list references and counters.",
+      "gas": 7167,
+      "kind": "slice",
+      "source": "activation.free.store.moduleRefs"
+    },
+    "slice.activation.free.store_namespace_identity": {
+      "category": "slice",
+      "description": "No-rules path: Activation storage sub-slice for parent node and namespace resource id.",
+      "gas": 44249,
+      "kind": "slice",
+      "source": "activation.free.store.namespaceIdentity"
+    },
+    "slice.activation.free.store_namespace_label": {
+      "category": "slice",
+      "description": "No-rules path: Activation storage sub-slice for the namespace label string.",
+      "gas": 22512,
+      "kind": "slice",
+      "source": "activation.free.store.namespaceLabel"
+    },
+    "slice.activation.free.store_owner_and_registries": {
+      "category": "slice",
+      "description": "No-rules path: Activation storage sub-slice for owner, registry, and parent registry.",
+      "gas": 64417,
+      "kind": "slice",
+      "source": "activation.free.store.ownerAndRegistries"
+    },
+    "slice.activation.free.universal_resolver_discovery": {
+      "category": "slice",
+      "description": "No-rules path: Combined Universal Resolver registry discovery cost.",
+      "gas": 30082,
+      "kind": "slice",
+      "source": "activation.free.universalResolverDiscovery"
+    },
+    "slice.activation.high.activation_id_check": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Check that the activation id is unused.",
+      "gas": 2227,
+      "kind": "slice",
+      "source": "activation.high.activationIdCheck"
+    },
+    "slice.activation.high.configure_modules": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Call configured modules so they store activation-scoped parameters.",
+      "gas": 859107,
+      "kind": "slice",
+      "source": "activation.high.configureModules"
+    },
+    "slice.activation.high.controller_registry_roles_check": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Confirm the controller can register and renew subnames.",
+      "gas": 3265,
+      "kind": "slice",
+      "source": "activation.high.controllerRegistryRolesCheck"
+    },
+    "slice.activation.high.duration_and_payment_checks": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Validate duration bounds and payment module approval.",
+      "gas": 5501,
+      "kind": "slice",
+      "source": "activation.high.durationAndPaymentChecks"
+    },
+    "slice.activation.high.emit_activation_events": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Emit activation-created and activation-status events.",
+      "gas": 3670,
+      "kind": "slice",
+      "source": "activation.high.emitActivationEvents"
+    },
+    "slice.activation.high.find_exact_registry": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Universal Resolver lookup for the namespace registry.",
+      "gas": 25072,
+      "kind": "slice",
+      "source": "activation.high.findExactRegistry"
+    },
+    "slice.activation.high.find_parent_registry": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Universal Resolver lookup for the parent registry.",
+      "gas": 5010,
+      "kind": "slice",
+      "source": "activation.high.findParentRegistry"
+    },
+    "slice.activation.high.label_hash_and_parent_state": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Hash the namespace label and read its parent-registry state.",
+      "gas": 5689,
+      "kind": "slice",
+      "source": "activation.high.labelHashAndParentState"
+    },
+    "slice.activation.high.load_resolver_and_validate_name": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Load the configured Universal Resolver and reject empty ENS names.",
+      "gas": 3212,
+      "kind": "slice",
+      "source": "activation.high.loadResolverAndValidateName"
+    },
+    "slice.activation.high.measured_body_total": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Measured body total for the profiled controller function.",
+      "gas": 1264882,
+      "kind": "slice",
+      "source": "activation.high.measuredBodyTotal"
+    },
+    "slice.activation.high.namehash_and_activation_key": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Compute the ENS node and activation id.",
+      "gas": 1831,
+      "kind": "slice",
+      "source": "activation.high.namehashAndActivationKey"
+    },
+    "slice.activation.high.owner_admin_check": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Confirm the name owner still has admin authority on the registry.",
+      "gas": 5814,
+      "kind": "slice",
+      "source": "activation.high.ownerAdminCheck"
+    },
+    "slice.activation.high.parent_subregistry_check": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Verify the parent registry points to the resolved namespace registry.",
+      "gas": 1877,
+      "kind": "slice",
+      "source": "activation.high.parentSubregistryCheck"
+    },
+    "slice.activation.high.store_activation": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Write the activation record to controller storage.",
+      "gas": 225980,
+      "kind": "slice",
+      "source": "activation.high.storeActivation"
+    },
+    "slice.activation.high.store_mint_config": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Activation storage sub-slice for resolver, roles, duration bounds, and active flag.",
+      "gas": 67157,
+      "kind": "slice",
+      "source": "activation.high.store.mintConfig"
+    },
+    "slice.activation.high.store_module_lists": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Store configured rule and hook module lists.",
+      "gas": 115093,
+      "kind": "slice",
+      "source": "activation.high.storeModuleLists"
+    },
+    "slice.activation.high.store_module_refs": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Activation storage sub-slice for module list references and counters.",
+      "gas": 27067,
+      "kind": "slice",
+      "source": "activation.high.store.moduleRefs"
+    },
+    "slice.activation.high.store_namespace_identity": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Activation storage sub-slice for parent node and namespace resource id.",
+      "gas": 44249,
+      "kind": "slice",
+      "source": "activation.high.store.namespaceIdentity"
+    },
+    "slice.activation.high.store_namespace_label": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Activation storage sub-slice for the namespace label string.",
+      "gas": 22512,
+      "kind": "slice",
+      "source": "activation.high.store.namespaceLabel"
+    },
+    "slice.activation.high.store_owner_and_registries": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Activation storage sub-slice for owner, registry, and parent registry.",
+      "gas": 64417,
+      "kind": "slice",
+      "source": "activation.high.store.ownerAndRegistries"
+    },
+    "slice.activation.high.universal_resolver_discovery": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Combined Universal Resolver registry discovery cost.",
+      "gas": 30082,
+      "kind": "slice",
+      "source": "activation.high.universalResolverDiscovery"
+    },
+    "slice.mint.free.activation_load_and_active": {
+      "category": "slice",
+      "description": "No-rules path: Load activation state and reject inactive activations.",
+      "gas": 4383,
+      "kind": "slice",
+      "source": "mint.free.activationLoadAndActive"
+    },
+    "slice.mint.free.collect_payment": {
+      "category": "slice",
+      "description": "No-rules path: Run payment collection if rules produced a non-zero price.",
+      "gas": 287,
+      "kind": "slice",
+      "source": "mint.free.collectPayment"
+    },
+    "slice.mint.free.duration_and_runtime_checks": {
+      "category": "slice",
+      "description": "No-rules path: Validate requested duration and runtime data array lengths.",
+      "gas": 1067,
+      "kind": "slice",
+      "source": "mint.free.durationAndRuntimeChecks"
+    },
+    "slice.mint.free.emit_event": {
+      "category": "slice",
+      "description": "No-rules path: Emit the mint or renewal event.",
+      "gas": 3817,
+      "kind": "slice",
+      "source": "mint.free.emitEvent"
+    },
+    "slice.mint.free.evaluate_rules": {
+      "category": "slice",
+      "description": "No-rules path: Run the configured rule modules.",
+      "gas": 515,
+      "kind": "slice",
+      "source": "mint.free.evaluateRules"
+    },
+    "slice.mint.free.label_activation_store": {
+      "category": "slice",
+      "description": "No-rules path: Map the minted label to the activation id for future renewals.",
+      "gas": 22368,
+      "kind": "slice",
+      "source": "mint.free.labelActivationStore"
+    },
+    "slice.mint.free.label_hash_and_context": {
+      "category": "slice",
+      "description": "No-rules path: Hash the subname label and construct the mint context.",
+      "gas": 7415,
+      "kind": "slice",
+      "source": "mint.free.labelHashAndContext"
+    },
+    "slice.mint.free.measured_body_total": {
+      "category": "slice",
+      "description": "No-rules path: Measured body total for the profiled controller function.",
+      "gas": 208249,
+      "kind": "slice",
+      "source": "mint.free.measuredBodyTotal"
+    },
+    "slice.mint.free.namespace_current": {
+      "category": "slice",
+      "description": "No-rules path: Read parent registry state to ensure the namespace is still registered.",
+      "gas": 22619,
+      "kind": "slice",
+      "source": "mint.free.namespaceCurrent"
+    },
+    "slice.mint.free.owner_admin_check": {
+      "category": "slice",
+      "description": "No-rules path: Confirm the name owner still has admin authority on the registry.",
+      "gas": 6027,
+      "kind": "slice",
+      "source": "mint.free.ownerAdminCheck"
+    },
+    "slice.mint.free.post_hooks": {
+      "category": "slice",
+      "description": "No-rules path: Run configured post hooks.",
+      "gas": 401,
+      "kind": "slice",
+      "source": "mint.free.postHooks"
+    },
+    "slice.mint.free.registry_write": {
+      "category": "slice",
+      "description": "No-rules path: Call the official ENSv2 PermissionedRegistry.",
+      "gas": 138340,
+      "kind": "slice",
+      "source": "mint.free.registryWrite"
+    },
+    "slice.mint.high.activation_load_and_active": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Load activation state and reject inactive activations.",
+      "gas": 4383,
+      "kind": "slice",
+      "source": "mint.high.activationLoadAndActive"
+    },
+    "slice.mint.high.collect_payment": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Run payment collection if rules produced a non-zero price.",
+      "gas": 51362,
+      "kind": "slice",
+      "source": "mint.high.collectPayment"
+    },
+    "slice.mint.high.duration_and_runtime_checks": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Validate requested duration and runtime data array lengths.",
+      "gas": 1067,
+      "kind": "slice",
+      "source": "mint.high.durationAndRuntimeChecks"
+    },
+    "slice.mint.high.emit_event": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Emit the mint or renewal event.",
+      "gas": 3817,
+      "kind": "slice",
+      "source": "mint.high.emitEvent"
+    },
+    "slice.mint.high.evaluate_rules": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Run the configured rule modules.",
+      "gas": 249536,
+      "kind": "slice",
+      "source": "mint.high.evaluateRules"
+    },
+    "slice.mint.high.label_activation_store": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Map the minted label to the activation id for future renewals.",
+      "gas": 22368,
+      "kind": "slice",
+      "source": "mint.high.labelActivationStore"
+    },
+    "slice.mint.high.label_hash_and_context": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Hash the subname label and construct the mint context.",
+      "gas": 7415,
+      "kind": "slice",
+      "source": "mint.high.labelHashAndContext"
+    },
+    "slice.mint.high.measured_body_total": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Measured body total for the profiled controller function.",
+      "gas": 579133,
+      "kind": "slice",
+      "source": "mint.high.measuredBodyTotal"
+    },
+    "slice.mint.high.namespace_current": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Read parent registry state to ensure the namespace is still registered.",
+      "gas": 22619,
+      "kind": "slice",
+      "source": "mint.high.namespaceCurrent"
+    },
+    "slice.mint.high.owner_admin_check": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Confirm the name owner still has admin authority on the registry.",
+      "gas": 6027,
+      "kind": "slice",
+      "source": "mint.high.ownerAdminCheck"
+    },
+    "slice.mint.high.post_hooks": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Run configured post hooks.",
+      "gas": 91936,
+      "kind": "slice",
+      "source": "mint.high.postHooks"
+    },
+    "slice.mint.high.registry_write": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Call the official ENSv2 PermissionedRegistry.",
+      "gas": 117593,
+      "kind": "slice",
+      "source": "mint.high.registryWrite"
+    },
+    "slice.renew.free.activation_load_and_active": {
+      "category": "slice",
+      "description": "No-rules path: Load activation state and reject inactive activations.",
+      "gas": 4383,
+      "kind": "slice",
+      "source": "renew.free.activationLoadAndActive"
+    },
+    "slice.renew.free.collect_payment": {
+      "category": "slice",
+      "description": "No-rules path: Run payment collection if rules produced a non-zero price.",
+      "gas": 287,
+      "kind": "slice",
+      "source": "renew.free.collectPayment"
+    },
+    "slice.renew.free.duration_and_runtime_checks": {
+      "category": "slice",
+      "description": "No-rules path: Validate requested duration and runtime data array lengths.",
+      "gas": 1067,
+      "kind": "slice",
+      "source": "renew.free.durationAndRuntimeChecks"
+    },
+    "slice.renew.free.emit_event": {
+      "category": "slice",
+      "description": "No-rules path: Emit the mint or renewal event.",
+      "gas": 3750,
+      "kind": "slice",
+      "source": "renew.free.emitEvent"
+    },
+    "slice.renew.free.evaluate_rules": {
+      "category": "slice",
+      "description": "No-rules path: Run the configured rule modules.",
+      "gas": 515,
+      "kind": "slice",
+      "source": "renew.free.evaluateRules"
+    },
+    "slice.renew.free.expiry_and_context": {
+      "category": "slice",
+      "description": "No-rules path: Compute renewal expiry and construct the renewal context.",
+      "gas": 2792,
+      "kind": "slice",
+      "source": "renew.free.expiryAndContext"
+    },
+    "slice.renew.free.label_state_and_activation_check": {
+      "category": "slice",
+      "description": "No-rules path: Read label state and verify the label belongs to this activation.",
+      "gas": 11387,
+      "kind": "slice",
+      "source": "renew.free.labelStateAndActivationCheck"
+    },
+    "slice.renew.free.measured_body_total": {
+      "category": "slice",
+      "description": "No-rules path: Measured body total for the profiled controller function.",
+      "gas": 69724,
+      "kind": "slice",
+      "source": "renew.free.measuredBodyTotal"
+    },
+    "slice.renew.free.namespace_current": {
+      "category": "slice",
+      "description": "No-rules path: Read parent registry state to ensure the namespace is still registered.",
+      "gas": 22619,
+      "kind": "slice",
+      "source": "renew.free.namespaceCurrent"
+    },
+    "slice.renew.free.owner_admin_check": {
+      "category": "slice",
+      "description": "No-rules path: Confirm the name owner still has admin authority on the registry.",
+      "gas": 6027,
+      "kind": "slice",
+      "source": "renew.free.ownerAdminCheck"
+    },
+    "slice.renew.free.post_hooks": {
+      "category": "slice",
+      "description": "No-rules path: Run configured post hooks.",
+      "gas": 396,
+      "kind": "slice",
+      "source": "renew.free.postHooks"
+    },
+    "slice.renew.free.registry_write": {
+      "category": "slice",
+      "description": "No-rules path: Call the official ENSv2 PermissionedRegistry.",
+      "gas": 15163,
+      "kind": "slice",
+      "source": "renew.free.registryWrite"
+    },
+    "slice.renew.high.activation_load_and_active": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Load activation state and reject inactive activations.",
+      "gas": 4383,
+      "kind": "slice",
+      "source": "renew.high.activationLoadAndActive"
+    },
+    "slice.renew.high.collect_payment": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Run payment collection if rules produced a non-zero price.",
+      "gas": 51254,
+      "kind": "slice",
+      "source": "renew.high.collectPayment"
+    },
+    "slice.renew.high.duration_and_runtime_checks": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Validate requested duration and runtime data array lengths.",
+      "gas": 1067,
+      "kind": "slice",
+      "source": "renew.high.durationAndRuntimeChecks"
+    },
+    "slice.renew.high.emit_event": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Emit the mint or renewal event.",
+      "gas": 3733,
+      "kind": "slice",
+      "source": "renew.high.emitEvent"
+    },
+    "slice.renew.high.evaluate_rules": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Run the configured rule modules.",
+      "gas": 244010,
+      "kind": "slice",
+      "source": "renew.high.evaluateRules"
+    },
+    "slice.renew.high.expiry_and_context": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Compute renewal expiry and construct the renewal context.",
+      "gas": 2792,
+      "kind": "slice",
+      "source": "renew.high.expiryAndContext"
+    },
+    "slice.renew.high.label_state_and_activation_check": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Read label state and verify the label belongs to this activation.",
+      "gas": 11387,
+      "kind": "slice",
+      "source": "renew.high.labelStateAndActivationCheck"
+    },
+    "slice.renew.high.measured_body_total": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Measured body total for the profiled controller function.",
+      "gas": 380220,
+      "kind": "slice",
+      "source": "renew.high.measuredBodyTotal"
+    },
+    "slice.renew.high.namespace_current": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Read parent registry state to ensure the namespace is still registered.",
+      "gas": 22619,
+      "kind": "slice",
+      "source": "renew.high.namespaceCurrent"
+    },
+    "slice.renew.high.owner_admin_check": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Confirm the name owner still has admin authority on the registry.",
+      "gas": 6027,
+      "kind": "slice",
+      "source": "renew.high.ownerAdminCheck"
+    },
+    "slice.renew.high.post_hooks": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Run configured post hooks.",
+      "gas": 16456,
+      "kind": "slice",
+      "source": "renew.high.postHooks"
+    },
+    "slice.renew.high.registry_write": {
+      "category": "slice",
+      "description": "All-rules, split-payment, five-resolver-write path: Call the official ENSv2 PermissionedRegistry.",
+      "gas": 15154,
+      "kind": "slice",
+      "source": "renew.high.registryWrite"
+    }
+  },
+  "source": "benchmarks/.gas-snapshot"
 }

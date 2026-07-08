@@ -55,9 +55,7 @@ The controller stores:
 | `owner` | Activation manager. |
 | `registry` | ENSv2 registry target. |
 | `parentRegistry` | ENSv2 registry that owns the namespace label. |
-| `namespaceKey` | Deterministic one-activation-per-namespace key. |
 | `parentNode` | Canonical parent namehash. |
-| `namespaceLabelHash` | Hash of the namespace label in its parent registry. |
 | `namespaceResource` | Parent registry EAC resource captured at activation. |
 | `namespaceLabel` | Label used to verify the parent subregistry pointer at runtime. |
 | `resolver` | Resolver used on registry registration. |
@@ -71,6 +69,8 @@ The controller stores:
 | `paymentModule` | Payment module address or zero. |
 | `rules` | Rule address or SSTORE2 pointer. |
 | `postHooks` | Hook address or SSTORE2 pointer. |
+
+The controller does not store `namespaceKey` because it is already the `activationId` mapping key. It also does not store `namespaceLabelHash`; runtime currentness checks recompute it from `namespaceLabel` before reading the parent registry state.
 
 ## Module List Encoding
 

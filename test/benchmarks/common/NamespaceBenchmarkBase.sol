@@ -10,6 +10,11 @@ import {NamespaceBenchmarkCombinations} from "test/benchmarks/common/NamespaceBe
 abstract contract NamespaceBenchmarkBase is NamespaceBenchmarkCombinations {
     uint256 private benchmarkNamespaceCounter;
 
+    modifier benchmarkSetup() {
+        vm.pauseGasMetering();
+        _;
+    }
+
     struct MintScenario {
         bytes32 activationId;
         string label;
@@ -51,7 +56,7 @@ abstract contract NamespaceBenchmarkBase is NamespaceBenchmarkCombinations {
     function _activateCombo(uint8 preset, PaymentMode paymentMode, HookMode hookMode, uint8 resolverWrites) internal {
         string memory label = "12345";
         ComboSpec memory spec = _comboSpec(preset, paymentMode, hookMode, resolverWrites);
-        _activate(_comboConfig(label, spec));
+        _activateExistingNamespace(_comboConfig(label, spec));
     }
 
     function _activate(NamespaceTypes.ActivationConfig memory config) internal returns (bytes32 activationId) {
@@ -61,9 +66,42 @@ abstract contract NamespaceBenchmarkBase is NamespaceBenchmarkCombinations {
         activationId = _activateNamespace(string.concat("bench", vm.toString(benchmarkNamespaceCounter)), config);
     }
 
+    function _activateExistingNamespace(NamespaceTypes.ActivationConfig memory config)
+        internal
+        returns (bytes32 activationId)
+    {
+        vm.prank(accounts.alice.addr);
+        activationId = controller.activate(_aliceName(), config);
+    }
+
+    function _meteredActivateExistingNamespace(NamespaceTypes.ActivationConfig memory config)
+        internal
+        returns (bytes32 activationId)
+    {
+        bytes memory name = _aliceName();
+        vm.prank(accounts.alice.addr);
+        vm.resumeGasMetering();
+        activationId = controller.activate(name, config);
+        vm.pauseGasMetering();
+    }
+
     function _mint(MintScenario memory scenario) internal returns (uint256 tokenId) {
         vm.prank(accounts.buyer.addr);
         tokenId = controller.mint(scenario.activationId, scenario.label, 365 days, scenario.runtimeData);
+    }
+
+    function _meteredMint(MintScenario memory scenario) internal returns (uint256 tokenId) {
+        vm.prank(accounts.buyer.addr);
+        vm.resumeGasMetering();
+        tokenId = controller.mint(scenario.activationId, scenario.label, 365 days, scenario.runtimeData);
+        vm.pauseGasMetering();
+    }
+
+    function _meteredRenew(MintScenario memory scenario, uint64 duration) internal returns (uint64 newExpiry) {
+        vm.prank(accounts.buyer.addr);
+        vm.resumeGasMetering();
+        newExpiry = controller.renew(scenario.activationId, scenario.label, duration, scenario.runtimeData);
+        vm.pauseGasMetering();
     }
 
     function _mintAndAssert(MintScenario memory scenario) internal returns (uint256 tokenId) {

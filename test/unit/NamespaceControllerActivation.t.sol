@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
 import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
+import {IUniversalResolverV2} from "@ensv2/universalResolver/interfaces/IUniversalResolverV2.sol";
 import {PermissionedRegistry} from "@ensv2/registry/PermissionedRegistry.sol";
 import {NameCoder} from "@ens/contracts/utils/NameCoder.sol";
 
 import {NamespaceController} from "src/NamespaceController.sol";
 import {INamespaceController} from "src/interfaces/INamespaceController.sol";
-import {IUniversalResolverV2} from "src/interfaces/IUniversalResolverV2.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {SaleWindowRule} from "src/modules/rules/SaleWindowRule.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
+import {ParentChainRegistry} from "test/mocks/ParentChainRegistry.sol";
 
 contract NamespaceControllerActivationTest is NamespaceSetUp {
     bytes32 private constant _ERC1967_IMPLEMENTATION_SLOT =
@@ -157,10 +157,7 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
 
     function test_activate_revertsWhenNamespaceIsReserved() public {
         PermissionedRegistry reservedRegistry = new PermissionedRegistry(
-            IHCAFactoryBasic(address(0)),
-            registryMetadata,
-            address(this),
-            ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
+            labelStore, address(this), ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
         );
         ethRegistry.register(
             "reserved", address(0), IRegistry(address(reservedRegistry)), address(0), 0, type(uint64).max
@@ -181,78 +178,53 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
         controller.activate(reservedName, config);
     }
 
-    function test_activate_revertsWhenCanonicalRegistryCannotBeProven() public {
+    function test_activate_allowsExactRegistryWhenChildParentPointerDiffers() public {
         PermissionedRegistry wrongRegistry = new PermissionedRegistry(
-            IHCAFactoryBasic(address(0)),
-            registryMetadata,
-            address(this),
-            ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
+            labelStore, address(this), ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
         );
         ethRegistry.register(
             "wrong", accounts.owner.addr, IRegistry(address(wrongRegistry)), address(0), 0, type(uint64).max
         );
         wrongRegistry.setParent(ethRegistry, "other");
+        wrongRegistry.grantRootRoles(ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN, accounts.alice.addr);
+        wrongRegistry.grantRootRoles(ROLE_REGISTRAR | ROLE_RENEW, address(controller));
 
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
         bytes memory wrongName = NameCoder.encode("wrong.eth");
 
-        vm.expectRevert(abi.encodeWithSelector(INamespaceController.NamespaceRegistryNotFound.selector, wrongName));
         vm.prank(accounts.alice.addr);
-        controller.activate(wrongName, config);
+        bytes32 activationId = controller.activate(wrongName, config);
+
+        NamespaceTypes.Activation memory activation = controller.getActivation(activationId);
+        assertEq(address(activation.registry), address(wrongRegistry));
+        assertEq(address(activation.parentRegistry), address(ethRegistry));
+        assertEq(activation.parentNode, NameCoder.namehash(wrongName, 0));
     }
 
-    function test_activate_revertsWhenUniversalResolverOmitsParentRegistry() public {
+    function test_activate_revertsWhenResolvedRegistryParentIsMissing() public {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
-        bytes memory aliceName = _aliceName();
-        IRegistry[] memory registries = new IRegistry[](1);
-        registries[0] = registry;
-        universalResolver.setCanonicalRegistryOverride(registry);
-        universalResolver.setRegistriesOverride(registries);
+        bytes memory orphanName = NameCoder.encode("orphan.missing.eth");
+        ParentChainRegistry orphanRegistry = new ParentChainRegistry();
+        universalResolver.setExactRegistryOverride(orphanRegistry);
 
         vm.expectRevert(
-            abi.encodeWithSelector(INamespaceController.NamespaceParentRegistryNotFound.selector, aliceName)
+            abi.encodeWithSelector(INamespaceController.NamespaceParentRegistryNotFound.selector, orphanName)
         );
         vm.prank(accounts.alice.addr);
-        controller.activate(aliceName, config);
+        controller.activate(orphanName, config);
     }
 
-    function test_activate_revertsWhenUniversalResolverRegistryListDisagreesWithCanonicalRegistry() public {
+    function test_activate_revertsWhenParentRegistryDoesNotPointToResolvedRegistry() public {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
-        bytes memory aliceName = _aliceName();
-        IRegistry[] memory registries = new IRegistry[](2);
-        registries[0] = ethRegistry;
-        registries[1] = ethRegistry;
-        universalResolver.setCanonicalRegistryOverride(registry);
-        universalResolver.setRegistriesOverride(registries);
+        bytes memory missingName = NameCoder.encode("missing.alice.eth");
+        ParentChainRegistry orphanRegistry = new ParentChainRegistry();
+        universalResolver.setExactRegistryOverride(orphanRegistry);
+        registry.grantRootRoles(ROLE_REGISTRAR, address(this));
+        registry.register("missing", accounts.owner.addr, IRegistry(address(0)), address(0), 0, type(uint64).max);
 
-        vm.expectRevert(abi.encodeWithSelector(INamespaceController.NamespaceRegistryNotFound.selector, aliceName));
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.NamespaceRegistryNotFound.selector, missingName));
         vm.prank(accounts.alice.addr);
-        controller.activate(aliceName, config);
-    }
-
-    function test_activate_revertsWhenParentRegistryNoLongerPointsToResolvedRegistry() public {
-        PermissionedRegistry originalRegistry = _registerMutableNamespace("drift");
-        PermissionedRegistry replacementRegistry = new PermissionedRegistry(
-            IHCAFactoryBasic(address(0)),
-            registryMetadata,
-            address(this),
-            ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
-        );
-        replacementRegistry.setParent(ethRegistry, "drift");
-        bytes memory driftName = NameCoder.encode("drift.eth");
-        IRegistry[] memory registries = new IRegistry[](2);
-        registries[0] = originalRegistry;
-        registries[1] = ethRegistry;
-        universalResolver.setCanonicalRegistryOverride(originalRegistry);
-        universalResolver.setRegistriesOverride(registries);
-
-        vm.prank(accounts.owner.addr);
-        ethRegistry.setSubregistry(uint256(keccak256(bytes("drift"))), replacementRegistry);
-
-        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
-        vm.expectRevert(abi.encodeWithSelector(INamespaceController.NamespaceRegistryNotFound.selector, driftName));
-        vm.prank(accounts.alice.addr);
-        controller.activate(driftName, config);
+        controller.activate(missingName, config);
     }
 
     function test_mint_revertsWhenParentSubregistryChangesAfterActivation() public {
@@ -264,10 +236,7 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
         bytes32 activationId = controller.activate(mutableName, config);
 
         PermissionedRegistry replacementRegistry = new PermissionedRegistry(
-            IHCAFactoryBasic(address(0)),
-            registryMetadata,
-            address(this),
-            ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
+            labelStore, address(this), ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
         );
         replacementRegistry.setParent(ethRegistry, "mutable");
         vm.prank(accounts.owner.addr);
@@ -320,10 +289,7 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
         ethRegistry.unregister(uint256(keccak256(bytes("cycle"))));
 
         PermissionedRegistry replacementRegistry = new PermissionedRegistry(
-            IHCAFactoryBasic(address(0)),
-            registryMetadata,
-            address(this),
-            ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
+            labelStore, address(this), ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
         );
         ethRegistry.register(
             "cycle",
@@ -438,10 +404,7 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
 
     function _registerMutableNamespace(string memory label) private returns (PermissionedRegistry namespaceRegistry) {
         namespaceRegistry = new PermissionedRegistry(
-            IHCAFactoryBasic(address(0)),
-            registryMetadata,
-            address(this),
-            ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
+            labelStore, address(this), ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
         );
         ethRegistry.register(
             label,
