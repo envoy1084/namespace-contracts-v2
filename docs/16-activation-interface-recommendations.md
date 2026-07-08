@@ -1,269 +1,21 @@
 # Activation Interface Recommendations
 
-This document answers three open architecture questions:
+This document records the activation design that is now implemented and the tradeoffs that remain open for future versions.
 
-1. Why the controller currently uses `IPermissionedRegistry` instead of `IStandardRegistry`.
-2. Whether a namespace should have multiple activations.
-3. Whether activation can accept a name and use `UniversalResolverV2` instead of requiring registry and parent-node inputs.
-
-It is design guidance. The current contracts still use the activation API described in the earlier spec files unless noted otherwise.
-
-## Registry Interface Choice
-
-### Current Choice
-
-`ActivationConfig.registry` is typed as:
+## Current Activation API
 
 ```solidity
-IPermissionedRegistry registry;
+function activate(bytes calldata name, NamespaceTypes.ActivationConfig calldata config)
+    external
+    returns (bytes32 activationId);
 ```
 
-This is stricter than `IStandardRegistry`.
+`name` is the DNS-encoded parent namespace, for example `NameCoder.encode("alice.eth")`.
 
-### Why Not Only IStandardRegistry
-
-`IStandardRegistry` exposes the write functions Namespace needs:
-
-| Function | Needed by Namespace |
-| --- | --- |
-| `register(...)` | Mint subnames. |
-| `renew(anyId, newExpiry)` | Renew subnames. |
-| `getExpiry(anyId)` | Read expiry if using lower-level renewal logic. |
-| `getSubregistry(label)` / `getParent()` | Registry tree validation. |
-
-But `IStandardRegistry` does not expose the permission and state APIs the current controller uses:
-
-| Needed by current controller | Exposed by | Why Namespace uses it |
-| --- | --- | --- |
-| `hasRootRoles(...)` | `IEnhancedAccessControl`, inherited by `IPermissionedRegistry` | Verify activation owner authority and controller register/renew authority. |
-| `getState(anyId)` | `IPermissionedRegistry` | Read status, expiry, token id, resource, and latest owner in one call. |
-| `Status.REGISTERED` | `IPermissionedRegistry` | Ensure renewal only applies to active registered labels. |
-| `getTokenId(anyId)` | `IPermissionedRegistry` | Available if token id is needed outside `getState`. |
-| `latestOwnerOf(tokenId)` | `IPermissionedRegistry` | Available for state-aware integrations. |
-
-The concrete ENSv2 `UserRegistry` inherits `PermissionedRegistry`, and `PermissionedRegistry` supports `IPermissionedRegistry`, `IStandardRegistry`, and `IRegistry`. For the current intended target, `IPermissionedRegistry` is the accurate interface.
-
-### What Would Break If We Used IStandardRegistry
-
-If the controller stored only `IStandardRegistry`, it would need to drop or redesign:
-
-| Current invariant | Issue with `IStandardRegistry` only |
-| --- | --- |
-| Activation owner must have registrar-admin and renew-admin roles. | No `hasRootRoles`. |
-| Controller must have register and renew roles at activation time. | No `hasRootRoles`. |
-| Renewal requires current status `REGISTERED`. | No `getState` or `Status`. |
-| Renewal event emits registry token id. | No direct token-id lookup for versioned token ids. |
-| Activation management authority remains aligned with ENSv2 EAC. | No EAC surface. |
-
-The registry call itself would still revert if the controller lacks permission, but the controller would lose early, explicit, user-readable validation.
-
-### Recommendation
-
-Keep the core controller typed to `IPermissionedRegistry`.
-
-Use `IStandardRegistry` only in a separate adapter or future generic mode if the product intentionally wants to support non-EAC registries and accepts weaker activation-owner checks.
-
-Recommended naming improvement:
+`ActivationConfig` no longer contains `registry` or `parentNode`. The controller derives both through `UniversalResolverV2`.
 
 ```solidity
-IPermissionedRegistry permissionedRegistry;
-```
-
-This makes the security assumption visible in the activation config.
-
-## One Activation Per Namespace
-
-### Current Behavior
-
-The current controller derives activation ids with a nonce:
-
-```solidity
-keccak256(abi.encode(block.chainid, registry, parentNode, owner, nonce))
-```
-
-That means the same owner can create multiple activations for the same registry and parent node.
-
-### Product Goal
-
-For user-facing behavior, a namespace should have one current sale activation at a time.
-
-For example:
-
-```text
-alice.eth should not have two simultaneous public mint configurations.
-```
-
-This is the right product direction because it avoids:
-
-| Problem | Why it matters |
-| --- | --- |
-| Buyer confusion | Users should not choose between competing activation ids for one name. |
-| Indexer ambiguity | One current sale config is easier to index and display. |
-| Rule bypass by alternate activation | A seller should not accidentally leave an older, cheaper activation live. |
-| Operational mistakes | Config updates should target the known current activation. |
-
-### Do Not Enforce One Activation Forever
-
-The controller should not permanently limit a namespace to one activation ever.
-
-Reasons:
-
-| Reason | Explanation |
-| --- | --- |
-| Module stack is immutable | Changing rule order, phases, payment module address, or hook list requires a new activation. |
-| Sales evolve | A namespace may need a v2 sale stack after adding new modules. |
-| Emergency migration | A bad module stack may require replacing the activation. |
-| Historical renewals | Labels minted under an old stack may need predictable renewal behavior. |
-
-### Recommended Model
-
-Use one current mint activation per canonical namespace, while keeping historical activations addressable.
-
-Suggested controller state:
-
-```solidity
-mapping(address registry => bytes32 activationId) public currentActivationByRegistry;
-```
-
-Because activation already validates the registry's canonical parent, the registry address is the simplest key for "one current activation for this namespace."
-
-Alternative key:
-
-```solidity
-mapping(bytes32 parentNode => bytes32 activationId) public currentActivationByParentNode;
-```
-
-This is also valid, but the registry address better captures ENSv2's actual writable namespace. If a registry can be linked from multiple names, a registry-level key prevents two current sale configs from operating on the same underlying child namespace.
-
-### Recommended Status Split
-
-The current `active` boolean blocks both mint and renew.
-
-For one-current-activation support, split this into:
-
-```solidity
-bool mintEnabled;
-bool renewEnabled;
-bool archived;
-```
-
-Why:
-
-| Flag | Purpose |
-| --- | --- |
-| `mintEnabled` | Only true for the current mint activation for a registry. |
-| `renewEnabled` | Can remain true for historical activations. |
-| `archived` | Marks an activation as intentionally retired. |
-
-### Recommended Mint Rule
-
-`mint` should require:
-
-```solidity
-currentActivationByRegistry[address(activation.registry)] == activationId
-activation.mintEnabled == true
-```
-
-This ensures one current public sale path per registry.
-
-### Recommended Renewal Rule
-
-Renewals should stay bound to the activation that minted the label:
-
-```solidity
-labelActivations[address(registry)][labelHash] == activationId
-activation.renewEnabled == true
-```
-
-Why:
-
-| Reason | Explanation |
-| --- | --- |
-| Predictable renewal pricing | A label minted under one sale stack renews under that stack unless explicitly migrated. |
-| Avoid accidental repricing | A new activation should not silently change renewal terms for old labels. |
-| Avoid stranded renewals | Replacing the current mint activation should not automatically disable old renewals. |
-
-If the product wants new terms to apply to old labels, add an explicit migration function rather than implicitly routing renewals to the latest activation.
-
-### Replacement Flow
-
-Recommended future flow:
-
-```mermaid
-sequenceDiagram
-    participant Owner as "Namespace owner"
-    participant Controller as "NamespaceController"
-
-    Owner->>Controller: create activation A
-    Controller->>Controller: currentActivationByRegistry[registry] = A
-    Owner->>Controller: create activation B as replacement
-    Controller->>Controller: set A.mintEnabled = false
-    Controller->>Controller: keep A.renewEnabled as configured
-    Controller->>Controller: currentActivationByRegistry[registry] = B
-```
-
-This gives the UI one current mint activation while preserving historical renewal behavior.
-
-### Minimal Simpler Model
-
-A simpler model is:
-
-```solidity
-mapping(address registry => bytes32 activationId) public activeActivationByRegistry;
-bool active;
-```
-
-But this is weaker because disabling the old activation to create a new one also disables renewals for labels minted through the old activation. Use it only if the product intentionally wants old renewals to stop when a new sale starts.
-
-## Activation Arguments
-
-### Current Activation Inputs
-
-Current activation requires:
-
-| Field | Why it is required today |
-| --- | --- |
-| `registry` | The controller needs the exact writable ENSv2 registry to call `register` and `renew`. |
-| `parentNode` | The controller binds the registry to a canonical namehash and passes it to hooks/modules. |
-| `resolver` | The registry registration needs a default resolver for new labels. |
-| `buyerRoleBitmap` | ENSv2 needs explicit buyer role assignment. |
-| `minDuration` / `maxDuration` | Sale-level duration policy. |
-| `rules` | Sale gates and price composition. |
-| `paymentModule` | Settlement logic. |
-| `postHooks` | Post-registry side effects. |
-
-Many of these are not accidental complexity. They are the actual sale parameters.
-
-However, `registry` and `parentNode` can be made easier for users by deriving them from a full ENS name.
-
-## UniversalResolverV2 For Activation
-
-ENSv2 `UniversalResolverV2` exposes registry discovery helpers:
-
-| Function | Use |
-| --- | --- |
-| `findExactRegistry(bytes dnsName)` | Returns the exact registry for a DNS-encoded name, or zero if missing. |
-| `findCanonicalRegistry(bytes dnsName)` | Returns the exact registry only if it is canonical for that name. |
-| `findRegistries(bytes dnsName)` | Returns registry ancestry in label order. |
-| `findCanonicalName(IRegistry registry)` | Returns canonical DNS-encoded name for a registry. |
-
-This can improve activation UX, but it should be used carefully.
-
-### Name-Based Activation Shape
-
-A future helper could be:
-
-```solidity
-function activateByName(
-    bytes calldata dnsEncodedParentName,
-    ActivationConfigByName calldata config
-) external returns (bytes32 activationId);
-```
-
-Where `ActivationConfigByName` removes `registry` and `parentNode`:
-
-```solidity
-struct ActivationConfigByName {
+struct ActivationConfig {
     address resolver;
     uint256 buyerRoleBitmap;
     uint64 minDuration;
@@ -274,99 +26,109 @@ struct ActivationConfigByName {
 }
 ```
 
-Internal flow:
+## Why The Controller Still Uses IPermissionedRegistry
+
+`IStandardRegistry` exposes the write functions Namespace needs:
+
+| Function | Needed by Namespace |
+| --- | --- |
+| `register(...)` | Mint subnames. |
+| `renew(anyId, newExpiry)` | Renew subnames. |
+| `getExpiry(anyId)` | Lower-level expiry reads. |
+
+But the controller also needs permission and state APIs:
+
+| Needed by controller | Exposed by |
+| --- | --- |
+| Activation owner root admin check | `IPermissionedRegistry.hasRootRoles` |
+| Controller register/renew role check | `IPermissionedRegistry.hasRootRoles` |
+| Parent namespace status/resource | `IPermissionedRegistry.getState` |
+| Renewal token id/status/expiry | `IPermissionedRegistry.getState` |
+
+So the core controller remains intentionally typed to `IPermissionedRegistry`. A future generic-registry adapter would need a different authority model.
+
+## One Activation Per Namespace
+
+The implemented activation id is deterministic:
+
+```solidity
+activationId = keccak256(
+    abi.encode(
+        block.chainid,
+        address(namespaceRegistry),
+        parentNode,
+        address(parentRegistry),
+        namespaceResource
+    )
+);
+```
+
+`activationId == namespaceKey`.
+
+This creates one activation per current namespace registration. A second activation for the same namespace resource reverts with `NamespaceAlreadyActivated`.
+
+## Why The Key Uses Resource, Not Token Id
+
+ENSv2 `PermissionedRegistry` tracks two version concepts:
+
+| ENSv2 value | When it changes | Activation impact |
+| --- | --- | --- |
+| `eacVersionId` / resource | Unregister/re-register or expired re-registration. | Should create a new activation namespace. |
+| `tokenVersionId` / token id | Unregister/re-register and role regeneration. | Should not automatically invalidate activation. |
+
+Role grants/revocations can regenerate token ids without changing the namespace's EAC resource. If activation ids used token ids, normal permission edits could accidentally orphan a sale. Using the resource keeps the activation stable across role maintenance while still separating old owners from new registrations.
+
+## UniversalResolverV2 Flow
 
 ```mermaid
 flowchart TD
-    A["activateByName(dnsEncodedParentName, config)"] --> B["Call UniversalResolverV2.findCanonicalRegistry(name)"]
+    A["activate(name, config)"] --> B["findCanonicalRegistry(name)"]
     B --> C{"registry found?"}
-    C -->|"No"| D["revert RegistryNotFoundForName"]
-    C -->|"Yes"| E["Cast to IPermissionedRegistry"]
-    E --> F["Compute parentNode from dnsEncodedParentName"]
-    F --> G["Run same activation preconditions"]
-    G --> H["Store activation"]
+    C -->|"No"| D["revert NamespaceRegistryNotFound"]
+    C -->|"Yes"| E["findRegistries(name)"]
+    E --> F["registries[0] is namespace registry"]
+    E --> G["registries[1] is parent registry"]
+    G --> H["parentRegistry.getState(labelHash)"]
+    H --> I{"status REGISTERED?"}
+    I -->|"No"| J["revert NamespaceNotRegistered"]
+    I -->|"Yes"| K["derive namespaceKey"]
+    K --> L{"already activated?"}
+    L -->|"Yes"| M["revert NamespaceAlreadyActivated"]
+    L -->|"No"| N["store activation and configure modules"]
 ```
 
-### Why Full Name, Not Label
+The controller also verifies `parentRegistry.getSubregistry(label) == namespaceRegistry`.
 
-A label alone is ambiguous:
+## Runtime Staleness Checks
 
-```text
-alice
-```
+`mint` and `renew` re-check the parent namespace before using an activation:
 
-It does not say whether the intended namespace is:
-
-```text
-alice.eth
-alice.box
-alice.someparent.eth
-```
-
-Name-based activation must accept a full DNS-encoded parent name such as:
-
-```text
-alice.eth
-club.alice.eth
-```
-
-### Should Resolver Be Derived Too
-
-Do not automatically derive the default subname resolver from Universal Resolver.
-
-Reason:
-
-| Resolver source | Issue |
+| Check | Error |
 | --- | --- |
-| Parent name resolver from `findResolver` | This is the resolver responsible for parent records, not necessarily the resolver Alice wants assigned to every minted subname. |
-| Exact registry resolver entry | This is name state, not sale config. |
-| Explicit activation `resolver` | Clear and deterministic for all mints. |
+| Parent namespace status is still `REGISTERED`. | `NamespaceActivationUnavailable` |
+| Parent namespace resource still equals stored resource. | `NamespaceActivationStale` |
+| Parent subregistry still points to stored registry. | `NamespaceRegistryChanged` |
 
-Keep `resolver` explicit, or provide a product-level default in a wrapper or factory.
+This prevents an old activation from minting after the parent name expires, is re-registered, or is repointed to a different registry.
 
-### On-Chain Universal Resolver Tradeoffs
+## Resolver Is Still Explicit
 
-| Benefit | Cost |
-| --- | --- |
-| User passes one full name instead of registry and parent node. | More external calls during activation. |
-| Less frontend-specific registry discovery logic. | Controller now depends on Universal Resolver deployment and behavior. |
-| Can reject non-canonical registry names directly. | Must still check registry supports permissioned APIs and roles. |
+UniversalResolverV2 can find the resolver for `alice.eth`, but that is not necessarily the resolver Alice wants assigned to every minted subname.
 
-### Recommended Approach
+The activation `resolver` remains explicit because it controls what gets written into:
 
-For the core controller:
-
-```text
-Keep activate(config) with explicit registry and parentNode.
-Continue verifying the registry's canonical parent chain on-chain.
+```solidity
+registry.register(label, buyer, address(0), activation.resolver, buyerRoleBitmap, expiry)
 ```
 
-For product UX:
+## Future Considerations
 
-```text
-Use UniversalResolverV2 off-chain in the app to discover registry and parentNode.
-Pass explicit registry and parentNode to activate.
-Let the controller verify the result.
+The current model is strict: one activation per namespace resource. Future versions may want a replacement flow that keeps historical renewals alive while allowing a new sale stack for future mints.
+
+Possible extension:
+
+```solidity
+replaceActivation(bytes name, ActivationConfig config, bool keepRenewals)
 ```
 
-For a later convenience layer:
-
-```text
-Add activateByName(...) as a wrapper/helper entry point.
-It should resolve the registry through UniversalResolverV2, compute parentNode, then call the same internal activation path.
-```
-
-This gives good UX without making the lowest-level controller depend on Universal Resolver for its core security.
-
-## Recommended Next Contract Changes
-
-If we decide to implement the product direction, the next contract change should be:
-
-1. Add one-current-mint-activation tracking keyed by registry.
-2. Split `active` into `mintEnabled` and `renewEnabled`.
-3. Make `mint` require the activation is the current mint activation for its registry.
-4. Keep `renew` bound to `labelActivations` and `renewEnabled`.
-5. Add explicit replacement flow for a namespace owner to replace current mint activation.
-6. Optionally add `activateByName` or a separate helper contract using `UniversalResolverV2`.
-
-Do not switch to `IStandardRegistry` unless the controller intentionally drops ENSv2 EAC authority checks or introduces a separate adapter for generic standard registries.
+That should be designed explicitly. It should not silently route old labels to new renewal rules.

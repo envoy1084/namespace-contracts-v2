@@ -30,24 +30,26 @@ contract NamespaceController is NamespaceControllerRules {
 
         ActivationData storage activation = _requireActivation(activationId);
         if (!activation.active) revert ActivationNotActive(activationId);
+        _checkNamespaceCurrent(activationId, activation);
         _checkRegistryAdminAuthority(activation.owner, activation.registry);
         _checkDuration(activationId, activation, duration);
         _checkRuntimeDataLengths(activation, runtimeData);
 
         uint256 labelId = uint256(keccak256(bytes(label)));
+        bytes32 labelHash = bytes32(labelId);
         NamespaceTypes.MintContext memory ctx = _mintContext(activation, activationId, label, labelId, duration);
+        labelActivations[address(activation.registry)][labelHash] = activationId;
         NamespaceTypes.Price memory price = _evaluateMintRules(activation, ctx, runtimeData.ruleData);
 
         tokenId = activation.registry
             .register(
                 label, msg.sender, IRegistry(address(0)), activation.resolver, activation.buyerRoleBitmap, ctx.expiry
             );
-        labelActivations[address(activation.registry)][bytes32(labelId)] = activationId;
 
         _collectMint(activation, ctx, price, runtimeData.paymentData);
         _runPostMintHooks(activation, ctx, tokenId, runtimeData.postHookData);
 
-        emit SubnameMinted(activationId, bytes32(labelId), label, msg.sender, tokenId, price.token, price.amount);
+        emit SubnameMinted(activationId, labelHash, label, msg.sender, tokenId, price.token, price.amount);
     }
 
     /// @inheritdoc INamespaceController
@@ -61,6 +63,7 @@ contract NamespaceController is NamespaceControllerRules {
 
         ActivationData storage activation = _requireActivation(activationId);
         if (!activation.active) revert ActivationNotActive(activationId);
+        _checkNamespaceCurrent(activationId, activation);
         _checkRegistryAdminAuthority(activation.owner, activation.registry);
         _checkDuration(activationId, activation, duration);
         _checkRuntimeDataLengths(activation, runtimeData);

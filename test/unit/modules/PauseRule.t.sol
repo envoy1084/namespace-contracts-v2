@@ -108,6 +108,6 @@ contract PauseRuleTest is NamespaceSetUp {
         config.rules = rules;
 
         vm.prank(accounts.alice.addr);
-        activationId = controller.activate(config);
+        activationId = controller.activate(_aliceName(), config);
     }
 }

@@ -63,8 +63,6 @@ library NamespaceTypes {
     }
 
     /// @notice Input used to create a namespace activation.
-    /// @param registry ENSv2 registry where subnames are minted.
-    /// @param parentNode Namehash of the parent name, e.g. alice.eth.
     /// @param resolver Default resolver assigned to minted subnames.
     /// @param buyerRoleBitmap ENSv2 registry roles granted to subname buyers.
     /// @param minDuration Smallest mint or renewal duration allowed. Use 0 to allow any non-zero duration.
@@ -73,8 +71,6 @@ library NamespaceTypes {
     /// @param paymentModule Optional module that collects payment from the payer; required when rules can return non-zero.
     /// @param postHooks Hooks called after the ENSv2 registry mint succeeds.
     struct ActivationConfig {
-        IPermissionedRegistry registry;
-        bytes32 parentNode;
         address resolver;
         uint256 buyerRoleBitmap;
         uint64 minDuration;
@@ -87,7 +83,10 @@ library NamespaceTypes {
     /// @notice Public activation metadata used by the Namespace controller.
     /// @param owner Account that controls the activation.
     /// @param registry ENSv2 registry where labels are minted.
+    /// @param parentRegistry ENSv2 registry that owns the namespace label.
+    /// @param namespaceKey Deterministic key for the current namespace resource.
     /// @param parentNode Namehash of the parent name.
+    /// @param namespaceResource ENSv2 EAC resource for the active parent namespace registration.
     /// @param resolver Default resolver assigned during mint.
     /// @param buyerRoleBitmap ENSv2 registry roles granted to minted-name owners.
     /// @param minDuration Smallest mint or renewal duration allowed.
@@ -97,7 +96,10 @@ library NamespaceTypes {
     struct Activation {
         address owner;
         IPermissionedRegistry registry;
+        IPermissionedRegistry parentRegistry;
+        bytes32 namespaceKey;
         bytes32 parentNode;
+        uint256 namespaceResource;
         address resolver;
         uint256 buyerRoleBitmap;
         uint64 minDuration;

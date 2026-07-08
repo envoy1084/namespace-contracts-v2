@@ -32,19 +32,20 @@ flowchart TD
     A["mint called"] --> B["duration must be non-zero"]
     B --> C["load activation"]
     C --> D["activation must be active"]
-    D --> E["activation owner must still be ENSv2 admin"]
-    E --> F["duration must be within activation bounds"]
-    F --> G["runtime arrays must match configured counts"]
-    G --> H["compute labelHash and build MintContext"]
-    H --> I["evaluate rules and compose price"]
-    I --> J["call ENSv2 registry.register"]
-    J --> K["record label activation"]
-    K --> L{"price or msg.value non-zero?"}
-    L -->|"Yes"| M["call payment module"]
-    L -->|"No"| N["skip payment"]
-    M --> O["run post-mint hooks"]
-    N --> O
-    O --> P["emit SubnameMinted and return tokenId"]
+    D --> E["namespace activation must still be current"]
+    E --> F["activation owner must still be ENSv2 admin"]
+    F --> G["duration must be within activation bounds"]
+    G --> H["runtime arrays must match configured counts"]
+    H --> I["compute labelHash and build MintContext"]
+    I --> J["evaluate rules and compose price"]
+    J --> K["call ENSv2 registry.register"]
+    K --> L["record label activation"]
+    L --> M{"price or msg.value non-zero?"}
+    M -->|"Yes"| N["call payment module"]
+    M -->|"No"| O["skip payment"]
+    N --> P["run post-mint hooks"]
+    O --> P
+    P --> Q["emit SubnameMinted and return tokenId"]
 ```
 
 ## Sequence Diagram
@@ -59,7 +60,7 @@ sequenceDiagram
     participant Hook as "Post hooks"
 
     Buyer->>Controller: mint(activationId, label, duration, runtimeData)
-    Controller->>Controller: validate activation, duration, runtime lengths
+    Controller->>Controller: validate activation, namespace freshness, duration, runtime lengths
     Controller->>Controller: build MintContext
     loop "each rule"
         Controller->>Rule: evaluateMint(ctx, ruleData[i])
@@ -85,18 +86,19 @@ sequenceDiagram
 | 1 | Revert if `duration == 0`. | Zero-duration registrations are nonsensical and can bypass time-based pricing assumptions. |
 | 2 | Load activation by id. | Unknown activation ids should not execute arbitrary module data. |
 | 3 | Revert if activation is inactive. | Allows sale owner to stop minting and renewal through this activation. |
-| 4 | Check activation owner still has registry admin roles. | Prevents a stale activation owner from continuing to operate a namespace after losing ENSv2 authority. |
-| 5 | Check duration bounds. | Enforces sale-level minimum and maximum duration. |
-| 6 | Check `ruleData.length == ruleCount`. | Ensures each configured rule receives exactly one runtime payload. |
-| 7 | Check `postHookData.length == postHookCount`. | Ensures each configured hook receives exactly one runtime payload. |
-| 8 | Compute `labelHash = keccak256(bytes(label))`. | ENSv2 registry state is keyed by label hash; modules also use it for claims. |
-| 9 | Build `MintContext`. | Gives all modules the same immutable operation context. Computed expiry uses checked `uint64` arithmetic. |
-| 10 | Evaluate rules. | Applies gating and pricing before registry state changes. |
-| 11 | Register through ENSv2. | Official registry creates the subname and token id. |
-| 12 | Store label-to-activation mapping. | Renewal later requires the same activation id. |
-| 13 | Collect payment if needed. | Final price is enforced after successful registry write. |
-| 14 | Run hooks. | Optional side effects such as resolver writes happen after mint. |
-| 15 | Emit event. | Indexers can track mints and payments. |
+| 4 | Check namespace is still current. | Prevents old activations after namespace expiry/re-register or subregistry replacement. |
+| 5 | Check activation owner still has registry admin roles. | Prevents a stale activation owner from continuing to operate a namespace after losing ENSv2 authority. |
+| 6 | Check duration bounds. | Enforces sale-level minimum and maximum duration. |
+| 7 | Check `ruleData.length == ruleCount`. | Ensures each configured rule receives exactly one runtime payload. |
+| 8 | Check `postHookData.length == postHookCount`. | Ensures each configured hook receives exactly one runtime payload. |
+| 9 | Compute `labelHash = keccak256(bytes(label))`. | ENSv2 registry state is keyed by label hash; modules also use it for claims. |
+| 10 | Build `MintContext`. | Gives all modules the same immutable operation context. Computed expiry uses checked `uint64` arithmetic. |
+| 11 | Evaluate rules. | Applies gating and pricing before registry state changes. |
+| 12 | Register through ENSv2. | Official registry creates the subname and token id. |
+| 13 | Store label-to-activation mapping. | Renewal later requires the same activation id. |
+| 14 | Collect payment if needed. | Final price is enforced after successful registry write. |
+| 15 | Run hooks. | Optional side effects such as resolver writes happen after mint. |
+| 16 | Emit event. | Indexers can track mints and payments. |
 
 ## MintContext Construction
 
@@ -215,6 +217,7 @@ The event reports the final composed price, not each rule's intermediate effects
 | --- | --- |
 | Unknown activation | Controller |
 | Inactive activation | Controller |
+| Namespace activation stale or unavailable | Controller |
 | Lost owner registry admin authority | Controller |
 | Runtime array mismatch | Controller |
 | Sale closed or paused | Rule module |

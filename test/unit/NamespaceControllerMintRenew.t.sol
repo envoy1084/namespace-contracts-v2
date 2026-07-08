@@ -77,7 +77,7 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
         });
 
         vm.prank(accounts.alice.addr);
-        bytes32 activationId = controller.activate(config);
+        bytes32 activationId = controller.activate(_aliceName(), config);
 
         NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
         uint256 beforeBalance = accounts.treasury.addr.balance;
@@ -93,7 +93,7 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
         config.paymentModule = NamespaceTypes.ModuleConfig({module: address(0), configData: ""});
 
         vm.prank(accounts.alice.addr);
-        bytes32 activationId = controller.activate(config);
+        bytes32 activationId = controller.activate(_aliceName(), config);
 
         vm.expectRevert(
             abi.encodeWithSelector(INamespaceController.ZeroModule.selector, controller.MODULE_KIND_PAYMENT())
@@ -209,8 +209,6 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
 
     function test_renew_revertsWhenNativeValueHasNoPaymentModuleAndNoPrice() public {
         NamespaceTypes.ActivationConfig memory config = NamespaceTypes.ActivationConfig({
-            registry: registry,
-            parentNode: _aliceNode(),
             resolver: address(0),
             buyerRoleBitmap: 0,
             minDuration: 1,
@@ -221,7 +219,7 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
         });
 
         vm.prank(accounts.alice.addr);
-        bytes32 activationId = controller.activate(config);
+        bytes32 activationId = controller.activate(_aliceName(), config);
 
         NamespaceTypes.RuntimeData memory runtimeData;
         runtimeData.ruleData = new bytes[](0);
@@ -275,42 +273,21 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
     }
 
     function test_renew_revertsWhenActivationDidNotMintLabel() public {
-        bytes32 paidActivationId = _activateDefault();
-        NamespaceTypes.RuntimeData memory paidRuntimeData = _defaultRuntimeData();
+        bytes32 activationId = _activateDefault();
+        NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
 
-        vm.startPrank(accounts.buyer.addr);
-        token.approve(address(erc20Payment), 100 ether);
-        controller.mint(paidActivationId, "pay", 365 days, paidRuntimeData);
-        vm.stopPrank();
-
-        NamespaceTypes.ActivationConfig memory freeConfig = NamespaceTypes.ActivationConfig({
-            registry: registry,
-            parentNode: _aliceNode(),
-            resolver: address(0),
-            buyerRoleBitmap: 0,
-            minDuration: 1,
-            maxDuration: 365 days,
-            rules: new NamespaceTypes.RuleConfig[](0),
-            paymentModule: NamespaceTypes.ModuleConfig({module: address(0), configData: ""}),
-            postHooks: new NamespaceTypes.ModuleConfig[](0)
-        });
-
-        vm.prank(accounts.alice.addr);
-        bytes32 freeActivationId = controller.activate(freeConfig);
-
-        NamespaceTypes.RuntimeData memory freeRuntimeData;
-        freeRuntimeData.ruleData = new bytes[](0);
-        freeRuntimeData.postHookData = new bytes[](0);
+        vm.prank(address(controller));
+        registry.register(
+            "external", accounts.buyer.addr, IRegistry(address(0)), address(0), 0, uint64(block.timestamp + 365 days)
+        );
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                INamespaceController.LabelActivationMismatch.selector, "pay", freeActivationId, paidActivationId
+                INamespaceController.LabelActivationMismatch.selector, "external", activationId, bytes32(0)
             )
         );
         vm.prank(accounts.buyer.addr);
-        controller.renew(freeActivationId, "pay", 30 days, freeRuntimeData);
-
-        assertEq(token.balanceOf(accounts.treasury.addr), 100 ether);
+        controller.renew(activationId, "external", 30 days, runtimeData);
     }
 
     function test_mint_respectsReservationRule() public {
@@ -350,7 +327,7 @@ contract NamespaceControllerMintRenewTest is NamespaceSetUp {
         config.rules = rules;
 
         vm.prank(accounts.alice.addr);
-        bytes32 activationId = controller.activate(config);
+        bytes32 activationId = controller.activate(_aliceName(), config);
 
         NamespaceTypes.RuntimeData memory runtimeData = _defaultRuntimeData();
         runtimeData.ruleData = new bytes[](4);

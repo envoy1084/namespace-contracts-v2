@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
-
+import {NamespaceController} from "src/NamespaceController.sol";
 import {INamespaceController} from "src/interfaces/INamespaceController.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {ERC20PaymentModule} from "src/modules/payment/ERC20PaymentModule.sol";
@@ -145,7 +144,7 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
         config.rules = rules;
 
         vm.prank(accounts.alice.addr);
-        bytes32 activationId = controller.activate(config);
+        bytes32 activationId = controller.activate(_aliceName(), config);
 
         vm.prank(accounts.alice.addr);
         controller.updateModuleConfig(
@@ -244,7 +243,7 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
         config.postHooks = postHooks;
 
         vm.prank(accounts.alice.addr);
-        bytes32 activationId = controller.activate(config);
+        bytes32 activationId = controller.activate(_aliceName(), config);
 
         vm.prank(accounts.alice.addr);
         controller.updateModuleConfig(activationId, postHookKind, 1, "");
@@ -294,7 +293,7 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
             )
         );
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        controller.activate(_aliceName(), config);
     }
 
     function test_activate_revertsWhenModuleIsApprovedForDifferentKind() public {
@@ -319,7 +318,7 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
             abi.encodeWithSelector(INamespaceController.UnapprovedModule.selector, address(unapprovedRule), ruleKind)
         );
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        controller.activate(_aliceName(), config);
     }
 
     function test_activate_revertsForTooManyRules() public {
@@ -332,7 +331,7 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
             )
         );
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        controller.activate(_aliceName(), config);
     }
 
     function test_activate_revertsForTooManyPostHooks() public {
@@ -345,7 +344,7 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
             )
         );
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        controller.activate(_aliceName(), config);
     }
 
     function test_activate_revertsForZeroPostHookModule() public {
@@ -356,7 +355,7 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
             abi.encodeWithSelector(INamespaceController.ZeroModule.selector, controller.MODULE_KIND_POST_HOOK())
         );
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        controller.activate(_aliceName(), config);
     }
 
     function test_activate_revertsForOutOfOrderRulePhases() public {
@@ -381,16 +380,16 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
             )
         );
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        controller.activate(_aliceName(), config);
     }
 
-    function test_activate_revertsForZeroRegistry() public {
+    function test_activate_revertsWhenUniversalResolverIsNotConfigured() public {
+        NamespaceController freshController = _deployController(accounts.owner.addr);
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
-        config.registry = IPermissionedRegistry(address(0));
 
-        vm.expectRevert(abi.encodeWithSelector(INamespaceController.ZeroRegistry.selector));
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.UniversalResolverNotConfigured.selector));
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        freshController.activate(_aliceName(), config);
     }
 
     function test_activate_revertsWhenControllerMissingRegistryRoles() public {
@@ -405,7 +404,7 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
             )
         );
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        controller.activate(_aliceName(), config);
     }
 
     function test_getActivation_revertsWhenActivationMissing() public {
@@ -417,8 +416,6 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
 
     function test_getRulesAndPostHooks_returnsEmptyLists() public {
         NamespaceTypes.ActivationConfig memory config = NamespaceTypes.ActivationConfig({
-            registry: registry,
-            parentNode: _aliceNode(),
             resolver: address(0),
             buyerRoleBitmap: 0,
             minDuration: 1,
@@ -429,7 +426,7 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
         });
 
         vm.prank(accounts.alice.addr);
-        bytes32 activationId = controller.activate(config);
+        bytes32 activationId = controller.activate(_aliceName(), config);
 
         assertEq(controller.getRules(activationId).length, 0);
         assertEq(controller.getPostHooks(activationId).length, 0);
@@ -447,8 +444,6 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
         postHooks[0] = NamespaceTypes.ModuleConfig({module: address(postHook), configData: ""});
 
         NamespaceTypes.ActivationConfig memory config = NamespaceTypes.ActivationConfig({
-            registry: registry,
-            parentNode: _aliceNode(),
             resolver: address(0xBEEF),
             buyerRoleBitmap: 0,
             minDuration: 1,
@@ -459,7 +454,7 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
         });
 
         vm.prank(accounts.alice.addr);
-        bytes32 activationId = controller.activate(config);
+        bytes32 activationId = controller.activate(_aliceName(), config);
 
         address[] memory storedRules = controller.getRules(activationId);
         assertEq(storedRules.length, 1);
@@ -484,7 +479,7 @@ contract NamespaceControllerModulesTest is NamespaceSetUp {
         config.postHooks = postHooks;
 
         vm.prank(accounts.alice.addr);
-        bytes32 activationId = controller.activate(config);
+        bytes32 activationId = controller.activate(_aliceName(), config);
 
         address[] memory storedPostHooks = controller.getPostHooks(activationId);
         assertEq(storedPostHooks.length, 2);

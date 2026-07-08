@@ -19,7 +19,7 @@ This document covers production risks, deployment controls, and incident procedu
 
 1. Deploy controller implementation and proxy.
 2. Initialize controller with the intended owner.
-3. Set `rootRegistry`.
+3. Set `universalResolver`; the controller mirrors `universalResolver.ROOT_REGISTRY()` into `rootRegistry`.
 4. Deploy module implementations/proxies.
 5. Initialize every module with `(controller, moduleOwner)`.
 6. Approve curated modules by kind.
@@ -155,7 +155,7 @@ Monitor events:
 | `ModuleConfigUpdated` | Rule/payment/hook params changed. |
 | `ModuleApprovalSet` | Module allowlist changed. |
 | `ModuleApprovalRequiredSet` | Approval enforcement changed. |
-| `RootRegistrySet` | Future activation validation root changed. |
+| `RootRegistrySet` | UniversalResolver root mirror changed. |
 | `SubnameMinted` | Successful mint and final price. |
 | `SubnameRenewed` | Successful renewal and final price. |
 

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
+import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 
 import {INamespaceController} from "src/interfaces/INamespaceController.sol";
+import {IUniversalResolverV2} from "src/interfaces/IUniversalResolverV2.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {NamespaceControllerModules} from "src/controller/NamespaceControllerModules.sol";
 
@@ -20,30 +21,35 @@ abstract contract NamespaceControllerLifecycle is NamespaceControllerModules {
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
     /// @inheritdoc INamespaceController
-    function setRootRegistry(IRegistry rootRegistry_) external onlyOwner {
-        if (address(rootRegistry_) == address(0)) revert ZeroRegistry();
-        rootRegistry = rootRegistry_;
-        emit RootRegistrySet(address(rootRegistry_));
+    function setUniversalResolver(IUniversalResolverV2 universalResolver_) external onlyOwner {
+        if (address(universalResolver_) == address(0)) revert ZeroUniversalResolver();
+        universalResolver = universalResolver_;
+        rootRegistry = universalResolver_.ROOT_REGISTRY();
+        emit UniversalResolverSet(address(universalResolver_));
+        emit RootRegistrySet(address(rootRegistry));
     }
 
     /// @inheritdoc INamespaceController
-    function activate(NamespaceTypes.ActivationConfig calldata config)
+    function activate(bytes calldata name, NamespaceTypes.ActivationConfig calldata config)
         external
         nonReentrant
         returns (bytes32 activationId)
     {
-        _checkActivationPreconditions(config);
+        ResolvedNamespace memory resolved = _resolveNamespace(name);
+        _checkActivationPreconditions(config, resolved.registry);
 
-        uint256 nonce = ++activationNonce;
-        activationId =
-            keccak256(abi.encode(block.chainid, address(config.registry), config.parentNode, msg.sender, nonce));
+        activationId = resolved.namespaceKey;
+        if (activations[activationId].owner != address(0)) {
+            revert NamespaceAlreadyActivated(resolved.namespaceKey, activationId);
+        }
+        ++activationNonce;
 
         (address rules, uint8 ruleCount, uint8 firstRulePhase) = _storeRuleList(config.rules);
         (address postHooks, uint8 postHookCount) = _storeModuleList(MODULE_KIND_POST_HOOK, config.postHooks);
 
-        _storeActivation(activationId, config, rules, ruleCount, firstRulePhase, postHooks, postHookCount);
+        _storeActivation(activationId, resolved, config, rules, ruleCount, firstRulePhase, postHooks, postHookCount);
 
-        emit ActivationCreated(activationId, msg.sender, address(config.registry), config.parentNode);
+        emit ActivationCreated(activationId, msg.sender, address(resolved.registry), resolved.parentNode);
         emit ActivationStatusChanged(activationId, true);
 
         _configureRules(activationId, config.rules);
@@ -82,7 +88,10 @@ abstract contract NamespaceControllerLifecycle is NamespaceControllerModules {
         activation = NamespaceTypes.Activation({
             owner: stored.owner,
             registry: stored.registry,
+            parentRegistry: stored.parentRegistry,
+            namespaceKey: stored.namespaceKey,
             parentNode: stored.parentNode,
+            namespaceResource: stored.namespaceResource,
             resolver: stored.resolver,
             buyerRoleBitmap: stored.buyerRoleBitmap,
             minDuration: stored.minDuration,
@@ -94,6 +103,7 @@ abstract contract NamespaceControllerLifecycle is NamespaceControllerModules {
 
     function _storeActivation(
         bytes32 activationId,
+        ResolvedNamespace memory resolved,
         NamespaceTypes.ActivationConfig calldata config,
         address rules,
         uint8 ruleCount,
@@ -103,8 +113,13 @@ abstract contract NamespaceControllerLifecycle is NamespaceControllerModules {
     ) private {
         ActivationData storage activation = activations[activationId];
         activation.owner = msg.sender;
-        activation.registry = config.registry;
-        activation.parentNode = config.parentNode;
+        activation.registry = resolved.registry;
+        activation.parentRegistry = resolved.parentRegistry;
+        activation.namespaceKey = resolved.namespaceKey;
+        activation.parentNode = resolved.parentNode;
+        activation.namespaceLabelHash = resolved.labelHash;
+        activation.namespaceResource = resolved.resource;
+        activation.namespaceLabel = resolved.label;
         activation.resolver = config.resolver;
         activation.buyerRoleBitmap = config.buyerRoleBitmap;
         activation.minDuration = config.minDuration;
@@ -118,18 +133,19 @@ abstract contract NamespaceControllerLifecycle is NamespaceControllerModules {
         activation.postHooks = postHooks;
     }
 
-    function _checkActivationPreconditions(NamespaceTypes.ActivationConfig calldata config) private view {
-        if (address(config.registry) == address(0)) revert ZeroRegistry();
-        _checkCanonicalParentNode(config.registry, config.parentNode);
+    function _checkActivationPreconditions(
+        NamespaceTypes.ActivationConfig calldata config,
+        IPermissionedRegistry registry
+    ) private view {
         if (config.maxDuration == 0 || config.minDuration > config.maxDuration) {
             revert InvalidDurationBounds(config.minDuration, config.maxDuration);
         }
         if (config.paymentModule.module != address(0)) {
             _checkModule(config.paymentModule.module, MODULE_KIND_PAYMENT);
         }
-        _checkRegistryAdminAuthority(msg.sender, config.registry);
-        if (!config.registry.hasRootRoles(ROLE_REGISTRAR | ROLE_RENEW, address(this))) {
-            revert ControllerMissingRegistryRoles(address(config.registry), ROLE_REGISTRAR | ROLE_RENEW);
+        _checkRegistryAdminAuthority(msg.sender, registry);
+        if (!registry.hasRootRoles(ROLE_REGISTRAR | ROLE_RENEW, address(this))) {
+            revert ControllerMissingRegistryRoles(address(registry), ROLE_REGISTRAR | ROLE_RENEW);
         }
     }
 }

@@ -8,6 +8,8 @@ import {NamespaceBenchmarkCombinations} from "test/benchmarks/common/NamespaceBe
 
 /// @notice Small base entry point used by concrete gas benchmark suites.
 abstract contract NamespaceBenchmarkBase is NamespaceBenchmarkCombinations {
+    uint256 private benchmarkNamespaceCounter;
+
     struct MintScenario {
         bytes32 activationId;
         string label;
@@ -53,8 +55,10 @@ abstract contract NamespaceBenchmarkBase is NamespaceBenchmarkCombinations {
     }
 
     function _activate(NamespaceTypes.ActivationConfig memory config) internal returns (bytes32 activationId) {
-        vm.prank(accounts.alice.addr);
-        activationId = controller.activate(config);
+        unchecked {
+            ++benchmarkNamespaceCounter;
+        }
+        activationId = _activateNamespace(string.concat("bench", vm.toString(benchmarkNamespaceCounter)), config);
     }
 
     function _mint(MintScenario memory scenario) internal returns (uint256 tokenId) {

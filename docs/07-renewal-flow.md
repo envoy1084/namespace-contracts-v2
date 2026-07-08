@@ -32,23 +32,24 @@ flowchart TD
     A["renew called"] --> B["duration must be non-zero"]
     B --> C["load activation"]
     C --> D["activation must be active"]
-    D --> E["activation owner must still be ENSv2 admin"]
-    E --> F["duration must be within activation bounds"]
-    F --> G["runtime arrays must match configured counts"]
-    G --> H["compute labelHash"]
-    H --> I["read registry.getState(labelId)"]
-    I --> J["state must be REGISTERED"]
-    J --> K["label must have been minted by this activation"]
-    K --> L["compute newExpiry"]
-    L --> M["build RenewContext"]
-    M --> N["evaluate renewal rules and compose price"]
-    N --> O["call registry.renew"]
-    O --> P{"price or msg.value non-zero?"}
-    P -->|"Yes"| Q["call payment module"]
-    P -->|"No"| R["skip payment"]
-    Q --> S["run post-renew hooks"]
-    R --> S
-    S --> T["emit SubnameRenewed and return newExpiry"]
+    D --> E["namespace activation must still be current"]
+    E --> F["activation owner must still be ENSv2 admin"]
+    F --> G["duration must be within activation bounds"]
+    G --> H["runtime arrays must match configured counts"]
+    H --> I["compute labelHash"]
+    I --> J["read registry.getState(labelId)"]
+    J --> K["state must be REGISTERED"]
+    K --> L["label must have been minted by this activation"]
+    L --> M["compute newExpiry"]
+    M --> N["build RenewContext"]
+    N --> O["evaluate renewal rules and compose price"]
+    O --> P["call registry.renew"]
+    P --> Q{"price or msg.value non-zero?"}
+    Q -->|"Yes"| R["call payment module"]
+    Q -->|"No"| S["skip payment"]
+    R --> T["run post-renew hooks"]
+    S --> T
+    T --> U["emit SubnameRenewed and return newExpiry"]
 ```
 
 ## Sequence Diagram
@@ -63,7 +64,7 @@ sequenceDiagram
     participant Hook as "Post hooks"
 
     Payer->>Controller: renew(activationId, label, duration, runtimeData)
-    Controller->>Controller: validate activation, duration, runtime lengths
+    Controller->>Controller: validate activation, namespace freshness, duration, runtime lengths
     Controller->>Registry: getState(labelId)
     Registry-->>Controller: status, tokenId, expiry
     Controller->>Controller: require REGISTERED and matching activation id
@@ -90,20 +91,21 @@ sequenceDiagram
 | 1 | Revert if `duration == 0`. | Zero extension has no useful registry effect and can bypass pricing assumptions. |
 | 2 | Load activation by id. | Renewal must use a known sale configuration. |
 | 3 | Revert if activation inactive. | Sale owner can stop renewals as well as mints. |
-| 4 | Check activation owner still has registry admin roles. | Prevents stale Namespace owner from managing renewals. |
-| 5 | Check duration bounds. | Applies the same configured min/max duration policy to renewal. |
-| 6 | Check runtime data lengths. | Ensures every configured rule/hook receives exactly one payload. |
-| 7 | Compute `labelHash`. | Used for registry state lookup and activation binding. |
-| 8 | Read registry state. | Renewal needs token id, status, and current expiry. |
-| 9 | Require status `REGISTERED`. | Avoids renewing labels that registry says are not active. |
-| 10 | Require stored label activation equals input activation id. | Prevents cross-activation renewal policy abuse. |
-| 11 | Compute `newExpiry = state.expiry + duration`. | Renewal extends from current expiry, not current timestamp. |
-| 12 | Build `RenewContext`. | Gives modules the same renewal context. |
-| 13 | Evaluate renewal rules. | Applies renewal-specific gates and pricing. |
-| 14 | Call registry `renew`. | Official ENSv2 registry updates expiry. |
-| 15 | Collect payment if needed. | Enforces final renewal price. |
-| 16 | Run post-renew hooks. | Allows future hooks to react to renewal. |
-| 17 | Emit event. | Indexers can track renewal and price. |
+| 4 | Check namespace is still current. | Prevents old activations after namespace expiry/re-register or subregistry replacement. |
+| 5 | Check activation owner still has registry admin roles. | Prevents stale Namespace owner from managing renewals. |
+| 6 | Check duration bounds. | Applies the same configured min/max duration policy to renewal. |
+| 7 | Check runtime data lengths. | Ensures every configured rule/hook receives exactly one payload. |
+| 8 | Compute `labelHash`. | Used for registry state lookup and activation binding. |
+| 9 | Read registry state. | Renewal needs token id, status, and current expiry. |
+| 10 | Require status `REGISTERED`. | Avoids renewing labels that registry says are not active. |
+| 11 | Require stored label activation equals input activation id. | Prevents cross-activation renewal policy abuse. |
+| 12 | Compute `newExpiry = state.expiry + duration`. | Renewal extends from current expiry, not current timestamp. |
+| 13 | Build `RenewContext`. | Gives modules the same renewal context. |
+| 14 | Evaluate renewal rules. | Applies renewal-specific gates and pricing. |
+| 15 | Call registry `renew`. | Official ENSv2 registry updates expiry. |
+| 16 | Collect payment if needed. | Enforces final renewal price. |
+| 17 | Run post-renew hooks. | Allows future hooks to react to renewal. |
+| 18 | Emit event. | Indexers can track renewal and price. |
 
 ## Activation Binding
 
@@ -191,6 +193,7 @@ SubnameRenewed(
 | Failure | Source |
 | --- | --- |
 | Label not registered | Controller after registry `getState` |
+| Namespace activation stale or unavailable | Controller |
 | Label minted through another activation | Controller activation binding |
 | Renewal rule rejects payer or label | Rule module |
 | Wrong renewal proof | Reservation or whitelist rule |

@@ -17,7 +17,7 @@ import {NamespaceBenchmarkPricing} from "test/benchmarks/common/NamespaceBenchma
 
 /// @notice Builds benchmark activation configs and runtime data.
 abstract contract NamespaceBenchmarkScenarios is NamespaceBenchmarkPricing {
-    function _freeActivationConfig() internal view returns (NamespaceTypes.ActivationConfig memory config) {
+    function _freeActivationConfig() internal pure returns (NamespaceTypes.ActivationConfig memory config) {
         config = _activationConfig(new NamespaceTypes.RuleConfig[](0), _noPaymentModule(), _noHooks(), address(0));
     }
 
@@ -141,10 +141,8 @@ abstract contract NamespaceBenchmarkScenarios is NamespaceBenchmarkPricing {
         NamespaceTypes.ModuleConfig memory paymentModule,
         NamespaceTypes.ModuleConfig[] memory postHooks,
         address resolver_
-    ) internal view returns (NamespaceTypes.ActivationConfig memory config) {
+    ) internal pure returns (NamespaceTypes.ActivationConfig memory config) {
         config = NamespaceTypes.ActivationConfig({
-            registry: IPermissionedRegistry(address(registry)),
-            parentNode: _aliceNode(),
             resolver: resolver_,
             buyerRoleBitmap: BUYER_ROLES,
             minDuration: 1,

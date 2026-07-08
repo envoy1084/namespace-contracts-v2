@@ -8,21 +8,24 @@ Namespace uses these ENSv2 registry interfaces:
 
 | Interface | Use |
 | --- | --- |
-| `IRegistry` | Parent-chain traversal, subregistry lookup, root registry reference. |
+| `IRegistry` | Registry ancestry and subregistry lookup returned by UniversalResolverV2. |
 | `IPermissionedRegistry` | Register labels, renew labels, read label state, check root roles. |
+| `IUniversalResolverV2` | Canonical registry discovery from DNS-encoded namespace names. |
 
 Namespace calls:
 
 | Call | Used in | Purpose |
 | --- | --- | --- |
-| `registry.getParent()` | Activation | Walk from activation registry to configured root registry. |
-| `parent.getSubregistry(label)` | Activation | Verify parent-child registry relationship. |
+| `universalResolver.findCanonicalRegistry(name)` | Activation | Resolve the canonical writable registry for the namespace name. |
+| `universalResolver.findRegistries(name)` | Activation | Read namespace ancestry, including the parent registry that owns the namespace label. |
+| `parentRegistry.getState(labelId)` | Activation and runtime staleness checks | Read namespace status and current EAC resource. |
+| `parentRegistry.getSubregistry(label)` | Activation and runtime staleness checks | Confirm the parent still points to the activated registry. |
 | `registry.hasRootRoles(roles, account)` | Activation and management | Verify owner and controller authority. |
 | `registry.register(...)` | Mint | Create label in ENSv2 registry. |
 | `registry.getState(labelId)` | Renew | Read token id, status, and expiry. |
 | `registry.renew(tokenId, newExpiry)` | Renew | Extend expiry. |
 
-Namespace does not directly manage ENSv2 versioning internals such as registry-internal token versioning or authorization version ids. Those remain upstream ENSv2 registry concerns. Namespace treats the registry as an external contract with the public interfaces above.
+Namespace does not mutate ENSv2 versioning internals. It does, however, read the parent namespace `resource` during activation. ENSv2 increments the resource version when a name expires/unregisters and is re-registered, so using that resource in the activation key prevents an old activation from silently applying to a newly acquired namespace.
 
 ## Why Namespace Uses IPermissionedRegistry
 
@@ -74,11 +77,19 @@ activation owner must still have ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
 ```mermaid
 sequenceDiagram
     participant Alice as "Alice"
+    participant UR as "UniversalResolverV2"
+    participant Parent as "Parent registry"
     participant Registry as "ENSv2 registry"
     participant Controller as "NamespaceController"
 
     Alice->>Registry: grant root register and renew roles to controller
-    Alice->>Controller: activate(config)
+    Alice->>Controller: activate("alice.eth", config)
+    Controller->>UR: findCanonicalRegistry("alice.eth")
+    UR-->>Controller: AliceRegistry
+    Controller->>UR: findRegistries("alice.eth")
+    UR-->>Controller: [AliceRegistry, ETHRegistry, RootRegistry]
+    Controller->>Parent: getState(labelhash("alice"))
+    Parent-->>Controller: REGISTERED and namespace resource
     Controller->>Registry: hasRootRoles(admin roles, Alice)
     Registry-->>Controller: true
     Controller->>Registry: hasRootRoles(register and renew roles, controller)
@@ -90,43 +101,44 @@ If the controller does not have registry roles at activation time, activation re
 
 If the activation owner lacks admin authority, activation or later management calls revert with `UnauthorizedActivationOwner`.
 
-## Canonical Parent Registry Check
-
-The caller supplies both `registry` and `parentNode` in `ActivationConfig`. The controller verifies they match the registry's actual ENSv2 parent chain.
+## Canonical Namespace Discovery
 
 ```mermaid
 flowchart TD
-    A["Start at activation registry"] --> B["Read current.getParent()"]
-    B --> C["Parent address must be non-zero"]
-    C --> D["Label must satisfy ENS label-size check"]
-    D --> E["parent.getSubregistry(label) must equal current"]
-    E --> F{"Is parent rootRegistry?"}
-    F -->|"No"| G["Move current to parent"]
-    G --> B
-    F -->|"Yes"| H["Compute namehash from collected labels"]
-    H --> I["Computed namehash must equal config.parentNode"]
+    A["activate(dnsName, config)"] --> B["UniversalResolverV2.findCanonicalRegistry(dnsName)"]
+    B --> C{"canonical registry found?"}
+    C -->|"No"| D["revert NamespaceRegistryNotFound"]
+    C -->|"Yes"| E["UniversalResolverV2.findRegistries(dnsName)"]
+    E --> F["registries[0] must equal canonical registry"]
+    F --> G["registries[1] is parent registry"]
+    G --> H["extract first label from dnsName"]
+    H --> I["parentRegistry.getState(labelHash)"]
+    I --> J{"status REGISTERED?"}
+    J -->|"No"| K["revert NamespaceNotRegistered"]
+    J -->|"Yes"| L["parentRegistry.getSubregistry(label) must equal registry"]
+    L --> M["derive parentNode and namespaceKey"]
 ```
 
 Why the check exists:
 
 | Check | Why |
 | --- | --- |
-| `rootRegistry` configured | Without a root, there is no canonical chain endpoint. |
-| Parent is non-zero | Prevents activating a detached registry. |
-| Parent maps label back to child | Prevents spoofed parent labels. |
-| Label size assertion | Keeps computed namehash compatible with ENS label constraints. |
-| Depth limit `128` | Prevents unbounded parent-chain traversal. |
-| Computed node equals supplied `parentNode` | Binds the activation to the registry's actual name. |
+| UniversalResolver configured | Activation needs a canonical ENSv2 discovery source. |
+| DNS name is not root | Root cannot be a sellable user namespace activation. |
+| Canonical registry exists | Prevents activating missing names or fake registry addresses. |
+| Parent registry exists | Needed to read the current namespace label state. |
+| Parent state is `REGISTERED` | Reserved, expired, or unavailable names cannot activate sales. |
+| Parent subregistry still points to registry | Prevents stale activations after the namespace is repointed. |
 
 Failure modes:
 
 | Failure | Error |
 | --- | --- |
-| Root registry not set | `RootRegistryNotConfigured` |
-| Parent is zero | `RegistryParentNotConfigured` |
-| Parent-child link mismatch | `RegistryParentChildMismatch` |
-| Parent chain too deep | `RegistryParentChainTooDeep` |
-| Computed node differs from supplied node | `RegistryParentNodeMismatch` |
+| UniversalResolver not set | `UniversalResolverNotConfigured` |
+| Root name passed | `InvalidNamespaceName` |
+| Canonical registry missing or inconsistent | `NamespaceRegistryNotFound` |
+| Parent registry missing | `NamespaceParentRegistryNotFound` |
+| Parent label not registered | `NamespaceNotRegistered` |
 
 ## Mint Registry Call
 
@@ -216,7 +228,7 @@ Production deployments should decide which model they want:
 | Controller-enforced public sale | Controller is the only operational public mint route; other privileged paths are removed, timelocked, or constrained. |
 | Hybrid | Admin powers exist for emergency or reserved inventory, with explicit disclosure. |
 
-## UniversalResolverV2 As Discovery
+## UniversalResolverV2 As Activation Dependency
 
 `UniversalResolverV2` can discover registries from DNS-encoded names:
 
@@ -226,12 +238,6 @@ Production deployments should decide which model they want:
 | `findCanonicalRegistry(name)` | Finds the registry only when it is canonical for that name. |
 | `findRegistries(name)` | Returns registry ancestry, useful for off-chain tooling. |
 
-This is useful for activation UX. A frontend can ask Universal Resolver for the registry for `alice.eth`, compute `parentNode`, and pass both to `activate`. The controller should still verify the registry parent chain on-chain.
+The current controller uses UniversalResolverV2 directly in `activate(name, config)`. The frontend no longer passes `registry` or `parentNode`.
 
-An on-chain convenience entry point can be added later:
-
-```solidity
-activateByName(bytes dnsEncodedParentName, ActivationConfigByName config)
-```
-
-That helper would call `findCanonicalRegistry`, compute `parentNode`, then run the same internal activation checks. The core controller should not rely on Universal Resolver as the only source of truth without retaining permissioned-registry role checks.
+UniversalResolverV2 is used only for namespace discovery. The controller still performs explicit `IPermissionedRegistry` role checks before activation succeeds.

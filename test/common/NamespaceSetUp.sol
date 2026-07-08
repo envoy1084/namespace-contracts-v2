@@ -8,7 +8,6 @@ import {LibClone} from "solady/utils/LibClone.sol";
 import {NameCoder} from "@ens/contracts/utils/NameCoder.sol";
 import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
 import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
-import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 import {RegistryRolesLib} from "@ensv2/registry/libraries/RegistryRolesLib.sol";
 import {PermissionedRegistry} from "@ensv2/registry/PermissionedRegistry.sol";
 import {SimpleRegistryMetadata} from "@ensv2/registry/SimpleRegistryMetadata.sol";
@@ -19,6 +18,7 @@ import {FixedPriceRule} from "src/modules/rules/FixedPriceRule.sol";
 import {LabelLengthRule} from "src/modules/rules/LabelLengthRule.sol";
 import {SaleWindowRule} from "src/modules/rules/SaleWindowRule.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
+import {MockUniversalResolverV2} from "test/mocks/MockUniversalResolverV2.sol";
 import {RecordingPostHook} from "test/mocks/RecordingPostHook.sol";
 
 abstract contract NamespaceSetUp is Test {
@@ -26,7 +26,9 @@ abstract contract NamespaceSetUp is Test {
     uint256 internal constant ROLE_REGISTRAR_ADMIN = RegistryRolesLib.ROLE_REGISTRAR_ADMIN;
     uint256 internal constant ROLE_RENEW = RegistryRolesLib.ROLE_RENEW;
     uint256 internal constant ROLE_RENEW_ADMIN = RegistryRolesLib.ROLE_RENEW_ADMIN;
+    uint256 internal constant ROLE_UNREGISTER = RegistryRolesLib.ROLE_UNREGISTER;
     uint256 internal constant ROLE_SET_PARENT = RegistryRolesLib.ROLE_SET_PARENT;
+    uint256 internal constant ROLE_SET_SUBREGISTRY = RegistryRolesLib.ROLE_SET_SUBREGISTRY;
     uint256 internal constant ROLE_SET_RESOLVER = RegistryRolesLib.ROLE_SET_RESOLVER;
     uint256 internal constant ROLE_SET_RESOLVER_ADMIN = RegistryRolesLib.ROLE_SET_RESOLVER_ADMIN;
     uint256 internal constant ROLE_CAN_TRANSFER_ADMIN = RegistryRolesLib.ROLE_CAN_TRANSFER_ADMIN;
@@ -45,6 +47,7 @@ abstract contract NamespaceSetUp is Test {
     PermissionedRegistry internal rootRegistry;
     PermissionedRegistry internal ethRegistry;
     PermissionedRegistry internal registry;
+    MockUniversalResolverV2 internal universalResolver;
     MockERC20 internal token;
     ERC20PaymentModule internal erc20Payment;
     RecordingPostHook internal postHook;
@@ -85,8 +88,9 @@ abstract contract NamespaceSetUp is Test {
             "alice", accounts.owner.addr, IRegistry(address(registry)), address(0), 0, type(uint64).max
         );
         registry.setParent(ethRegistry, "alice");
+        universalResolver = new MockUniversalResolverV2(rootRegistry);
         vm.prank(accounts.owner.addr);
-        controller.setRootRegistry(rootRegistry);
+        controller.setUniversalResolver(universalResolver);
         token = new MockERC20("Mock USDC", "mUSDC");
         erc20Payment = ERC20PaymentModule(_deployModule(address(new ERC20PaymentModule())));
         postHook = RecordingPostHook(_deployModule(address(new RecordingPostHook())));
@@ -130,8 +134,6 @@ abstract contract NamespaceSetUp is Test {
         postHooks[0] = NamespaceTypes.ModuleConfig({module: address(postHook), configData: ""});
 
         config = NamespaceTypes.ActivationConfig({
-            registry: IPermissionedRegistry(address(registry)),
-            parentNode: _aliceNode(),
             resolver: address(0xBEEF),
             buyerRoleBitmap: BUYER_ROLES,
             minDuration: 1,
@@ -155,11 +157,43 @@ abstract contract NamespaceSetUp is Test {
     function _activateDefault() internal returns (bytes32 activationId) {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
         vm.prank(accounts.alice.addr);
-        activationId = controller.activate(config);
+        activationId = controller.activate(_aliceName(), config);
+    }
+
+    function _activateNamespace(string memory label, NamespaceTypes.ActivationConfig memory config)
+        internal
+        returns (bytes32 activationId)
+    {
+        _registerNamespace(label);
+        vm.prank(accounts.alice.addr);
+        activationId = controller.activate(_namespaceName(label), config);
+    }
+
+    function _registerNamespace(string memory label) internal returns (PermissionedRegistry namespaceRegistry) {
+        namespaceRegistry = new PermissionedRegistry(
+            IHCAFactoryBasic(address(0)),
+            registryMetadata,
+            address(this),
+            ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN | RegistryRolesLib.ROLE_REGISTER_RESERVED_ADMIN
+        );
+        ethRegistry.register(
+            label, accounts.owner.addr, IRegistry(address(namespaceRegistry)), address(0), 0, type(uint64).max
+        );
+        namespaceRegistry.setParent(ethRegistry, label);
+        namespaceRegistry.grantRootRoles(ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN, accounts.alice.addr);
+        namespaceRegistry.grantRootRoles(ROLE_REGISTRAR | ROLE_RENEW, address(controller));
     }
 
     function _aliceNode() internal pure returns (bytes32) {
         return NameCoder.namehash(NameCoder.ETH_NODE, keccak256(bytes("alice")));
+    }
+
+    function _aliceName() internal pure returns (bytes memory) {
+        return NameCoder.encode("alice.eth");
+    }
+
+    function _namespaceName(string memory label) internal pure returns (bytes memory) {
+        return NameCoder.encode(string.concat(label, ".eth"));
     }
 
     function _deployController(address owner_) internal returns (NamespaceController deployed) {

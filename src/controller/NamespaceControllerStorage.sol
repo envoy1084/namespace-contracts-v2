@@ -10,6 +10,7 @@ import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
 
 import {INamespaceController} from "src/interfaces/INamespaceController.sol";
+import {IUniversalResolverV2} from "src/interfaces/IUniversalResolverV2.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 
 /// @title NamespaceControllerStorage
@@ -33,12 +34,16 @@ abstract contract NamespaceControllerStorage is
     uint256 internal constant ROLE_REGISTRAR_ADMIN = ROLE_REGISTRAR << 128;
     uint256 internal constant ROLE_RENEW = 1 << 16;
     uint256 internal constant ROLE_RENEW_ADMIN = ROLE_RENEW << 128;
-    uint256 private constant _MAX_REGISTRY_PARENT_DEPTH = 128;
 
     struct ActivationData {
         address owner;
         IPermissionedRegistry registry;
+        IPermissionedRegistry parentRegistry;
+        bytes32 namespaceKey;
         bytes32 parentNode;
+        bytes32 namespaceLabelHash;
+        uint256 namespaceResource;
+        string namespaceLabel;
         address resolver;
         uint256 buyerRoleBitmap;
         uint64 minDuration;
@@ -64,14 +69,27 @@ abstract contract NamespaceControllerStorage is
         uint256 status;
     }
 
+    struct ResolvedNamespace {
+        IPermissionedRegistry registry;
+        IPermissionedRegistry parentRegistry;
+        bytes32 namespaceKey;
+        bytes32 parentNode;
+        bytes32 labelHash;
+        uint256 resource;
+        string label;
+    }
+
     /// @notice Total number of activations created by this controller.
     uint256 public activationNonce;
 
     /// @notice Whether activation modules must be approved by the controller owner.
     bool public moduleApprovalRequired;
 
-    /// @notice Canonical ENSv2 root registry used to validate activation registry parent chains.
+    /// @notice Root registry reported by the configured ENSv2 UniversalResolver.
     IRegistry public rootRegistry;
+
+    /// @notice ENSv2 UniversalResolver used to discover canonical namespace registries.
+    IUniversalResolverV2 public universalResolver;
 
     mapping(bytes32 activationId => ActivationData activation) internal activations;
     mapping(address registry => mapping(bytes32 labelHash => bytes32 activationId)) internal labelActivations;
@@ -96,55 +114,71 @@ abstract contract NamespaceControllerStorage is
         }
     }
 
-    function _checkCanonicalParentNode(IPermissionedRegistry registry, bytes32 parentNode) internal view {
-        IRegistry root = rootRegistry;
-        if (address(root) == address(0)) {
-            revert RootRegistryNotConfigured();
-        }
-
-        bytes32 canonicalParentNode = _canonicalRegistryNode(registry, root, 0);
-        if (canonicalParentNode != parentNode) {
-            revert RegistryParentNodeMismatch(address(registry), canonicalParentNode, parentNode);
-        }
-    }
-
     function _checkDuration(bytes32 activationId, ActivationData storage activation, uint64 duration) internal view {
         if (duration < activation.minDuration || duration > activation.maxDuration) {
             revert DurationOutOfBounds(activationId, duration, activation.minDuration, activation.maxDuration);
         }
     }
 
-    function _canonicalRegistryNode(IRegistry registry, IRegistry root, uint256) private view returns (bytes32 node) {
-        bytes32[] memory labels = new bytes32[](_MAX_REGISTRY_PARENT_DEPTH + 1);
-        IRegistry current = registry;
-        uint256 depth;
-        while (address(current) != address(root)) {
-            if (depth > _MAX_REGISTRY_PARENT_DEPTH) {
-                revert RegistryParentChainTooDeep(address(current));
-            }
+    function _resolveNamespace(bytes calldata name) internal view returns (ResolvedNamespace memory resolved) {
+        IUniversalResolverV2 resolver = universalResolver;
+        if (address(resolver) == address(0)) revert UniversalResolverNotConfigured();
+        if (NameCoder.countLabels(name, 0) == 0) revert InvalidNamespaceName(name);
 
-            (IRegistry parent, string memory label) = current.getParent();
-            if (address(parent) == address(0)) {
-                revert RegistryParentNotConfigured(address(current));
-            }
+        IRegistry registry = resolver.findCanonicalRegistry(name);
+        if (address(registry) == address(0)) revert NamespaceRegistryNotFound(name);
 
-            NameCoder.assertLabelSize(label);
-            IRegistry child = parent.getSubregistry(label);
-            if (address(child) != address(current)) {
-                revert RegistryParentChildMismatch(address(current), address(parent), label, address(child));
-            }
-            labels[depth] = keccak256(bytes(label));
-            current = parent;
-            unchecked {
-                ++depth;
-            }
+        IRegistry[] memory registries = resolver.findRegistries(name);
+        if (registries.length < 2 || address(registries[1]) == address(0)) {
+            revert NamespaceParentRegistryNotFound(name);
+        }
+        if (address(registries[0]) != address(registry)) revert NamespaceRegistryNotFound(name);
+
+        string memory label = NameCoder.firstLabel(name);
+        bytes32 labelHash = _labelHash(label);
+        IPermissionedRegistry parentRegistry = IPermissionedRegistry(address(registries[1]));
+        IPermissionedRegistry.State memory state = parentRegistry.getState(uint256(labelHash));
+        if (state.status != IPermissionedRegistry.Status.REGISTERED) {
+            revert NamespaceNotRegistered(name, state.status);
+        }
+        IRegistry currentRegistry = parentRegistry.getSubregistry(label);
+        if (address(currentRegistry) != address(registry)) {
+            revert NamespaceRegistryNotFound(name);
         }
 
-        while (depth != 0) {
-            unchecked {
-                --depth;
-            }
-            node = NameCoder.namehash(node, labels[depth]);
+        bytes32 parentNode = NameCoder.namehash(name, 0);
+        resolved = ResolvedNamespace({
+            registry: IPermissionedRegistry(address(registry)),
+            parentRegistry: parentRegistry,
+            namespaceKey: keccak256(
+                abi.encode(block.chainid, address(registry), parentNode, address(parentRegistry), state.resource)
+            ),
+            parentNode: parentNode,
+            labelHash: labelHash,
+            resource: state.resource,
+            label: label
+        });
+    }
+
+    function _checkNamespaceCurrent(bytes32 activationId, ActivationData storage activation) internal view {
+        IPermissionedRegistry.State memory state =
+            activation.parentRegistry.getState(uint256(activation.namespaceLabelHash));
+        if (state.status != IPermissionedRegistry.Status.REGISTERED) {
+            revert NamespaceActivationUnavailable(activationId, state.status);
+        }
+        if (state.resource != activation.namespaceResource) {
+            revert NamespaceActivationStale(activationId, activation.namespaceResource, state.resource);
+        }
+        IRegistry currentRegistry = activation.parentRegistry.getSubregistry(activation.namespaceLabel);
+        if (address(currentRegistry) != address(activation.registry)) {
+            revert NamespaceRegistryChanged(activationId, address(activation.registry), address(currentRegistry));
+        }
+    }
+
+    function _labelHash(string memory label) private pure returns (bytes32 hash) {
+        bytes memory labelBytes = bytes(label);
+        assembly ("memory-safe") {
+            hash := keccak256(add(labelBytes, 0x20), mload(labelBytes))
         }
     }
 }

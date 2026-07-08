@@ -4,25 +4,29 @@ This document describes the data structures that make an activation executable.
 
 ## Activation Id
 
-`activate` increments `activationNonce`, then computes:
+`activate(name, config)` resolves the namespace and computes a deterministic key:
 
 ```solidity
 activationId = keccak256(
-    abi.encode(block.chainid, address(config.registry), config.parentNode, msg.sender, nonce)
+    abi.encode(block.chainid, address(registry), parentNode, address(parentRegistry), namespaceResource)
 );
 ```
+
+`activationId` is equal to this namespace key.
 
 Properties:
 
 | Component | Purpose |
 | --- | --- |
 | `block.chainid` | Avoids cross-chain id reuse. |
-| `config.registry` | Binds id to the ENSv2 registry. |
-| `config.parentNode` | Binds id to the parent namespace. |
-| `msg.sender` | Binds id to the creator. |
-| `nonce` | Allows the same owner to create multiple activations for the same namespace. |
+| `registry` | Binds id to the canonical writable ENSv2 registry for the namespace. |
+| `parentNode` | Binds id to the namespace namehash, such as `namehash("alice.eth")`. |
+| `parentRegistry` | Binds id to the registry that owns the namespace label. |
+| `namespaceResource` | Binds id to the current ENSv2 EAC resource for the namespace label. |
 
-Because the nonce is included, the current contracts can create multiple activation ids for the same registry and parent node. The recommended product model is to add a separate "current activation" mapping per registry so only one activation is used for new mints at a time while older activations can remain available for renewals.
+Because the parent namespace resource is included, expiry/unregister/re-register creates a new activation namespace. Token id changes caused by ENSv2 role regeneration do not change the activation id because the EAC resource is unchanged.
+
+The controller rejects a second activation for the same current namespace key with `NamespaceAlreadyActivated`.
 
 ## ActivationConfig
 
@@ -30,8 +34,6 @@ Because the nonce is included, the current contracts can create multiple activat
 
 | Field | Type | Stored in controller | Can update in same activation |
 | --- | --- | --- | --- |
-| `registry` | `IPermissionedRegistry` | yes | no |
-| `parentNode` | `bytes32` | yes | no |
 | `resolver` | `address` | yes | no |
 | `buyerRoleBitmap` | `uint256` | yes | no |
 | `minDuration` | `uint64` | yes | no |
@@ -42,7 +44,7 @@ Because the nonce is included, the current contracts can create multiple activat
 
 `configData` for rules, payment module, and hooks is not stored in the controller. It is passed to each module's `configure(activationId, configData)`.
 
-`registry` and `parentNode` are explicit in the current low-level API. A future `activateByName` helper can derive both from a DNS-encoded parent name through `UniversalResolverV2`, but the underlying activation still needs an exact writable registry and canonical parent node.
+`registry`, `parentRegistry`, `parentNode`, and `namespaceResource` are derived from the DNS-encoded `name` argument using `UniversalResolverV2` and the parent `IPermissionedRegistry`.
 
 ## Internal ActivationData
 
@@ -52,7 +54,12 @@ The controller stores:
 | --- | --- |
 | `owner` | Activation manager. |
 | `registry` | ENSv2 registry target. |
+| `parentRegistry` | ENSv2 registry that owns the namespace label. |
+| `namespaceKey` | Deterministic one-activation-per-namespace key. |
 | `parentNode` | Canonical parent namehash. |
+| `namespaceLabelHash` | Hash of the namespace label in its parent registry. |
+| `namespaceResource` | Parent registry EAC resource captured at activation. |
+| `namespaceLabel` | Label used to verify the parent subregistry pointer at runtime. |
 | `resolver` | Resolver used on registry registration. |
 | `buyerRoleBitmap` | Roles granted to buyers. |
 | `minDuration` | Minimum allowed duration. |
@@ -207,7 +214,7 @@ Why:
 | Reason | Explanation |
 | --- | --- |
 | Prevent wrong renewal policy | A cheap renewal activation cannot renew a label minted through a stricter activation. |
-| Separate historical sale configs | Same registry may have replacement activations over time, but the recommended product model is only one current mint activation. |
+| Namespace-level binding | Only the activation that minted the label can renew it. |
 | Keep renewal state minimal | Mapping stores only the activation id needed for policy binding. |
 
 Limitation:

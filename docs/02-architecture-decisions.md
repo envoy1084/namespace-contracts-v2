@@ -61,16 +61,16 @@ Tradeoff:
 
 ## Decision 2A: Prefer One Current Mint Activation Per Namespace
 
-The current contracts allow multiple activation ids for the same registry and parent node. That is useful for iteration but not ideal for user-facing sales.
+The current contracts enforce one activation per current namespace resource. `activate(name, config)` resolves the canonical registry with UniversalResolverV2 and derives `activationId` from the namespace registry, parent node, parent registry, and parent namespace resource.
 
-Recommended product direction:
+Implemented behavior:
 
 ```text
-one current mint activation per canonical registry
-historical activations can remain renewal-enabled
+one activation per current namespace resource
+expired or re-registered namespace = new resource = new activation id
 ```
 
-Do not enforce "one activation forever." Module stacks are immutable, so replacing a sale stack requires a new activation. The safer model is to make only one activation current for new mints while preserving old activation ids for renewals unless an explicit migration is performed.
+This is stricter than the earlier "one current mint activation" recommendation. A future replacement flow can be added explicitly if the product needs to replace module stacks without waiting for an ENSv2 namespace resource change.
 
 Recommended future status model:
 

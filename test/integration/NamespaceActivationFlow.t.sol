@@ -86,7 +86,7 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
             _integrationActivationConfig(reservationRule.leaf(reservationClaim), whitelistRoot);
 
         vm.prank(accounts.alice.addr);
-        activationId = controller.activate(config);
+        activationId = controller.activate(_aliceName(), config);
     }
 
     function _integrationRuntimeData(bytes32 labelHash)
@@ -172,8 +172,6 @@ contract NamespaceActivationFlowTest is NamespaceSetUp {
         postHooks[0] = NamespaceTypes.ModuleConfig({module: address(postHook), configData: ""});
 
         config = NamespaceTypes.ActivationConfig({
-            registry: IPermissionedRegistry(address(registry)),
-            parentNode: _aliceNode(),
             resolver: address(0xBEEF),
             buyerRoleBitmap: BUYER_ROLES,
             minDuration: 1,

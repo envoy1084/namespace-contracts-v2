@@ -2,7 +2,6 @@
 pragma solidity ^0.8.26;
 
 import {INamespaceController} from "src/interfaces/INamespaceController.sol";
-import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {ERC20PaymentModule} from "src/modules/payment/ERC20PaymentModule.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
@@ -343,8 +342,6 @@ contract NamespaceControllerStrictRulesTest is NamespaceSetUp {
     {
         NamespaceTypes.ModuleConfig[] memory postHooks = new NamespaceTypes.ModuleConfig[](0);
         NamespaceTypes.ActivationConfig memory config = NamespaceTypes.ActivationConfig({
-            registry: IPermissionedRegistry(address(registry)),
-            parentNode: _aliceNode(),
             resolver: address(0xBEEF),
             buyerRoleBitmap: BUYER_ROLES,
             minDuration: 1,
@@ -355,7 +352,7 @@ contract NamespaceControllerStrictRulesTest is NamespaceSetUp {
         });
 
         vm.prank(accounts.alice.addr);
-        activationId = controller.activate(config);
+        activationId = controller.activate(_aliceName(), config);
     }
 
     function _singleRule(OutputRule rule, NamespaceTypes.RulePhase phase, NamespaceTypes.RuleOutput memory output)

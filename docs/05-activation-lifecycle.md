@@ -8,10 +8,10 @@ Activation turns a namespace owner's intended sale configuration into executable
 1. Deploy and initialize controller.
 2. Deploy and initialize modules.
 3. Controller owner approves modules.
-4. Controller owner sets root ENSv2 registry.
+4. Controller owner sets ENSv2 UniversalResolverV2.
 5. ENSv2 registry admin grants controller register and renew roles.
-6. Namespace owner calls activate(config).
-7. Controller validates registry, permissions, durations, modules, and phases.
+6. Namespace owner calls `activate(name, config)`.
+7. Controller resolves the namespace registry and validates permissions, durations, modules, and phases.
 8. Controller stores activation.
 9. Controller calls configure on every configured module.
 10. Activation id is returned and sale can be used.
@@ -24,7 +24,7 @@ Before `activate`:
 | Requirement | Why |
 | --- | --- |
 | Controller proxy initialized | Sets owner and enables module approval enforcement. |
-| `rootRegistry` set | Needed for canonical parent validation. |
+| `universalResolver` set | Needed for canonical namespace discovery from DNS-encoded names. |
 | Modules initialized with controller address | `configure` and runtime calls require `onlyController`. |
 | Modules approved by kind when approvals are required | Activation rejects unapproved modules. |
 | Activation caller has ENSv2 root admin roles | Caller must be authorized for the namespace. |
@@ -36,16 +36,22 @@ Before `activate`:
 sequenceDiagram
     participant Owner as "Namespace owner"
     participant Controller as "NamespaceController"
-    participant Registry as "ENSv2 registry"
+    participant UR as "UniversalResolverV2"
+    participant Parent as "Parent registry"
+    participant Registry as "Namespace registry"
     participant Rule as "Rule modules"
     participant Payment as "Payment module"
     participant Hook as "Post hooks"
 
-    Owner->>Controller: activate(config)
-    Controller->>Controller: require registry != zero
-    Controller->>Controller: require rootRegistry configured
-    Controller->>Registry: walk parent chain to rootRegistry
-    Controller->>Controller: require computed node == config.parentNode
+    Owner->>Controller: activate(name, config)
+    Controller->>UR: findCanonicalRegistry(name)
+    UR-->>Controller: namespace registry
+    Controller->>UR: findRegistries(name)
+    UR-->>Controller: registry ancestry
+    Controller->>Parent: getState(namespace label)
+    Parent-->>Controller: status and resource
+    Controller->>Parent: getSubregistry(namespace label)
+    Parent-->>Controller: namespace registry
     Controller->>Controller: require valid duration bounds
     Controller->>Registry: hasRootRoles(admin roles, Owner)
     Registry-->>Controller: true
@@ -69,17 +75,19 @@ sequenceDiagram
 
 | Order | Check | Why it exists |
 | --- | --- | --- |
-| 1 | `config.registry != address(0)` | Registry calls cannot target zero address. |
-| 2 | `rootRegistry != address(0)` | Parent-chain validation needs a canonical root. |
-| 3 | Registry parent chain computes `config.parentNode` | Prevents a caller from pairing one registry with another namehash. |
-| 4 | `config.maxDuration != 0` | Prevents an activation that can never accept a valid duration. |
-| 5 | `config.minDuration <= config.maxDuration` | Prevents impossible duration bounds. |
-| 6 | Payment module is approved if non-zero | Payment module controls asset movement. |
-| 7 | Caller has registry admin roles | Sale config must be created by an authorized namespace admin. |
-| 8 | Controller has register/renew roles | Future runtime calls need registry execution authority. |
-| 9 | Rule count and hook count are at most `255` | Counts are stored as `uint8`. |
-| 10 | Every configured module is non-zero and approved for its kind | Prevents invalid and uncurated external execution. |
-| 11 | Rule phases are non-descending | Ensures deterministic rule pipeline. |
+| 1 | `universalResolver != address(0)` | Activation needs canonical ENSv2 discovery. |
+| 2 | DNS name is not root. | Root is not a user namespace sale target. |
+| 3 | UniversalResolverV2 returns a canonical registry. | Prevents fake or detached registry activation. |
+| 4 | Parent registry exists and label status is `REGISTERED`. | Prevents activating reserved, expired, or unavailable namespaces. |
+| 5 | Parent subregistry still points to the resolved registry. | Prevents activating stale or inconsistent registry links. |
+| 6 | `config.maxDuration != 0` | Prevents an activation that can never accept a valid duration. |
+| 7 | `config.minDuration <= config.maxDuration` | Prevents impossible duration bounds. |
+| 8 | Payment module is approved if non-zero | Payment module controls asset movement. |
+| 9 | Caller has registry admin roles | Sale config must be created by an authorized namespace admin. |
+| 10 | Controller has register/renew roles | Future runtime calls need registry execution authority. |
+| 11 | Rule count and hook count are at most `255` | Counts are stored as `uint8`. |
+| 12 | Every configured module is non-zero and approved for its kind | Prevents invalid and uncurated external execution. |
+| 13 | Rule phases are non-descending | Ensures deterministic rule pipeline. |
 
 ## Activation Storage
 
@@ -87,8 +95,13 @@ The controller stores:
 
 ```text
 owner = msg.sender
-registry = config.registry
-parentNode = config.parentNode
+registry = resolved namespace registry
+parentRegistry = resolved parent registry
+namespaceKey = deterministic activation key
+parentNode = namehash(name)
+namespaceLabelHash = labelhash(first label)
+namespaceResource = parent registry resource for the namespace label
+namespaceLabel = first label
 resolver = config.resolver
 buyerRoleBitmap = config.buyerRoleBitmap
 minDuration = config.minDuration
@@ -108,38 +121,24 @@ ActivationStatusChanged(activationId, true)
 
 Although the activation is stored before module `configure` calls, the whole `activate` call is atomic. If any `configure` call reverts, storage and events revert.
 
-## Current Versus Recommended Activation Multiplicity
+## Activation Multiplicity
 
 Current implementation:
 
 ```text
-The same registry and parent node can have multiple activation ids because activation ids include a nonce.
+There is one activation per current namespace key.
 ```
 
-Recommended product model:
-
-```text
-Only one activation should be current for new mints for a namespace.
-Historical activations should remain addressable for renewals unless explicitly migrated or disabled.
-```
+The key includes chain id, namespace registry, parent node, parent registry, and parent namespace resource. Re-registered namespaces get a fresh resource and can activate again. A second activation for the same current resource reverts with `NamespaceAlreadyActivated`.
 
 Why this distinction matters:
 
 | Design | Issue |
 | --- | --- |
-| One activation forever | Cannot replace immutable module stacks when sale architecture changes. |
-| Multiple live mint activations | Buyers and indexers see conflicting sale configs. |
-| One current mint activation plus historical renewal activations | Clear user-facing sale path while preserving renewal behavior. |
-
-Recommended future state:
-
-```solidity
-mapping(address registry => bytes32 activationId) currentActivationByRegistry;
-```
-
-Then `mint` can require that the supplied activation id is the current one for the registry. `renew` should continue to use the activation that originally minted the label through `labelActivations`.
-
-The detailed design is in [Activation Interface Recommendations](./16-activation-interface-recommendations.md).
+| Name expires and is bought again | Parent registry resource changes; old activation becomes stale. |
+| Registry root roles change | Activation id stays stable; runtime admin checks enforce authority. |
+| ENSv2 token id changes due to role regeneration | Activation id stays stable because the resource did not change. |
+| Parent subregistry pointer changes | Runtime staleness check rejects mint and renew through the old activation. |
 
 ## Module Configure Phase
 
@@ -199,7 +198,7 @@ What cannot be changed inside the same activation:
 | Rule order or phase | Create a new activation. |
 | Add/remove hooks | Create a new activation. |
 | Payment module address | Create a new activation. |
-| Registry, parent node, resolver, duration bounds, buyer roles | Create a new activation. |
+| Namespace name, resolver, duration bounds, buyer roles | Create a new activation. |
 
 ## Activation Status
 

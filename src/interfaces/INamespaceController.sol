@@ -2,8 +2,8 @@
 pragma solidity ^0.8.26;
 
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
-import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
 
+import {IUniversalResolverV2} from "src/interfaces/IUniversalResolverV2.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 
 /// @title INamespaceController
@@ -14,15 +14,19 @@ interface INamespaceController {
     error NotActivationOwner(bytes32 activationId, address caller);
     error ZeroModule(bytes32 kind);
     error UnapprovedModule(address module, bytes32 kind);
-    error ZeroRegistry();
-    error RootRegistryNotConfigured();
+    error ZeroUniversalResolver();
+    error UniversalResolverNotConfigured();
     error ZeroActivationOwner();
     error UnauthorizedActivationOwner(address caller, address registry);
     error ControllerMissingRegistryRoles(address registry, uint256 requiredRoles);
-    error RegistryParentNotConfigured(address registry);
-    error RegistryParentChainTooDeep(address registry);
-    error RegistryParentChildMismatch(address registry, address parent, string label, address child);
-    error RegistryParentNodeMismatch(address registry, bytes32 expectedParentNode, bytes32 actualParentNode);
+    error InvalidNamespaceName(bytes name);
+    error NamespaceRegistryNotFound(bytes name);
+    error NamespaceParentRegistryNotFound(bytes name);
+    error NamespaceNotRegistered(bytes name, IPermissionedRegistry.Status status);
+    error NamespaceAlreadyActivated(bytes32 namespaceKey, bytes32 activationId);
+    error NamespaceActivationUnavailable(bytes32 activationId, IPermissionedRegistry.Status status);
+    error NamespaceActivationStale(bytes32 activationId, uint256 expectedResource, uint256 actualResource);
+    error NamespaceRegistryChanged(bytes32 activationId, address expectedRegistry, address actualRegistry);
     error ZeroDuration();
     error InvalidDurationBounds(uint64 minDuration, uint64 maxDuration);
     error DurationOutOfBounds(bytes32 activationId, uint64 duration, uint64 minDuration, uint64 maxDuration);
@@ -76,6 +80,9 @@ interface INamespaceController {
     /// @notice Emitted when the canonical ENSv2 root registry used for activation validation changes.
     event RootRegistrySet(address indexed rootRegistry);
 
+    /// @notice Emitted when the ENSv2 UniversalResolver used for activation discovery changes.
+    event UniversalResolverSet(address indexed universalResolver);
+
     /// @notice Emitted after a subname is minted.
     event SubnameMinted(
         bytes32 indexed activationId,
@@ -99,9 +106,12 @@ interface INamespaceController {
     );
 
     /// @notice Create and configure a namespace activation.
+    /// @param name DNS-encoded parent namespace name, e.g. `NameCoder.encode("alice.eth")`.
     /// @param config Activation configuration and module config payloads.
     /// @return activationId Created activation id.
-    function activate(NamespaceTypes.ActivationConfig calldata config) external returns (bytes32 activationId);
+    function activate(bytes calldata name, NamespaceTypes.ActivationConfig calldata config)
+        external
+        returns (bytes32 activationId);
 
     /// @notice Enable or disable an activation.
     /// @param activationId Activation id.
@@ -136,9 +146,9 @@ interface INamespaceController {
     /// @param approved Whether the module is approved.
     function setModuleApproval(bytes32 kind, address module, bool approved) external;
 
-    /// @notice Set the canonical ENSv2 root registry used to validate activation registry parent chains.
-    /// @param rootRegistry New root registry.
-    function setRootRegistry(IRegistry rootRegistry) external;
+    /// @notice Set the ENSv2 UniversalResolver used to discover namespace registries during activation.
+    /// @param universalResolver New UniversalResolverV2 contract.
+    function setUniversalResolver(IUniversalResolverV2 universalResolver) external;
 
     /// @notice Mint a subname through a stored activation.
     /// @param activationId Activation id.

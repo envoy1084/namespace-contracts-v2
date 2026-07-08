@@ -5,13 +5,14 @@ import {IHCAFactoryBasic} from "@ensv2/hca/interfaces/IHCAFactoryBasic.sol";
 import {IRegistry} from "@ensv2/registry/interfaces/IRegistry.sol";
 import {IPermissionedRegistry} from "@ensv2/registry/interfaces/IPermissionedRegistry.sol";
 import {PermissionedRegistry} from "@ensv2/registry/PermissionedRegistry.sol";
+import {NameCoder} from "@ens/contracts/utils/NameCoder.sol";
 
 import {NamespaceController} from "src/NamespaceController.sol";
 import {INamespaceController} from "src/interfaces/INamespaceController.sol";
+import {IUniversalResolverV2} from "src/interfaces/IUniversalResolverV2.sol";
 import {NamespaceTypes} from "src/libraries/NamespaceTypes.sol";
 import {SaleWindowRule} from "src/modules/rules/SaleWindowRule.sol";
 import {NamespaceSetUp} from "test/common/NamespaceSetUp.sol";
-import {ParentChainRegistry} from "test/mocks/ParentChainRegistry.sol";
 
 contract NamespaceControllerActivationTest is NamespaceSetUp {
     bytes32 private constant _ERC1967_IMPLEMENTATION_SLOT =
@@ -27,7 +28,11 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
         NamespaceTypes.Activation memory activation = controller.getActivation(activationId);
         assertEq(activation.owner, accounts.alice.addr);
         assertEq(address(activation.registry), address(registry));
+        assertEq(address(activation.parentRegistry), address(ethRegistry));
         assertEq(activation.parentNode, _aliceNode());
+        IPermissionedRegistry.State memory parentState = ethRegistry.getState(uint256(keccak256(bytes("alice"))));
+        assertEq(activation.namespaceResource, parentState.resource);
+        assertEq(activation.namespaceKey, activationId);
         assertEq(activation.resolver, address(0xBEEF));
         assertEq(activation.buyerRoleBitmap, BUYER_ROLES);
         assertEq(activation.minDuration, 1);
@@ -60,7 +65,7 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
             )
         );
         vm.prank(accounts.buyer.addr);
-        controller.activate(config);
+        controller.activate(_aliceName(), config);
     }
 
     function test_activate_revertsForInvalidDurationBounds() public {
@@ -72,7 +77,7 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
             abi.encodeWithSelector(INamespaceController.InvalidDurationBounds.selector, uint64(30 days), uint64(7 days))
         );
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        controller.activate(_aliceName(), config);
 
         config.minDuration = 0;
         config.maxDuration = 0;
@@ -81,31 +86,42 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
             abi.encodeWithSelector(INamespaceController.InvalidDurationBounds.selector, uint64(0), uint64(0))
         );
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        controller.activate(_aliceName(), config);
     }
 
     function test_activate_succeedsWhenAllModulesAreApproved() public {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
         vm.prank(accounts.alice.addr);
-        bytes32 activationId = controller.activate(config);
+        bytes32 activationId = controller.activate(_aliceName(), config);
 
         NamespaceTypes.Activation memory activation = controller.getActivation(activationId);
         assertEq(activation.owner, accounts.alice.addr);
     }
 
-    function test_setRootRegistry_revertsForZeroRegistry() public {
-        vm.expectRevert(abi.encodeWithSelector(INamespaceController.ZeroRegistry.selector));
-        vm.prank(accounts.owner.addr);
-        controller.setRootRegistry(IRegistry(address(0)));
+    function test_activate_revertsWhenNamespaceAlreadyActivated() public {
+        bytes32 activationId = _activateDefault();
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(INamespaceController.NamespaceAlreadyActivated.selector, activationId, activationId)
+        );
+        vm.prank(accounts.alice.addr);
+        controller.activate(_aliceName(), config);
     }
 
-    function test_activate_revertsWhenRootRegistryIsNotConfigured() public {
+    function test_setUniversalResolver_revertsForZeroResolver() public {
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.ZeroUniversalResolver.selector));
+        vm.prank(accounts.owner.addr);
+        controller.setUniversalResolver(IUniversalResolverV2(address(0)));
+    }
+
+    function test_activate_revertsWhenUniversalResolverIsNotConfigured() public {
         NamespaceController freshController = _deployController(accounts.owner.addr);
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
 
-        vm.expectRevert(abi.encodeWithSelector(INamespaceController.RootRegistryNotConfigured.selector));
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.UniversalResolverNotConfigured.selector));
         vm.prank(accounts.alice.addr);
-        freshController.activate(config);
+        freshController.activate(_aliceName(), config);
     }
 
     function test_activate_revertsWhenCallerLacksRenewAdmin() public {
@@ -119,115 +135,220 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
             )
         );
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        controller.activate(_aliceName(), config);
     }
 
-    function test_activate_revertsWhenParentNodeDoesNotMatchRegistry() public {
+    function test_activate_revertsForRootNamespaceName() public {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
-        bytes32 victimNode = keccak256("victim.eth");
-        config.parentNode = victimNode;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                INamespaceController.RegistryParentNodeMismatch.selector, address(registry), _aliceNode(), victimNode
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.InvalidNamespaceName.selector, hex"00"));
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        controller.activate(hex"00", config);
     }
 
-    function test_activate_revertsWhenRegistryParentPointsToDifferentChild() public {
-        PermissionedRegistry fakeRegistry = new PermissionedRegistry(
+    function test_activate_revertsWhenNamespaceRegistryDoesNotExist() public {
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        bytes memory missingName = NameCoder.encode("missing.eth");
+
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.NamespaceRegistryNotFound.selector, missingName));
+        vm.prank(accounts.alice.addr);
+        controller.activate(missingName, config);
+    }
+
+    function test_activate_revertsWhenNamespaceIsReserved() public {
+        PermissionedRegistry reservedRegistry = new PermissionedRegistry(
             IHCAFactoryBasic(address(0)),
             registryMetadata,
             address(this),
             ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
         );
-        fakeRegistry.setParent(ethRegistry, "alice");
-        fakeRegistry.grantRootRoles(ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN, accounts.alice.addr);
-        fakeRegistry.grantRootRoles(ROLE_REGISTRAR | ROLE_RENEW, address(controller));
+        ethRegistry.register(
+            "reserved", address(0), IRegistry(address(reservedRegistry)), address(0), 0, type(uint64).max
+        );
+        reservedRegistry.setParent(ethRegistry, "reserved");
 
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
-        config.registry = IPermissionedRegistry(address(fakeRegistry));
-        config.parentNode = _aliceNode();
+        bytes memory reservedName = NameCoder.encode("reserved.eth");
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                INamespaceController.RegistryParentChildMismatch.selector,
-                address(fakeRegistry),
-                address(ethRegistry),
-                "alice",
-                address(registry)
+                INamespaceController.NamespaceNotRegistered.selector,
+                reservedName,
+                IPermissionedRegistry.Status.RESERVED
             )
         );
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        controller.activate(reservedName, config);
     }
 
-    function test_activate_revertsWhenRegistryChainDoesNotReachConfiguredRoot() public {
-        PermissionedRegistry fakeRoot =
-            new PermissionedRegistry(IHCAFactoryBasic(address(0)), registryMetadata, address(this), ROLE_REGISTRAR);
-        PermissionedRegistry fakeEth = new PermissionedRegistry(
-            IHCAFactoryBasic(address(0)), registryMetadata, address(this), ROLE_REGISTRAR | ROLE_SET_PARENT
-        );
-        PermissionedRegistry fakeRegistry = new PermissionedRegistry(
+    function test_activate_revertsWhenCanonicalRegistryCannotBeProven() public {
+        PermissionedRegistry wrongRegistry = new PermissionedRegistry(
             IHCAFactoryBasic(address(0)),
             registryMetadata,
             address(this),
             ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
         );
-        fakeRoot.register("eth", accounts.owner.addr, IRegistry(address(fakeEth)), address(0), 0, type(uint64).max);
-        fakeEth.setParent(fakeRoot, "eth");
-        fakeEth.register(
-            "alice", accounts.owner.addr, IRegistry(address(fakeRegistry)), address(0), 0, type(uint64).max
+        ethRegistry.register(
+            "wrong", accounts.owner.addr, IRegistry(address(wrongRegistry)), address(0), 0, type(uint64).max
         );
-        fakeRegistry.setParent(fakeEth, "alice");
-        fakeRegistry.grantRootRoles(ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN, accounts.alice.addr);
-        fakeRegistry.grantRootRoles(ROLE_REGISTRAR | ROLE_RENEW, address(controller));
+        wrongRegistry.setParent(ethRegistry, "other");
 
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
-        config.registry = IPermissionedRegistry(address(fakeRegistry));
-        config.parentNode = _aliceNode();
+        bytes memory wrongName = NameCoder.encode("wrong.eth");
 
-        vm.expectRevert(
-            abi.encodeWithSelector(INamespaceController.RegistryParentNotConfigured.selector, address(fakeRoot))
-        );
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.NamespaceRegistryNotFound.selector, wrongName));
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        controller.activate(wrongName, config);
     }
 
-    function test_activate_revertsWhenRegistryParentChainIsTooDeep() public {
-        uint256 length = 130;
-        ParentChainRegistry[] memory chain = new ParentChainRegistry[](length);
-        for (uint256 i; i < length;) {
-            chain[i] = new ParentChainRegistry();
-            unchecked {
-                ++i;
-            }
-        }
-
-        string memory firstLabel = "deep0";
-        rootRegistry.register(
-            firstLabel, accounts.owner.addr, IRegistry(address(chain[0])), address(0), 0, type(uint64).max
-        );
-        chain[0].setParent(rootRegistry, firstLabel);
-        for (uint256 i = 1; i < length;) {
-            string memory label = string.concat("deep", vm.toString(i));
-            chain[i - 1].setSubregistry(label, chain[i]);
-            chain[i].setParent(chain[i - 1], label);
-            unchecked {
-                ++i;
-            }
-        }
-
+    function test_activate_revertsWhenUniversalResolverOmitsParentRegistry() public {
         NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
-        config.registry = IPermissionedRegistry(address(chain[length - 1]));
+        bytes memory aliceName = _aliceName();
+        IRegistry[] memory registries = new IRegistry[](1);
+        registries[0] = registry;
+        universalResolver.setCanonicalRegistryOverride(registry);
+        universalResolver.setRegistriesOverride(registries);
 
         vm.expectRevert(
-            abi.encodeWithSelector(INamespaceController.RegistryParentChainTooDeep.selector, address(chain[0]))
+            abi.encodeWithSelector(INamespaceController.NamespaceParentRegistryNotFound.selector, aliceName)
         );
         vm.prank(accounts.alice.addr);
-        controller.activate(config);
+        controller.activate(aliceName, config);
+    }
+
+    function test_activate_revertsWhenUniversalResolverRegistryListDisagreesWithCanonicalRegistry() public {
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        bytes memory aliceName = _aliceName();
+        IRegistry[] memory registries = new IRegistry[](2);
+        registries[0] = ethRegistry;
+        registries[1] = ethRegistry;
+        universalResolver.setCanonicalRegistryOverride(registry);
+        universalResolver.setRegistriesOverride(registries);
+
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.NamespaceRegistryNotFound.selector, aliceName));
+        vm.prank(accounts.alice.addr);
+        controller.activate(aliceName, config);
+    }
+
+    function test_activate_revertsWhenParentRegistryNoLongerPointsToResolvedRegistry() public {
+        PermissionedRegistry originalRegistry = _registerMutableNamespace("drift");
+        PermissionedRegistry replacementRegistry = new PermissionedRegistry(
+            IHCAFactoryBasic(address(0)),
+            registryMetadata,
+            address(this),
+            ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
+        );
+        replacementRegistry.setParent(ethRegistry, "drift");
+        bytes memory driftName = NameCoder.encode("drift.eth");
+        IRegistry[] memory registries = new IRegistry[](2);
+        registries[0] = originalRegistry;
+        registries[1] = ethRegistry;
+        universalResolver.setCanonicalRegistryOverride(originalRegistry);
+        universalResolver.setRegistriesOverride(registries);
+
+        vm.prank(accounts.owner.addr);
+        ethRegistry.setSubregistry(uint256(keccak256(bytes("drift"))), replacementRegistry);
+
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        vm.expectRevert(abi.encodeWithSelector(INamespaceController.NamespaceRegistryNotFound.selector, driftName));
+        vm.prank(accounts.alice.addr);
+        controller.activate(driftName, config);
+    }
+
+    function test_mint_revertsWhenParentSubregistryChangesAfterActivation() public {
+        PermissionedRegistry originalRegistry = _registerMutableNamespace("mutable");
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        bytes memory mutableName = NameCoder.encode("mutable.eth");
+
+        vm.prank(accounts.alice.addr);
+        bytes32 activationId = controller.activate(mutableName, config);
+
+        PermissionedRegistry replacementRegistry = new PermissionedRegistry(
+            IHCAFactoryBasic(address(0)),
+            registryMetadata,
+            address(this),
+            ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
+        );
+        replacementRegistry.setParent(ethRegistry, "mutable");
+        vm.prank(accounts.owner.addr);
+        ethRegistry.setSubregistry(uint256(keccak256(bytes("mutable"))), IRegistry(address(replacementRegistry)));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                INamespaceController.NamespaceRegistryChanged.selector,
+                activationId,
+                address(originalRegistry),
+                address(replacementRegistry)
+            )
+        );
+        vm.prank(accounts.buyer.addr);
+        controller.mint(activationId, "pay", 365 days, _defaultRuntimeData());
+    }
+
+    function test_mint_revertsWhenParentNamespaceIsUnavailableAfterActivation() public {
+        _registerMutableNamespace("gone");
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        bytes memory goneName = NameCoder.encode("gone.eth");
+
+        vm.prank(accounts.alice.addr);
+        bytes32 activationId = controller.activate(goneName, config);
+
+        vm.prank(accounts.owner.addr);
+        ethRegistry.unregister(uint256(keccak256(bytes("gone"))));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                INamespaceController.NamespaceActivationUnavailable.selector,
+                activationId,
+                IPermissionedRegistry.Status.AVAILABLE
+            )
+        );
+        vm.prank(accounts.buyer.addr);
+        controller.mint(activationId, "pay", 365 days, _defaultRuntimeData());
+    }
+
+    function test_reRegisteringNamespaceAllowsNewActivationAndStalesOldActivation() public {
+        _registerMutableNamespace("cycle");
+        NamespaceTypes.ActivationConfig memory config = _defaultActivationConfig();
+        bytes memory cycleName = NameCoder.encode("cycle.eth");
+
+        vm.prank(accounts.alice.addr);
+        bytes32 oldActivationId = controller.activate(cycleName, config);
+        uint256 oldResource = controller.getActivation(oldActivationId).namespaceResource;
+
+        vm.prank(accounts.owner.addr);
+        ethRegistry.unregister(uint256(keccak256(bytes("cycle"))));
+
+        PermissionedRegistry replacementRegistry = new PermissionedRegistry(
+            IHCAFactoryBasic(address(0)),
+            registryMetadata,
+            address(this),
+            ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
+        );
+        ethRegistry.register(
+            "cycle",
+            accounts.owner.addr,
+            IRegistry(address(replacementRegistry)),
+            address(0),
+            ROLE_SET_SUBREGISTRY | ROLE_UNREGISTER,
+            type(uint64).max
+        );
+        replacementRegistry.setParent(ethRegistry, "cycle");
+        replacementRegistry.grantRootRoles(ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN, accounts.alice.addr);
+        replacementRegistry.grantRootRoles(ROLE_REGISTRAR | ROLE_RENEW, address(controller));
+
+        vm.prank(accounts.alice.addr);
+        bytes32 newActivationId = controller.activate(cycleName, config);
+        uint256 newResource = ethRegistry.getState(uint256(keccak256(bytes("cycle")))).resource;
+        assertNotEq(newActivationId, oldActivationId);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                INamespaceController.NamespaceActivationStale.selector, oldActivationId, oldResource, newResource
+            )
+        );
+        vm.prank(accounts.buyer.addr);
+        controller.mint(oldActivationId, "pay", 365 days, _defaultRuntimeData());
     }
 
     function test_setActivationStatus_revertsWhenOwnerLostRegistryAdmin() public {
@@ -313,5 +434,25 @@ contract NamespaceControllerActivationTest is NamespaceSetUp {
             address(uint160(uint256(vm.load(address(saleWindowRule), _ERC1967_IMPLEMENTATION_SLOT)))),
             address(newImplementation)
         );
+    }
+
+    function _registerMutableNamespace(string memory label) private returns (PermissionedRegistry namespaceRegistry) {
+        namespaceRegistry = new PermissionedRegistry(
+            IHCAFactoryBasic(address(0)),
+            registryMetadata,
+            address(this),
+            ROLE_SET_PARENT | ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN
+        );
+        ethRegistry.register(
+            label,
+            accounts.owner.addr,
+            IRegistry(address(namespaceRegistry)),
+            address(0),
+            ROLE_SET_SUBREGISTRY | ROLE_UNREGISTER,
+            type(uint64).max
+        );
+        namespaceRegistry.setParent(ethRegistry, label);
+        namespaceRegistry.grantRootRoles(ROLE_REGISTRAR_ADMIN | ROLE_RENEW_ADMIN, accounts.alice.addr);
+        namespaceRegistry.grantRootRoles(ROLE_REGISTRAR | ROLE_RENEW, address(controller));
     }
 }

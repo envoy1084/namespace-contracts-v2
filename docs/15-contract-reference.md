@@ -7,8 +7,8 @@ This is a concise index of production contracts in `src/`.
 | Function | Access | Summary |
 | --- | --- | --- |
 | `initialize(address initialOwner)` | initializer | Initializes controller owner and enables module approval enforcement. |
-| `setRootRegistry(IRegistry rootRegistry)` | controller owner | Sets canonical root for future activation parent validation. |
-| `activate(ActivationConfig config)` | registry admin | Creates activation and configures modules. |
+| `setUniversalResolver(IUniversalResolverV2 universalResolver)` | controller owner | Sets the resolver used for activation namespace discovery and mirrors its `ROOT_REGISTRY()` in `rootRegistry`. |
+| `activate(bytes name, ActivationConfig config)` | registry admin | Resolves a DNS-encoded namespace name, creates activation, and configures modules. |
 | `setActivationStatus(bytes32 activationId, bool active)` | activation owner | Enables or disables activation. |
 | `transferActivationOwnership(bytes32 activationId, address newOwner)` | activation owner | Transfers activation ownership to another registry admin. |
 | `updateModuleConfig(bytes32 activationId, bytes32 kind, uint256 index, bytes configData)` | activation owner | Reconfigures existing module at index. |
@@ -32,6 +32,7 @@ This is a concise index of production contracts in `src/`.
 | `ModuleApprovalRequiredSet` | Approval enforcement changes. |
 | `ModuleApprovalSet` | Module approval changes. |
 | `RootRegistrySet` | Root registry changes. |
+| `UniversalResolverSet` | UniversalResolverV2 changes. |
 | `SubnameMinted` | Mint succeeds. |
 | `SubnameRenewed` | Renewal succeeds. |
 
@@ -63,6 +64,7 @@ This is a concise index of production contracts in `src/`.
 | Interface | Required methods |
 | --- | --- |
 | `INamespaceController` | Controller API, events, errors. |
+| `IUniversalResolverV2` | `ROOT_REGISTRY`, `findCanonicalRegistry`, `findRegistries`, resolver discovery helpers. |
 | `IConfigurableModule` | `configure`. |
 | `IRuleModule` | `evaluateMint`, `evaluateRenew`. |
 | `IPaymentModule` | `collectMint`, `collectRenew`. |
@@ -106,7 +108,7 @@ This is a concise index of production contracts in `src/`.
 | --- | --- |
 | Activation lookup/status | `ActivationNotFound`, `ActivationNotActive` |
 | Ownership/permissions | `NotActivationOwner`, `UnauthorizedActivationOwner`, `ControllerMissingRegistryRoles` |
-| Registry parent validation | `RootRegistryNotConfigured`, `RegistryParentNotConfigured`, `RegistryParentChildMismatch`, `RegistryParentNodeMismatch` |
+| Namespace discovery/staleness | `UniversalResolverNotConfigured`, `NamespaceRegistryNotFound`, `NamespaceNotRegistered`, `NamespaceAlreadyActivated`, `NamespaceActivationStale`, `NamespaceRegistryChanged` |
 | Duration/runtime shape | `ZeroDuration`, `InvalidDurationBounds`, `DurationOutOfBounds`, `RuntimeDataLengthMismatch` |
 | Module config | `ZeroModule`, `UnapprovedModule`, `ModuleIndexOutOfBounds`, `ModuleListTooLong` |
 | Rule engine | `RulePhaseOrderInvalid`, `RuleBlocked`, `RequiredRuleFlagsMissing`, `RuleOperationNotAllowed`, `RulePaymentTokenMismatch` |
